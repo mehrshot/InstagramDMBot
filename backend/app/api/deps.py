@@ -1,14 +1,16 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.queue import Queue
 from app.core.security import TokenError, decode_token
 from app.models import Shop, User
+from app.services.instagram import InstagramClient
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -45,3 +47,15 @@ async def get_current_shop(user: CurrentUser) -> Shop:
 
 
 CurrentShop = Annotated[Shop, Depends(get_current_shop)]
+
+
+def get_queue(request: Request) -> Queue:
+    return request.app.state.queue
+
+
+def get_instagram_client(request: Request) -> InstagramClient:
+    return InstagramClient(request.app.state.http)
+
+
+JobQueue = Annotated[Queue, Depends(get_queue)]
+Instagram = Annotated[InstagramClient, Depends(get_instagram_client)]

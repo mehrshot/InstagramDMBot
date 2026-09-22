@@ -6,6 +6,8 @@ from typing import Any
 from sqlalchemy import JSON, DateTime, Enum, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from app.core.timeutil import utcnow
+
 # Deterministic constraint names keep Alembic migrations stable across databases.
 _NAMING = {
     "ix": "ix_%(column_0_label)s",
@@ -26,9 +28,13 @@ class UUIDPk:
 
 
 class Timestamps:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Python-side defaults give microsecond precision on every DB, so ordering by
+    # created_at (e.g. message history) is stable.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), default=utcnow, server_default=func.now(), onupdate=utcnow
     )
 
 

@@ -9,7 +9,11 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import get_settings
 
-TokenType = Literal["access", "refresh"]
+# "ig_oauth" is the signed `state` for the Instagram connect flow: it carries the shop id
+# through Instagram's redirect and protects the callback against CSRF.
+TokenType = Literal["access", "refresh", "ig_oauth"]
+
+_OAUTH_STATE_LIFETIME = timedelta(minutes=15)
 
 _hasher = PasswordHasher()
 _ALGORITHM = "HS256"
@@ -30,15 +34,15 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_token(user_id: uuid.UUID, token_type: TokenType) -> str:
+def create_token(subject_id: uuid.UUID, token_type: TokenType) -> str:
     settings = get_settings()
-    lifetime = (
-        timedelta(minutes=settings.access_token_expire_minutes)
-        if token_type == "access"
-        else timedelta(days=settings.refresh_token_expire_days)
-    )
+    lifetime = {
+        "access": timedelta(minutes=settings.access_token_expire_minutes),
+        "refresh": timedelta(days=settings.refresh_token_expire_days),
+        "ig_oauth": _OAUTH_STATE_LIFETIME,
+    }[token_type]
     now = datetime.now(UTC)
-    payload = {"sub": str(user_id), "type": token_type, "iat": now, "exp": now + lifetime}
+    payload = {"sub": str(subject_id), "type": token_type, "iat": now, "exp": now + lifetime}
     return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
 
 
