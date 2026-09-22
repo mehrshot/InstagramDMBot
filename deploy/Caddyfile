@@ -1,0 +1,6 @@
+# Caddy obtains and renews the HTTPS certificate automatically.
+# Meta requires a valid HTTPS URL for OAuth redirects and webhooks.
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}
