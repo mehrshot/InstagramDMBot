@@ -46,10 +46,27 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.openai.com/v1"
     llm_api_key: str = ""
     llm_model: str = ""
+    # Optional separate model for reading uploaded images (menus, price lists); must accept
+    # image input. Falls back to llm_model.
+    llm_vision_model: str = ""
+    llm_timeout_seconds: float = 45.0
+    llm_max_output_tokens: int = 700
+    llm_temperature: float = 0.3
+
+    # Per-shop limits (the future paid plans will raise these).
+    knowledge_char_limit: int = 40_000
+    product_row_limit: int = 2_000
+    upload_max_bytes: int = 5 * 1024 * 1024
+    # How often Google Sheets product sources are re-read.
+    product_sync_interval_minutes: int = 5
 
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def llm_configured(self) -> bool:
+        return bool(self.llm_api_key and self.llm_model)
 
     @model_validator(mode="after")
     def _check_production_secrets(self) -> "Settings":

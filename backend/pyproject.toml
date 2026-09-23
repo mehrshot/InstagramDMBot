@@ -18,6 +18,10 @@ dependencies = [
     "httpx>=0.27",
     "redis>=5.0",
     "arq>=0.26",
+    "pypdf>=6.19.0",
+    "python-docx>=1.2.0",
+    "openpyxl>=3.1.5",
+    "python-multipart>=0.0.32",
 ]
 
 [dependency-groups]
@@ -45,3 +49,7 @@ ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/conftest.py" = ["E402"]
+# User-facing Persian copy and the LLM prompt read better unwrapped.
+"app/services/knowledge.py" = ["E501"]
+"app/services/responder.py" = ["E501"]
+"app/services/products.py" = ["E501"]

@@ -2,6 +2,10 @@
 
 بک‌اند پایتون (FastAPI) برای رباتی که با اطلاعات هر فروشگاه به دایرکت‌های اینستاگرام جواب می‌دهد.
 
+- **راهنمای کامل فرانت‌اند (برای علی):** [docs/FRONTEND.md](docs/FRONTEND.md)
+- **اسکیمای API:** [docs/openapi.json](docs/openapi.json)
+- **چک‌لیست راه‌اندازی (کارهای بیرون از کد):** [docs/LAUNCH.md](docs/LAUNCH.md)
+
 ## ساختار
 
 ```
@@ -11,10 +15,10 @@ backend/
     models/      جداول دیتابیس
     schemas/     مدل‌های ورودی/خروجی API
     api/routes/  endpointها
-    services/    منطق اصلی: اینستاگرام، webhook، پایپ‌لاین پیام‌ها، تولید جواب
+    services/    منطق اصلی: اینستاگرام، webhook، پیام‌ها، هوش مصنوعی، اطلاعات، محصولات
     worker.py    پردازش پس‌زمینه (arq + Redis)
   alembic/       migrationهای دیتابیس
-  scripts/       ابزارهای توسعه (شبیه‌ساز دایرکت)
+  scripts/       شبیه‌ساز دایرکت، داده‌ی نمونه، خروجی OpenAPI
   tests/
 deploy/Caddyfile   HTTPS خودکار
 docker-compose.yml
@@ -33,6 +37,7 @@ uv sync
 
 ```
 DATABASE_URL=sqlite+aiosqlite:///./dev.db
+SECRET_KEY=dev-secret-key-at-least-32-characters-long
 ENCRYPTION_KEY=<خروجی دستور زیر>
 QUEUE_BACKEND=inline
 INSTAGRAM_DRY_RUN=true
@@ -56,6 +61,20 @@ uv run uvicorn app.main:app --reload
 ```
 
 مستندات تعاملی API (برای علی): http://localhost:8000/docs
+
+برای داشتن یک فروشگاه نمونه‌ی پر (ورود با `demo@shop.ir` / `demopass123`):
+
+```bash
+uv run python -m scripts.seed_demo
+```
+
+برای فعال کردن هوش مصنوعی، این سه مقدار را به `.env` اضافه کنید (هر سرویس سازگار با OpenAI که از tool calling پشتیبانی کند):
+
+```
+LLM_BASE_URL=https://...
+LLM_API_KEY=...
+LLM_MODEL=...
+```
 
 ### شبیه‌سازی دایرکت بدون متا
 
@@ -97,37 +116,4 @@ Migrationها موقع بالا آمدن سرویس `api` خودکار اجرا 
 
 ## قرارداد API برای فرانت
 
-همه‌ی مسیرها زیر `/api/v1` هستند. توکن در هدر `Authorization: Bearer <access_token>`.
-
-| متد | مسیر | توضیح |
-|---|---|---|
-| POST | `/auth/register` | `{email, password, full_name?, shop_name}` → `{access_token, refresh_token}` |
-| POST | `/auth/login` | `{email, password}` → توکن‌ها |
-| POST | `/auth/refresh` | `{refresh_token}` → توکن‌های جدید |
-| GET | `/me` | کاربر + فروشگاه |
-| GET | `/shop` | تنظیمات ربات |
-| PATCH | `/shop` | تغییر تنظیمات: `name, bot_enabled, tone (friendly/formal), use_emoji, fallback_message, forbidden_rules, handoff_pause_minutes` |
-| GET | `/instagram` | وضعیت اتصال: `{connected, active, username, ig_user_id, token_expires_at}` |
-| GET | `/instagram/connect-url` | `{url}`: مرورگر کاربر را به این آدرس بفرستید |
-| DELETE | `/instagram` | قطع اتصال پیج |
-
-### اتصال اینستاگرام از سمت فرانت
-
-1. کاربر روی «اتصال اینستاگرام» می‌زند. فرانت `GET /instagram/connect-url` را صدا می‌زند و `window.location = url`.
-2. کاربر در صفحه‌ی اینستاگرام اجازه می‌دهد. اینستاگرام او را به بک‌اند برمی‌گرداند و بک‌اند اتصال را کامل می‌کند.
-3. بک‌اند مرورگر را به **`{FRONTEND_URL}/instagram/callback`** می‌فرستد. این صفحه را علی باید بسازد و پارامترهایش این‌هاست:
-
-| `status` | `reason` | پیامی که به کاربر نشان داده شود |
-|---|---|---|
-| `connected` | - | پیج با موفقیت وصل شد |
-| `denied` | - | اجازه‌ی دسترسی داده نشد |
-| `error` | `account_in_use` | این پیج به حساب دیگری وصل است |
-| `error` | `invalid_state` | لینک منقضی شده، دوباره تلاش کنید |
-| `error` | `instagram` / `missing_code` | خطا در ارتباط با اینستاگرام، دوباره تلاش کنید |
-
-اگر `active` در `GET /instagram` برابر `false` باشد، یعنی اینستاگرام دسترسی را لغو کرده (مثلاً رمز پیج عوض شده) و کاربر باید دوباره وصل کند. این حالت را با یک هشدار واضح در پنل نشان دهید.
-
-### نکات کلی
-
-- عمر access token ۳۰ دقیقه و refresh token ۳۰ روز است. روی پاسخ 401، فرانت یک بار `/auth/refresh` را صدا بزند.
-- خطاها به شکل `{"detail": "..."}` با متن فارسی برمی‌گردند. خطای اعتبارسنجی (422) لیستی از فیلدهای مشکل‌دار است.
+کامل در [docs/FRONTEND.md](docs/FRONTEND.md).

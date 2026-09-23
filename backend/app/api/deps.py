@@ -1,5 +1,6 @@
 from typing import Annotated
 
+import httpx
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -11,6 +12,7 @@ from app.core.queue import Queue
 from app.core.security import TokenError, decode_token
 from app.models import Shop, User
 from app.services.instagram import InstagramClient
+from app.services.llm import LLMClient
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -59,3 +61,17 @@ def get_instagram_client(request: Request) -> InstagramClient:
 
 JobQueue = Annotated[Queue, Depends(get_queue)]
 Instagram = Annotated[InstagramClient, Depends(get_instagram_client)]
+
+
+def get_http(request: Request) -> httpx.AsyncClient:
+    return request.app.state.http
+
+
+HttpClient = Annotated[httpx.AsyncClient, Depends(get_http)]
+
+
+def get_llm(http: HttpClient) -> LLMClient:
+    return LLMClient(http)
+
+
+LLM = Annotated[LLMClient, Depends(get_llm)]

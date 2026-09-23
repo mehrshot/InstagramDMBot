@@ -167,6 +167,15 @@ class InstagramClient:
             params={"subscribed_fields": "messages", "access_token": token},
         )
 
+    async def get_customer_username(self, token: str, igsid: str) -> str | None:
+        """Username of a customer who messaged the page (Instagram User Profile API)."""
+        if self._settings.instagram_dry_run:
+            return None
+        data = await self._request(
+            "GET", f"{self._graph}/{igsid}", params={"fields": "username", "access_token": token}
+        )
+        return data.get("username")
+
     async def send_text(self, token: str, recipient_igsid: str, text: str) -> str:
         """Send one DM; returns Meta's message id. `text` must already fit MAX_TEXT_LENGTH."""
         if self._settings.instagram_dry_run:

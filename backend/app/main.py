@@ -8,7 +8,17 @@ from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import account, auth, health, instagram, webhooks
+from app.api.routes import (
+    account,
+    auth,
+    conversations,
+    dashboard,
+    health,
+    instagram,
+    knowledge,
+    products,
+    webhooks,
+)
 from app.core.config import get_settings
 from app.core.queue import ArqQueue, InlineQueue
 
@@ -58,6 +68,10 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix=api_prefix)
     app.include_router(account.router, prefix=api_prefix)
     app.include_router(instagram.router, prefix=api_prefix)
+    app.include_router(knowledge.router, prefix=api_prefix)
+    app.include_router(products.router, prefix=api_prefix)
+    app.include_router(conversations.router, prefix=api_prefix)
+    app.include_router(dashboard.router, prefix=api_prefix)
     return app
 
 

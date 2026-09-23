@@ -1,0 +1,3342 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DM Assistant",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Ready Health Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Delete Account",
+        "description": "Permanently delete the account and everything stored for it (Meta requires this).",
+        "operationId": "delete_account_api_v1_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDelete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/password": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Change Password",
+        "operationId": "change_password_api_v1_me_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/shop": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Get Shop",
+        "operationId": "get_shop_api_v1_shop_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Update Shop",
+        "operationId": "update_shop_api_v1_shop_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShopUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/instagram": {
+      "get": {
+        "tags": [
+          "instagram"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status_api_v1_instagram_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstagramStatusOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "instagram"
+        ],
+        "summary": "Disconnect",
+        "operationId": "disconnect_api_v1_instagram_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/instagram/connect-url": {
+      "get": {
+        "tags": [
+          "instagram"
+        ],
+        "summary": "Connect Url",
+        "description": "URL of Instagram's consent screen. The panel sends the browser there.",
+        "operationId": "connect_url_api_v1_instagram_connect_url_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectUrlOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/knowledge/sections": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Sections",
+        "description": "Static description of the knowledge form: render the panel from this.",
+        "operationId": "sections_api_v1_knowledge_sections_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Entries",
+        "operationId": "list_entries_api_v1_knowledge_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Create Entry",
+        "operationId": "create_entry_api_v1_knowledge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/knowledge/single/{section}": {
+      "put": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Set Single Section",
+        "description": "Set the text of a one-box section (about, shipping, ...). Empty content clears it.",
+        "operationId": "set_single_section_api_v1_knowledge_single__section__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/KnowledgeSection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SingleSectionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/EntryOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Set Single Section Api V1 Knowledge Single  Section  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/upload": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Upload File",
+        "description": "Extract text from a file into a new, editable entry in the \"file\" section.",
+        "operationId": "upload_file_api_v1_knowledge_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_api_v1_knowledge_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/knowledge/{entry_id}": {
+      "patch": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Update Entry",
+        "operationId": "update_entry_api_v1_knowledge__entry_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Entry",
+        "operationId": "delete_entry_api_v1_knowledge__entry_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/fields": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Fields",
+        "description": "Our product fields, for the column-mapping step.",
+        "operationId": "fields_api_v1_products_fields_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FieldOut"
+                  },
+                  "type": "array",
+                  "title": "Response Fields Api V1 Products Fields Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/template.csv": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Template",
+        "description": "A ready-made product table; opens correctly in Excel and imports into Google Sheets.",
+        "operationId": "template_api_v1_products_template_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/v1/products/sheet/preview": {
+      "post": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Preview Sheet",
+        "operationId": "preview_sheet_api_v1_products_sheet_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SheetPreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products/sheet": {
+      "put": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Connect Sheet",
+        "description": "Save the Google Sheet link + mapping and import it now. Re-synced every few minutes.",
+        "operationId": "connect_sheet_api_v1_products_sheet_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SheetConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products/file/preview": {
+      "post": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Preview File",
+        "operationId": "preview_file_api_v1_products_file_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_file_api_v1_products_file_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products/file": {
+      "post": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Import File",
+        "description": "One-off import of an Excel/CSV file (not re-synced; upload again to update).",
+        "operationId": "import_file_api_v1_products_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_file_api_v1_products_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products/sync": {
+      "post": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Sync Now",
+        "operationId": "sync_now_api_v1_products_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products/source": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Get Source",
+        "operationId": "get_source_api_v1_products_source_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Remove Source",
+        "description": "Disconnect the product table and delete the imported products.",
+        "operationId": "remove_source_api_v1_products_source_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "List Products",
+        "operationId": "list_products_api_v1_products_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "search name/code",
+              "title": "Q"
+            },
+            "description": "search name/code"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "List Conversations",
+        "operationId": "list_conversations_api_v1_conversations_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "needs_owner",
+                "unanswered",
+                "paused"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Filter"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "customer username",
+              "title": "Q"
+            },
+            "description": "customer username"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversation_id}": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Get Conversation",
+        "operationId": "get_conversation_api_v1_conversations__conversation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/pause": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Pause Bot",
+        "description": "Stop the bot for this one customer (e.g. the owner is handling it).",
+        "operationId": "pause_bot_api_v1_conversations__conversation_id__pause_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/resume": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Resume Bot",
+        "operationId": "resume_bot_api_v1_conversations__conversation_id__resume_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/handoffs": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "List Handoffs",
+        "description": "DMs the bot passed to the owner because it didn't know the answer.\n\nOpen ones come oldest first (the customer who has waited longest is on top); resolved\nones newest first. A handoff resolves itself when the owner replies on Instagram.",
+        "operationId": "list_handoffs_api_v1_handoffs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "open",
+                "resolved"
+              ],
+              "type": "string",
+              "default": "open",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoffPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/handoffs/{conversation_id}/resolve": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Resolve Handoff",
+        "description": "Close a handoff by hand (e.g. the owner answered by phone). Idempotent.",
+        "operationId": "resolve_handoff_api_v1_handoffs__conversation_id__resolve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/unanswered": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "List Unanswered",
+        "description": "Questions the bot couldn't answer from the shop's data. Newest first.\n\nThe panel shows these as \"add this to your information\" suggestions.",
+        "operationId": "list_unanswered_api_v1_unanswered_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UnansweredOut"
+                  },
+                  "title": "Response List Unanswered Api V1 Unanswered Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/unanswered/{message_id}/resolve": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Resolve Unanswered",
+        "operationId": "resolve_unanswered_api_v1_unanswered__message_id__resolve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_v1_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/playground/chat": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Playground Chat",
+        "description": "Test the bot with the shop's current data, without Instagram. Nothing is saved.\n\nWorks while the bot is switched off, so owners can try it before going live.",
+        "operationId": "playground_chat_api_v1_playground_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaygroundIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountDelete": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "AccountDelete"
+      },
+      "Body_import_file_api_v1_products_file_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "column_mapping": {
+            "type": "string",
+            "title": "Column Mapping",
+            "description": "JSON object, e.g. {\"name\": \"نام محصول\"}"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "column_mapping"
+        ],
+        "title": "Body_import_file_api_v1_products_file_post"
+      },
+      "Body_preview_file_api_v1_products_file_preview_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_file_api_v1_products_file_preview_post"
+      },
+      "Body_upload_file_api_v1_knowledge_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_file_api_v1_knowledge_upload_post"
+      },
+      "ConnectUrlOut": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ConnectUrlOut"
+      },
+      "ConversationDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "customer_igsid": {
+            "type": "string",
+            "title": "Customer Igsid"
+          },
+          "customer_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Username"
+          },
+          "instagram_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instagram Url"
+          },
+          "last_customer_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Customer Message At"
+          },
+          "bot_paused_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Paused Until"
+          },
+          "bot_paused": {
+            "type": "boolean",
+            "title": "Bot Paused"
+          },
+          "open_unanswered": {
+            "type": "integer",
+            "title": "Open Unanswered"
+          },
+          "handoff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandoffOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "customer_igsid",
+          "customer_username",
+          "instagram_url",
+          "last_customer_message_at",
+          "bot_paused_until",
+          "bot_paused",
+          "open_unanswered",
+          "handoff",
+          "last_message",
+          "messages"
+        ],
+        "title": "ConversationDetail"
+      },
+      "ConversationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "customer_igsid": {
+            "type": "string",
+            "title": "Customer Igsid"
+          },
+          "customer_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Username"
+          },
+          "instagram_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instagram Url"
+          },
+          "last_customer_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Customer Message At"
+          },
+          "bot_paused_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Paused Until"
+          },
+          "bot_paused": {
+            "type": "boolean",
+            "title": "Bot Paused"
+          },
+          "open_unanswered": {
+            "type": "integer",
+            "title": "Open Unanswered"
+          },
+          "handoff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandoffOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "customer_igsid",
+          "customer_username",
+          "instagram_url",
+          "last_customer_message_at",
+          "bot_paused_until",
+          "bot_paused",
+          "open_unanswered",
+          "handoff",
+          "last_message"
+        ],
+        "title": "ConversationOut"
+      },
+      "ConversationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ConversationPage"
+      },
+      "DashboardOut": {
+        "properties": {
+          "setup": {
+            "$ref": "#/components/schemas/SetupStatus"
+          },
+          "open_handoffs": {
+            "type": "integer",
+            "title": "Open Handoffs"
+          },
+          "last_7_days": {
+            "$ref": "#/components/schemas/Stats"
+          },
+          "tokens_this_month": {
+            "type": "integer",
+            "title": "Tokens This Month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "setup",
+          "open_handoffs",
+          "last_7_days",
+          "tokens_this_month"
+        ],
+        "title": "DashboardOut"
+      },
+      "EntryCreate": {
+        "properties": {
+          "section": {
+            "$ref": "#/components/schemas/KnowledgeSection"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Title",
+            "default": ""
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 40000,
+            "minLength": 1,
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section",
+          "content"
+        ],
+        "title": "EntryCreate"
+      },
+      "EntryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "section": {
+            "$ref": "#/components/schemas/KnowledgeSection"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "source_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Filename"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "section",
+          "title",
+          "content",
+          "source_filename",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EntryOut"
+      },
+      "EntryUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "title": "EntryUpdate"
+      },
+      "FieldOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "required"
+        ],
+        "title": "FieldOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HandoffItem": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "customer_igsid": {
+            "type": "string",
+            "title": "Customer Igsid"
+          },
+          "customer_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Username"
+          },
+          "instagram_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instagram Url"
+          },
+          "last_customer_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Customer Message At"
+          },
+          "handoff": {
+            "$ref": "#/components/schemas/HandoffOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "customer_igsid",
+          "customer_username",
+          "instagram_url",
+          "last_customer_message_at",
+          "handoff"
+        ],
+        "title": "HandoffItem"
+      },
+      "HandoffOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "resolved"
+            ],
+            "title": "Status"
+          },
+          "handed_off_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Handed Off At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandoffResolution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "handed_off_at",
+          "reason",
+          "question",
+          "resolved_at",
+          "resolved_by"
+        ],
+        "title": "HandoffOut",
+        "description": "The bot passed this conversation to the owner (latest handoff)."
+      },
+      "HandoffPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HandoffItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "HandoffPage"
+      },
+      "HandoffResolution": {
+        "type": "string",
+        "enum": [
+          "owner_reply",
+          "manual"
+        ],
+        "title": "HandoffResolution"
+      },
+      "InstagramStatusOut": {
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": false
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "ig_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ig User Id"
+          },
+          "token_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connected"
+        ],
+        "title": "InstagramStatusOut"
+      },
+      "KnowledgeOut": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EntryOut"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "chars_used": {
+            "type": "integer",
+            "title": "Chars Used"
+          },
+          "char_limit": {
+            "type": "integer",
+            "title": "Char Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "chars_used",
+          "char_limit"
+        ],
+        "title": "KnowledgeOut"
+      },
+      "KnowledgeSection": {
+        "type": "string",
+        "enum": [
+          "about",
+          "shipping",
+          "payment",
+          "returns",
+          "contact",
+          "faq",
+          "free_text",
+          "file"
+        ],
+        "title": "KnowledgeSection"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/MessageSender"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "unanswered": {
+            "type": "boolean",
+            "title": "Unanswered"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sender",
+          "text",
+          "unanswered",
+          "created_at"
+        ],
+        "title": "MessageOut"
+      },
+      "MessageSender": {
+        "type": "string",
+        "enum": [
+          "customer",
+          "bot",
+          "owner"
+        ],
+        "title": "MessageSender"
+      },
+      "PasswordChange": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange"
+      },
+      "PauseIn": {
+        "properties": {
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 43200.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          }
+        },
+        "type": "object",
+        "title": "PauseIn"
+      },
+      "PlaygroundIn": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/PlaygroundTurn"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "PlaygroundIn"
+      },
+      "PlaygroundOut": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "title": "Reply"
+          },
+          "unanswered": {
+            "type": "boolean",
+            "title": "Unanswered"
+          },
+          "handoff_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handoff Reason"
+          },
+          "product_lookups": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Product Lookups"
+          },
+          "ai_ready": {
+            "type": "boolean",
+            "title": "Ai Ready"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply",
+          "unanswered",
+          "handoff_reason",
+          "product_lookups",
+          "ai_ready"
+        ],
+        "title": "PlaygroundOut"
+      },
+      "PlaygroundTurn": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "bot"
+            ],
+            "title": "Role"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "text"
+        ],
+        "title": "PlaygroundTurn"
+      },
+      "PreviewOut": {
+        "properties": {
+          "headers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Headers"
+          },
+          "sample_rows": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sample Rows"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          },
+          "suggested_mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Suggested Mapping"
+          }
+        },
+        "type": "object",
+        "required": [
+          "headers",
+          "sample_rows",
+          "row_count",
+          "suggested_mapping"
+        ],
+        "title": "PreviewOut"
+      },
+      "ProductOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "extra": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extra"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "category",
+          "color",
+          "size",
+          "price",
+          "stock",
+          "description",
+          "extra"
+        ],
+        "title": "ProductOut"
+      },
+      "ProductPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProductPage"
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Full Name",
+            "default": ""
+          },
+          "shop_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Shop Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "shop_name"
+        ],
+        "title": "RegisterRequest"
+      },
+      "SectionOut": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/KnowledgeSection"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hint": {
+            "type": "string",
+            "title": "Hint"
+          },
+          "placeholder": {
+            "type": "string",
+            "title": "Placeholder"
+          },
+          "multiple": {
+            "type": "boolean",
+            "title": "Multiple"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "hint",
+          "placeholder",
+          "multiple"
+        ],
+        "title": "SectionOut"
+      },
+      "SectionsOut": {
+        "properties": {
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionOut"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "supported_file_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported File Types"
+          },
+          "max_file_bytes": {
+            "type": "integer",
+            "title": "Max File Bytes"
+          },
+          "char_limit": {
+            "type": "integer",
+            "title": "Char Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sections",
+          "supported_file_types",
+          "max_file_bytes",
+          "char_limit"
+        ],
+        "title": "SectionsOut"
+      },
+      "SetupStatus": {
+        "properties": {
+          "instagram_connected": {
+            "type": "boolean",
+            "title": "Instagram Connected"
+          },
+          "instagram_active": {
+            "type": "boolean",
+            "title": "Instagram Active"
+          },
+          "instagram_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instagram Username"
+          },
+          "knowledge_entries": {
+            "type": "integer",
+            "title": "Knowledge Entries"
+          },
+          "products_connected": {
+            "type": "boolean",
+            "title": "Products Connected"
+          },
+          "product_count": {
+            "type": "integer",
+            "title": "Product Count"
+          },
+          "product_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Error"
+          },
+          "ai_ready": {
+            "type": "boolean",
+            "title": "Ai Ready"
+          },
+          "bot_enabled": {
+            "type": "boolean",
+            "title": "Bot Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instagram_connected",
+          "instagram_active",
+          "instagram_username",
+          "knowledge_entries",
+          "products_connected",
+          "product_count",
+          "product_error",
+          "ai_ready",
+          "bot_enabled"
+        ],
+        "title": "SetupStatus"
+      },
+      "SheetConnectIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Url"
+          },
+          "column_mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Column Mapping"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "column_mapping"
+        ],
+        "title": "SheetConnectIn"
+      },
+      "SheetPreviewIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "SheetPreviewIn"
+      },
+      "ShopOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "bot_enabled": {
+            "type": "boolean",
+            "title": "Bot Enabled"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "use_emoji": {
+            "type": "boolean",
+            "title": "Use Emoji"
+          },
+          "fallback_message": {
+            "type": "string",
+            "title": "Fallback Message"
+          },
+          "forbidden_rules": {
+            "type": "string",
+            "title": "Forbidden Rules"
+          },
+          "handoff_pause_minutes": {
+            "type": "integer",
+            "title": "Handoff Pause Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "bot_enabled",
+          "tone",
+          "use_emoji",
+          "fallback_message",
+          "forbidden_rules",
+          "handoff_pause_minutes"
+        ],
+        "title": "ShopOut"
+      },
+      "ShopUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "bot_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Enabled"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "friendly",
+                  "formal"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          },
+          "use_emoji": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Emoji"
+          },
+          "fallback_message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Message"
+          },
+          "forbidden_rules": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forbidden Rules"
+          },
+          "handoff_pause_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10080.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handoff Pause Minutes"
+          }
+        },
+        "type": "object",
+        "title": "ShopUpdate"
+      },
+      "SingleSectionUpdate": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "maxLength": 40000,
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "SingleSectionUpdate"
+      },
+      "SourceOut": {
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "google_sheet",
+                  "upload"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "column_mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Column Mapping",
+            "default": {}
+          },
+          "product_count": {
+            "type": "integer",
+            "title": "Product Count",
+            "default": 0
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connected"
+        ],
+        "title": "SourceOut"
+      },
+      "Stats": {
+        "properties": {
+          "conversations": {
+            "type": "integer",
+            "title": "Conversations"
+          },
+          "customer_messages": {
+            "type": "integer",
+            "title": "Customer Messages"
+          },
+          "bot_replies": {
+            "type": "integer",
+            "title": "Bot Replies"
+          },
+          "open_unanswered": {
+            "type": "integer",
+            "title": "Open Unanswered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversations",
+          "customer_messages",
+          "bot_replies",
+          "open_unanswered"
+        ],
+        "title": "Stats"
+      },
+      "TokenPair": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenPair"
+      },
+      "UnansweredOut": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Message Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "customer_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Username"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "conversation_id",
+          "customer_username",
+          "question",
+          "created_at"
+        ],
+        "title": "UnansweredOut"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "shop": {
+            "$ref": "#/components/schemas/ShopOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "shop"
+        ],
+        "title": "UserOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

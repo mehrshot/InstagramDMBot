@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, Timestamps, UUIDPk
@@ -21,7 +21,7 @@ class InstagramAccount(UUIDPk, Timestamps, Base):
     ig_user_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     username: Mapped[str] = mapped_column(String(64))
     access_token_encrypted: Mapped[str] = mapped_column(Text)
-    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    token_expires_at: Mapped[datetime | None] = mapped_column()
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     shop: Mapped["Shop"] = relationship(back_populates="instagram_account")

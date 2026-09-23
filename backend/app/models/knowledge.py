@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Timestamps, UUIDPk, str_enum
@@ -52,7 +52,7 @@ class ProductSource(UUIDPk, Timestamps, Base):
     url: Mapped[str | None] = mapped_column(Text)
     # Maps our canonical fields (name, color, size, price, stock...) to the sheet's column headers.
     column_mapping: Mapped[dict[str, Any]] = mapped_column(default=dict)
-    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_synced_at: Mapped[datetime | None] = mapped_column()
     last_error: Mapped[str | None] = mapped_column(Text)
 
 

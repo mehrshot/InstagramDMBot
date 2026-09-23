@@ -8,6 +8,8 @@ Decisions that are easy to get wrong live here:
   newest message actually answers.
 - When the owner answers by hand the bot steps back for `shop.handoff_pause_minutes`. Our own
   sends also come back as echoes and must not be mistaken for the owner.
+- When the bot can't answer, the conversation is handed off: the customer gets the shop's
+  fallback message once, and the question waits in the owner's panel until the owner replies.
 """
 
 import logging
@@ -21,9 +23,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.queue import Queue
 from app.core.security import decrypt_secret
 from app.core.timeutil import as_utc, utcnow
-from app.models import Conversation, InstagramAccount, Message, MessageSender, Shop
+from app.models import (
+    Conversation,
+    HandoffResolution,
+    InstagramAccount,
+    Message,
+    MessageSender,
+    Shop,
+)
 from app.services.instagram import InstagramClient, InstagramError, split_text
-from app.services.responder import Responder
+from app.services.llm import LLMError
+from app.services.responder import ChatTurn, Responder
 from app.services.webhook import MessagingEvent
 
 logger = logging.getLogger(__name__)
@@ -35,7 +45,12 @@ HISTORY_LIMIT = 20
 
 
 async def handle_event(
-    db: AsyncSession, event: MessagingEvent, queue: Queue, *, debounce_seconds: float
+    db: AsyncSession,
+    event: MessagingEvent,
+    queue: Queue,
+    *,
+    debounce_seconds: float,
+    instagram: InstagramClient | None = None,
 ) -> None:
     account = await db.scalar(
         select(InstagramAccount).where(
@@ -56,6 +71,8 @@ async def handle_event(
     if event.is_echo:
         await _record_echo(db, shop, conversation, event)
         return
+    if conversation.customer_username is None and instagram is not None:
+        await _lookup_username(db, conversation, account, instagram)
 
     db.add(
         Message(
@@ -108,6 +125,9 @@ async def _record_echo(
     )
     if shop.handoff_pause_minutes > 0:
         conversation.bot_paused_until = utcnow() + timedelta(minutes=shop.handoff_pause_minutes)
+    if conversation.handoff_open:
+        conversation.handoff_resolved_at = utcnow()
+        conversation.handoff_resolved_by = HandoffResolution.OWNER_REPLY
     await _commit_ignoring_duplicate(db)
 
 
@@ -157,8 +177,22 @@ async def reply_to_conversation(
     if not history or history[-1].sender != MessageSender.CUSTOMER:
         return  # already answered, by us or by the owner
 
-    reply = await responder.generate(shop, history)
+    turns = [ChatTurn(sender=m.sender.value, text=m.text) for m in history]
+    try:
+        reply = await responder.generate(shop, turns)
+    except LLMError as exc:
+        if exc.retryable:
+            raise
+        logger.error("LLM rejected request for shop %s: %s", shop.id, exc)
+        return
     if reply is None or not reply.text.strip():
+        return
+    if reply.unanswered and conversation.handoff_open:
+        # The customer already got the "a colleague will answer" message; repeating it on
+        # every follow-up is noise. The new question is added to the open handoff instead.
+        _open_handoff(conversation, history, reply.handoff_reason)
+        history[-1].unanswered = True
+        await db.commit()
         return
 
     token = decrypt_secret(account.access_token_encrypted)
@@ -178,17 +212,59 @@ async def reply_to_conversation(
         except InstagramError as exc:
             await db.delete(message)
             await db.commit()
+            if exc.retryable:
+                # Nothing is recorded as handed off yet, so the retry sends the fallback.
+                raise
             if exc.token_invalid:
                 account.is_active = False
-                await db.commit()
                 logger.warning("instagram token revoked for shop %s", shop.id)
-                return
-            if exc.retryable:
-                raise
-            logger.warning("send failed for conversation %s: %s", conversation.id, exc)
-            return
+            else:
+                logger.warning("send failed for conversation %s: %s", conversation.id, exc)
+            break
         message.ig_message_id = mid
         await db.commit()
+
+    if reply.unanswered:
+        # Even if the fallback couldn't be delivered, the owner must see the question.
+        _open_handoff(conversation, history, reply.handoff_reason)
+    await db.commit()
+
+
+def _open_handoff(conversation: Conversation, history: list[Message], reason: str | None) -> None:
+    """Start a handoff, or add the customer's latest question to the one already open."""
+    asked: list[str] = []
+    for message in reversed(history):
+        if message.sender != MessageSender.CUSTOMER:
+            break
+        asked.insert(0, message.text)
+    question = "\n".join(asked)
+    if conversation.handoff_open:
+        conversation.handoff_question = "\n".join(
+            filter(None, [conversation.handoff_question, question])
+        )
+        return
+    conversation.handoff_at = utcnow()
+    conversation.handoff_reason = (reason or "")[:255] or None
+    conversation.handoff_question = question
+    conversation.handoff_resolved_at = None
+    conversation.handoff_resolved_by = None
+
+
+async def _lookup_username(
+    db: AsyncSession,
+    conversation: Conversation,
+    account: InstagramAccount,
+    instagram: InstagramClient,
+) -> None:
+    try:
+        username = await instagram.get_customer_username(
+            decrypt_secret(account.access_token_encrypted), conversation.customer_igsid
+        )
+    except InstagramError as exc:
+        logger.info("username lookup failed for %s: %s", conversation.customer_igsid, exc)
+        username = None
+    conversation.customer_username = (username or "")[:64]
+    await db.commit()
 
 
 async def _message_exists(db: AsyncSession, mid: str) -> bool:
