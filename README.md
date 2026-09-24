@@ -1,11 +1,56 @@
-# DM Assistant — دستیار هوشمند دایرکت اینستاگرام
+# جواب (Javab)
 
-بک‌اند پایتون (FastAPI) برای رباتی که با اطلاعات هر فروشگاه به دایرکت‌های اینستاگرام جواب می‌دهد.
+**هیچ دایرکتی بی‌جواب نمی‌مونه.** دستیار هوش مصنوعی فروشگاه‌های اینستاگرامی: با اطلاعات و محصولات هر فروشگاه به دایرکت‌ها جواب می‌دهد و هر جا لازم باشد گفتگو را به صاحب پیج می‌سپارد.
+
+- `backend/`: پایتون (FastAPI)
+- `frontend/`: پنل فروشگاه (React + TypeScript)
 
 - **راهنمای کامل فرانت‌اند (برای علی):** [docs/FRONTEND.md](docs/FRONTEND.md)
 - **پنل (فرانت‌اند):** [frontend/](frontend/README.md)
 - **اسکیمای API:** [docs/openapi.json](docs/openapi.json)
 - **نقشه‌ی لانچ (کارهای بیرون از کد، قدم‌به‌قدم):** [docs/launch-guide.html](docs/launch-guide.html) — فایل را دانلود و در مرورگر باز کنید، یا [نسخه‌ی آنلاین](https://claude.ai/artifact/MjudMjNEeSQR3Yze5A3BXn)
+
+## اجرای کل پروژه روی کامپیوتر خودتان (بک‌اند + پنل)
+
+پیش‌نیاز: [uv](https://docs.astral.sh/uv/) و [Node.js 20+](https://nodejs.org/). به Docker، Redis، اینستاگرام یا کلید هوش مصنوعی نیاز نیست.
+
+۱. فایل `backend/.env` را مثل بخش «اجرای محلی» پایین بسازید. بعد:
+
+```bash
+cd backend
+uv sync
+uv run alembic upgrade head
+uv run python -m scripts.seed_demo
+uv run uvicorn app.main:app --reload
+```
+
+۲. در یک ترمینال دیگر:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+۳. پنل را در `http://localhost:3000` باز کنید و با `demo@shop.ir` / `demopass123` وارد شوید.
+
+۴. دایرکت مشتری را شبیه‌سازی کنید (باید در بخش «ارجاع‌شده به شما» پنل ظاهر شود):
+
+```bash
+cd backend
+uv run python -m scripts.simulate dm --text "سلام" --text "فاکتور رسمی میدید؟"
+```
+
+### تست هوش مصنوعی واقعی
+
+سه مقدار `LLM_BASE_URL`، `LLM_API_KEY` و `LLM_MODEL` را در `backend/.env` بگذارید (راهنما: قدم ۱.۳ نقشه‌ی لانچ)، بعد:
+
+```bash
+cd backend
+uv run python -m scripts.check_llm --price-in 0.10 --price-out 0.50
+```
+
+سه سناریوی واقعی (سوال محصول، سوال از اطلاعات فروشگاه، سوالی که باید به مدیر ارجاع شود) را اجرا می‌کند و هزینه‌ی هر جواب را تخمین می‌زند.
 
 ## ساختار
 
@@ -21,6 +66,7 @@ backend/
   alembic/       migrationهای دیتابیس
   scripts/       شبیه‌ساز دایرکت، داده‌ی نمونه، خروجی OpenAPI
   tests/
+frontend/          پنل فروشگاه (React + TypeScript + Vite) — frontend/README.md
 deploy/Caddyfile   HTTPS خودکار
 docker-compose.yml
 ```

@@ -1,7 +1,8 @@
 // Persian is the source language; en.ts must have exactly the same shape (checked by TS).
 
 const fa = {
-  appName: "دستیار دایرکت",
+  appName: "جواب",
+  tagline: "هیچ دایرکتی بی‌جواب نمی‌مونه",
   panelTitle: (shop: string) => `پنل ${shop}`,
   langName: "فارسی",
   otherLang: "English",

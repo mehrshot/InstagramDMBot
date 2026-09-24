@@ -187,3 +187,26 @@ async def test_playground_without_ai(client: AsyncClient, auth_headers: dict) ->
     body = resp.json()
     assert body["ai_ready"] is False
     assert body["unanswered"] is True
+
+
+async def test_adapts_to_models_that_reject_classic_parameters(
+    db: AsyncSession, shop: Shop, fake_web: FakeWeb, llm_on
+) -> None:
+    """Newer models refuse max_tokens/temperature; switching model must stay a config change."""
+    fake_web.llm_rejects = {"max_tokens", "temperature"}
+    fake_web.llm_replies = [{"content": "سلام، در خدمتم"}]
+    reply = await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "سلام")])
+    assert reply is not None and reply.text == "سلام، در خدمتم"
+    final = fake_web.llm_requests[-1]
+    assert "max_tokens" not in final and "temperature" not in final
+    assert final["max_completion_tokens"] > 0
+
+
+async def test_other_bad_requests_still_fail_clearly(
+    db: AsyncSession, shop: Shop, fake_web: FakeWeb, llm_on
+) -> None:
+    fake_web.llm_status = 400
+    with pytest.raises(LLMError) as exc_info:
+        await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "سلام")])
+    assert not exc_info.value.retryable
+    assert len(fake_web.llm_requests) == 1  # no pointless resends

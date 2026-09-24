@@ -3,12 +3,17 @@
 
 @theme {
   --font-sans: "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
+  /* «جواب» Persian turquoise. 600 is the primary (white text on it: 5.4:1). */
+  --color-brand-50: #eefafc;
+  --color-brand-100: #d3f1f6;
+  --color-brand-200: #a9e2ec;
+  --color-brand-300: #6fcbdb;
+  --color-brand-400: #33aec3;
+  --color-brand-500: #1491a8;
+  --color-brand-600: #0e7490;
+  --color-brand-700: #0f5e75;
+  --color-brand-800: #134e61;
+  --color-brand-900: #153f4f;
 }
 
 html,

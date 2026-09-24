@@ -5,6 +5,7 @@ behind the same API shape. Only `base_url`, key and model name change between th
 """
 
 import base64
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -113,20 +114,50 @@ class LLMClient:
 
     async def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         url = self._settings.llm_base_url.rstrip("/") + path
-        try:
-            resp = await self._http.post(
-                url,
-                json=body,
-                headers={"Authorization": f"Bearer {self._settings.llm_api_key}"},
-                timeout=self._settings.llm_timeout_seconds,
-            )
-        except httpx.HTTPError as exc:
-            raise LLMError(f"network error: {type(exc).__name__}", retryable=True) from None
+        # Newer models reject some classic parameters (reasoning models want
+        # max_completion_tokens and only the default temperature). Adapt and resend instead
+        # of failing, so switching models is only a config change.
+        for _ in range(len(_PARAMETER_FIXES) + 1):
+            try:
+                resp = await self._http.post(
+                    url,
+                    json=body,
+                    headers={"Authorization": f"Bearer {self._settings.llm_api_key}"},
+                    timeout=self._settings.llm_timeout_seconds,
+                )
+            except httpx.HTTPError as exc:
+                raise LLMError(f"network error: {type(exc).__name__}", retryable=True) from None
+            if resp.status_code == 400 and _fix_rejected_parameter(body, resp.text):
+                continue
+            break
         if resp.status_code == 429 or resp.status_code >= 500:
             raise LLMError(f"provider busy (HTTP {resp.status_code})", retryable=True)
         if resp.is_error:
-            raise LLMError(f"provider rejected request (HTTP {resp.status_code})", retryable=False)
+            raise LLMError(
+                f"provider rejected request (HTTP {resp.status_code}): {resp.text[:300]}",
+                retryable=False,
+            )
         try:
             return resp.json()
         except ValueError:
             raise LLMError("non-JSON response from LLM provider", retryable=True) from None
+
+
+def _rename_max_tokens(body: dict[str, Any]) -> None:
+    body["max_completion_tokens"] = body.pop("max_tokens")
+
+
+_PARAMETER_FIXES = {
+    "max_tokens": _rename_max_tokens,
+    "temperature": lambda body: body.pop("temperature"),
+}
+
+
+def _fix_rejected_parameter(body: dict[str, Any], error_text: str) -> bool:
+    """If a 400 names a parameter we can drop or rename, change `body` and return True."""
+    text = error_text.lower()
+    for param, fix in _PARAMETER_FIXES.items():
+        if param in body and re.search(rf"\b{param}\b", text):
+            fix(body)
+            return True
+    return False

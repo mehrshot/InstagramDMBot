@@ -1,7 +1,8 @@
 import type { Dict } from "./fa";
 
 const en: Dict = {
-  appName: "DM Assistant",
+  appName: "Javab",
+  tagline: "No DM goes unanswered",
   panelTitle: (shop) => `${shop} panel`,
   langName: "English",
   otherLang: "فارسی",

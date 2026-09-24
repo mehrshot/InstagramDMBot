@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>نقشه‌ی لانچ ربات دایرکت</title>
+<title>نقشه‌ی لانچ جواب</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -230,7 +230,7 @@
 <main>
 
 <header class="top">
-  <span class="eyebrow">ربات پاسخ‌گوی دایرکت · برای تیم (مسئول بک‌اند + علی)</span>
+  <span class="eyebrow">«جواب» · برای تیم (مسئول بک‌اند + علی)</span>
   <h1>نقشه‌ی لانچ: از کد آماده تا اولین مشتری</h1>
   <p class="lede">کد بک‌اند کامل و تست‌شده است. هر چیزی که از اینجا به بعد مانده، <strong>بیرون از کد</strong> است: ساختن حساب‌ها، خریدن سرور، تنظیم متا، تست و گرفتن تأیید. این صفحه همه‌ی آن‌ها را به ترتیب درست، قدم‌به‌قدم و بدون فرض دانش قبلی توضیح می‌دهد.</p>
   <div class="facts">
@@ -330,10 +330,21 @@
         <div class="step-head"><span class="step-num">۰.۲</span><h3 id="s0-2-h">شرکت خارجی و مشاوره‌ی حقوقی</h3><span class="chip me">مسئول بک‌اند</span><span class="chip block">مانع فاز ۷</span></div>
         <dl class="kv"><dt>چرا</dt><dd>متا مدارک شرکت ایرانی را برای Business Verification قبول نمی‌کند. بدون آن، ربات فقط برای پیج‌های تستر کار می‌کند و فروش عمومی ممکن نیست.</dd></dl>
         <ol class="how">
-          <li>با یک مشاور آشنا به تحریم‌ها و ثبت شرکت خارجی صحبت کنید (ریسک‌ها و مسیر درست).</li>
-          <li>کشور را انتخاب کنید. رایج‌ها: <strong>UK Ltd</strong> (ثبت آنلاین و سریع)، <strong>US LLC</strong>، <strong>امارات</strong> یا <strong>ترکیه</strong> (اگر کسی آنجا هست).</li>
-          <li>ثبت را شروع کنید. <strong>منتظرش نمانید</strong>؛ فازهای ۱ تا ۶ بدون شرکت هم جلو می‌روند.</li>
+          <li><strong>اول مشاوره‌ی حقوقی</strong> با کسی که هم ثبت شرکت خارجی و هم تحریم‌ها را می‌شناسد. سوال اصلی: شرکتی که مالک یا مدیرش ساکن ایران است و به فروشگاه‌های ایرانی خدمات می‌دهد، با قوانین تحریم کشور محل ثبت و شرایط متا (شرکت آمریکایی) چه ریسکی دارد.</li>
+          <li><strong>بهترین حالت: یک شریک یا عضو خانواده‌ی مورد اعتماد که ساکن خارج از ایران است</strong> و واقعاً مدیر شرکت می‌شود. تقریباً همه‌ی مراحل (احراز هویت، حساب بانکی، تلفن، تأیید متا) با او ساده‌تر و مطمئن‌تر است.</li>
+          <li>کشور را انتخاب کنید. رایج‌ترین: <strong>UK Ltd</strong>، ثبت آنلاین در Companies House. نکته‌ی مهم: از نوامبر ۲۰۲۵ <strong>احراز هویت مدیران اجباری است</strong>؛ یا با گذرنامه‌ی بیومتریک از طریق اپ GOV.UK One Login، یا از طریق یک شرکت خدمات ثبت مجاز (ACSP) که از راه دور انجام می‌دهد. این شرکت‌ها قوانین ضدپولشویی دارند و ممکن است متقاضی ساکن ایران را نپذیرند؛ قبل از پرداخت بپرسید.</li>
+          <li><strong>مدارکی که متا قبول می‌کند</strong> (باید به اسم شرکت باشد، نه شخص): گواهی ثبت شرکت (Certificate of Incorporation)، مدرک ثبت یا مجوز کسب، مدرک مالیاتی رسمی، <strong>صورتحساب بانکی شرکت</strong> یا قبض خدمات. صورتحساب و قبض باید مال ۹۰ روز اخیر باشد. سخت‌ترین قسمت معمولاً <strong>حساب بانکی شرکت</strong> است؛ از همان مشاور بپرسید.</li>
+          <li>ثبت را شروع کنید، ولی <strong>منتظرش نمانید</strong>؛ فازهای ۱ تا ۶ بدون شرکت هم جلو می‌روند.</li>
         </ol>
+        <div class="callout warn"><strong>چطور شانس قبولی را بالا ببرید</strong>
+          <ul>
+            <li>اسم قانونی دقیقاً یکسان در همه‌جا: Companies House، Business Portfolio متا، فوتر سایت، صفحه‌ی Privacy، صورتحساب بانکی (مثلاً فقط «Javab Ltd»، نه گاهی «Javab Limited»).</li>
+            <li>یک آدرس و یک شماره تلفن (قابل دریافت تماس و پیامک) در همه‌ی مدارک و فرم‌ها.</li>
+            <li>سایت <code>javab.app</code> با اسم و آدرس شرکت در فوتر، و ایمیل روی همان دامنه.</li>
+            <li>تأیید دامنه در متا با رکورد DNS (قدم ۷.۱).</li>
+            <li>هیچ‌کس نمی‌تواند قبولی را تضمین کند؛ متا دلیل رد را معمولاً کلی می‌گوید. با اطلاعات هماهنگ، دوباره فرستادن معمولاً جواب می‌دهد.</li>
+          </ul>
+        </div>
         <div class="callout crit"><strong>مدرک ساختگی نه</strong><p>همه‌ی اطلاعات باید واقعی و قابل اثبات باشد. مدرک جعلی یعنی بن دائمی اکانت و اپ.</p></div>
         <dl class="kv"><dt>خروجی</dt><dd>شرکت ثبت‌شده، مدارک رسمی، آدرس و تلفن قابل تأیید (برای فاز ۷)</dd></dl>
       </div>
@@ -388,25 +399,31 @@
     </li>
     <li class="step" id="s1-3"><input type="checkbox" aria-labelledby="s1-3-h">
       <div class="step-body">
-        <div class="step-head"><span class="step-num">۱.۳</span><h3 id="s1-3-h">سرویس هوش مصنوعی</h3><span class="chip me">مسئول بک‌اند</span><span class="chip">۱ ساعت</span></div>
-        <dl class="kv"><dt>چرا</dt><dd>مغز ربات. بدون آن، ربات فقط پیام «همکارم جواب می‌دهد» را می‌فرستد.</dd></dl>
+        <div class="step-head"><span class="step-num">۱.۳</span><h3 id="s1-3-h">سرویس هوش مصنوعی</h3><span class="chip me">مسئول بک‌اند</span><span class="chip">۳۰ دقیقه</span></div>
+        <dl class="kv"><dt>چرا</dt><dd>مغز ربات. بدون آن، ربات فقط پیام «همکارم جواب می‌دهد» را می‌فرستد. <strong>به سرور و متا وابسته نیست؛ همین امروز روی کامپیوتر خودتان تست می‌شود.</strong></dd></dl>
         <ol class="how">
-          <li>در یک درگاه ایرانی که API سازگار با OpenAI می‌دهد ثبت‌نام و حساب را شارژ کنید.</li>
-          <li>در مستنداتش چک کنید از <strong>tool calling / function calling</strong> پشتیبانی می‌کند (برای جستجوی محصولات لازم است).</li>
-          <li>این سه را یادداشت کنید:
-            <div class="table-wrap" style="margin-top:6px"><table>
-              <thead><tr><th>چیز</th><th>مثال</th><th>کجا می‌رود</th></tr></thead>
-              <tbody>
-                <tr><td>آدرس API</td><td><code>https://api.example.ir/v1</code></td><td><code>LLM_BASE_URL</code></td></tr>
-                <tr><td>کلید</td><td><code>sk-...</code></td><td><code>LLM_API_KEY</code></td></tr>
-                <tr><td>اسم مدل سریع</td><td>یک مدل mini / flash / haiku</td><td><code>LLM_MODEL</code></td></tr>
-                <tr><td>(اختیاری) مدلی که عکس می‌خواند</td><td>—</td><td><code>LLM_VISION_MODEL</code></td></tr>
-              </tbody>
-            </table></div>
-          </li>
-          <li><strong>کلید را برای Claude بفرستید</strong> تا چند مدل را روی سوال‌های فارسی واقعی مقایسه و پرامپت را تنظیم کند. این کار به سرور و متا وابسته نیست.</li>
+          <li>در <strong>AvalAI</strong> (<code>avalai.ir</code>) با شماره موبایل ثبت‌نام کنید: <strong>۲۰۰ هزار تومان اعتبار رایگان</strong> می‌دهد، که برای صدها تا هزاران جواب تستی کافی است. پرداخت ریالی است و از ایران کار می‌کند.</li>
+          <li>از پنل آن یک کلید API بسازید و این سه خط را در <code>backend/.env</code> بگذارید:
+            <pre><code>LLM_BASE_URL=https://api.avalai.ir/v1
+LLM_API_KEY=کلید-شما
+LLM_MODEL=اسم-یک-مدل-ارزان-با-function-calling</code></pre>
+            برای شروع ارزان‌ترین مدل‌های فهرست قیمت‌شان را امتحان کنید (مثلاً سری mini/nano/luna، deepseek flash یا gemini flash).</li>
+          <li>با یک دستور همه‌چیز را بسنجید: اتصال، کیفیت فارسی، جستجوی محصول، ارجاع به مدیر و هزینه‌ی هر جواب:
+            <pre><code>cd backend
+uv run python -m scripts.check_llm --price-in 0.10 --price-out 0.50</code></pre>
+            (عددها را از جدول قیمت همان مدل بگذارید.) هدف: <strong>۳ از ۳</strong>. مدل دیگری را با <code>--model اسم-مدل</code> امتحان کنید و ارزان‌ترینی که ۳ از ۳ می‌گیرد را نگه دارید.</li>
+          <li>خروجی را برای Claude بفرستید تا با جواب‌های واقعی، پرامپت فارسی تنظیم شود.</li>
         </ol>
-        <dl class="kv"><dt>خروجی</dt><dd>سه مقدار بالا، ذخیره در گاوصندوق</dd></dl>
+        <div class="callout warn"><strong>چرا سهمیه‌ی رایگان گوگل (Gemini) برای محصول اصلی مناسب نیست</strong>
+          <ul>
+            <li>گوگل ایران را پشتیبانی نمی‌کند؛ ساختن اکانت و کلید از ایران ممکن نیست و خطر بسته شدن کلید هست.</li>
+            <li>طبق شرایط گوگل، در نسخه‌ی رایگان <strong>پیام‌ها برای بهبود مدل‌هایش استفاده می‌شود و ممکن است آدم‌ها آن را بخوانند</strong>. دایرکت مشتری‌ها اطلاعات شخصی است و با صفحه‌ی حریم خصوصی ما تناقض دارد.</li>
+            <li>گوگل سقف رایگان را عدد ثابتی اعلام نمی‌کند و بدون خبر تغییرش می‌دهد. هر جواب ربات چند هزار توکن مصرف می‌کند (اطلاعات فروشگاه همراه هر سوال فرستاده می‌شود)؛ سقف‌های رایگان بقیه (Groq، OpenRouter) هم برای بیش از چند ده جواب در روز کافی نیست.</li>
+            <li>در مقابل، با ارزان‌ترین مدل‌ها هزینه‌ی هر جواب حدود <strong>یک دهم سنت</strong> است (حدود ۱ دلار برای هر ۱۰۰۰ جواب)؛ ناچیز در برابر قیمت اشتراک.</li>
+          </ul>
+          <p>بعد از ثبت شرکت خارجی، می‌شود مستقیم از OpenAI یا Google (نسخه‌ی پولی، بدون آموزش روی داده‌ها) هم استفاده کرد؛ کد فقط با عوض کردن همین سه خط جابه‌جا می‌شود.</p>
+        </div>
+        <dl class="kv"><dt>خروجی</dt><dd>سه مقدار بالا در <code>.env</code> و گاوصندوق + نتیجه‌ی <code>check_llm</code></dd></dl>
       </div>
     </li>
     <li class="step" id="s1-4"><input type="checkbox" aria-labelledby="s1-4-h">
@@ -503,7 +520,7 @@
         <ol class="how">
           <li>در پنل DNS دامنه یک رکورد بسازید: نوع <code>A</code>، اسم <code>api</code>، مقدار = IP سرور.</li>
           <li>ممکن است تا چند ساعت طول بکشد. برای چک کردن، در کامپیوتر خودتان:
-            <pre><code>nslookup api.your-domain.com</code></pre>
+            <pre><code>nslookup api.javab.app</code></pre>
             باید IP سرور را نشان دهد.</li>
         </ol>
         <p class="muted">رکورد پنل (مثلاً <code>panel</code>) را بعداً با علی می‌سازید (قدم ۴.۳).</p>
@@ -534,8 +551,8 @@ ufw allow 22 &amp;&amp; ufw allow 80 &amp;&amp; ufw allow 443 &amp;&amp; ufw --f
             <pre><code>curl -fsSL https://get.docker.com | sh</code></pre></li>
           <li>در گیت‌هاب یک توکن فقط‌خواندنی بسازید: <strong>Settings ← Developer settings ← Fine-grained tokens</strong>، دسترسی Contents: Read روی همین ریپو.</li>
           <li>کد را بگیرید (موقع پرسیدن رمز، توکن را بدهید):
-            <pre><code>git clone https://github.com/mehrshot/InstagramDMBot.git /opt/dmbot
-cd /opt/dmbot</code></pre></li>
+            <pre><code>git clone https://github.com/mehrshot/InstagramDMBot.git /opt/javab
+cd /opt/javab</code></pre></li>
         </ol>
       </div>
     </li>
@@ -556,10 +573,10 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
               <thead><tr><th>متغیر</th><th>مقدار</th></tr></thead>
               <tbody>
                 <tr><td><code>ENVIRONMENT</code></td><td><code>production</code></td></tr>
-                <tr><td><code>API_DOMAIN</code></td><td><code>api.your-domain.com</code></td></tr>
-                <tr><td><code>PUBLIC_BASE_URL</code></td><td><code>https://api.your-domain.com</code></td></tr>
-                <tr><td><code>FRONTEND_URL</code></td><td>آدرس پنل، مثلاً <code>https://panel.your-domain.com</code></td></tr>
-                <tr><td><code>CORS_ORIGINS</code></td><td><code>["https://panel.your-domain.com"]</code></td></tr>
+                <tr><td><code>API_DOMAIN</code></td><td><code>api.javab.app</code></td></tr>
+                <tr><td><code>PUBLIC_BASE_URL</code></td><td><code>https://api.javab.app</code></td></tr>
+                <tr><td><code>FRONTEND_URL</code></td><td>آدرس پنل، مثلاً <code>https://app.javab.app</code></td></tr>
+                <tr><td><code>CORS_ORIGINS</code></td><td><code>["https://app.javab.app"]</code></td></tr>
                 <tr><td><code>META_APP_ID</code> / <code>META_APP_SECRET</code></td><td>قدم ۱.۶</td></tr>
                 <tr><td><code>LLM_BASE_URL</code> / <code>LLM_API_KEY</code> / <code>LLM_MODEL</code></td><td>قدم ۱.۳</td></tr>
               </tbody>
@@ -576,7 +593,7 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
         <ol class="how">
           <li><pre><code>docker compose up -d --build</code></pre></li>
           <li>وضعیت: <pre><code>docker compose ps</code></pre> همه‌ی سرویس‌ها (db، redis، api، worker، caddy) باید <code>running</code> باشند.</li>
-          <li>در مرورگر باز کنید: <code>https://api.your-domain.com/health/ready</code> ← باید <code>{"status":"ready"}</code> ببینید. قفل HTTPS کنار آدرس یعنی گواهی خودکار گرفته شده.</li>
+          <li>در مرورگر باز کنید: <code>https://api.javab.app/health/ready</code> ← باید <code>{"status":"ready"}</code> ببینید. قفل HTTPS کنار آدرس یعنی گواهی خودکار گرفته شده.</li>
           <li>اگر خطا بود، لاگ‌ها: <pre><code>docker compose logs -f api</code></pre> (خروجی را برای Claude بفرستید).</li>
         </ol>
         <dl class="kv"><dt>خروجی</dt><dd>بک‌اند روی اینترنت، با HTTPS</dd></dl>
@@ -587,9 +604,9 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
         <div class="step-head"><span class="step-num">۲.۷</span><h3 id="s2-7-h">بکاپ خودکار و مانیتورینگ</h3><span class="chip me">مسئول بک‌اند</span><span class="chip">۳۰ دقیقه</span></div>
         <ol class="how">
           <li>بکاپ هر شب ساعت ۴ (با <code>crontab -e</code> این خط را اضافه کنید):
-            <pre><code>0 4 * * * mkdir -p /root/backups &amp;&amp; cd /opt/dmbot &amp;&amp; docker compose exec -T db pg_dump -U app app | gzip &gt; /root/backups/db-$(date +\%F).sql.gz</code></pre></li>
+            <pre><code>0 4 * * * mkdir -p /root/backups &amp;&amp; cd /opt/javab &amp;&amp; docker compose exec -T db pg_dump -U app app | gzip &gt; /root/backups/db-$(date +\%F).sql.gz</code></pre></li>
           <li>هر هفته یک نسخه از <code>/root/backups</code> را بیرون از سرور هم نگه دارید (بکاپی که فقط روی همان سرور باشد، با خراب شدن سرور از دست می‌رود).</li>
-          <li>یک مانیتور رایگان (مثلاً UptimeRobot) روی <code>https://api.your-domain.com/health/ready</code> بگذارید تا اگر سرور خوابید، ایمیل بگیرید.</li>
+          <li>یک مانیتور رایگان (مثلاً UptimeRobot) روی <code>https://api.javab.app/health/ready</code> بگذارید تا اگر سرور خوابید، ایمیل بگیرید.</li>
         </ol>
       </div>
     </li>
@@ -613,7 +630,7 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
         <div class="step-head"><span class="step-num">۳.۱</span><h3 id="s3-1-h">آدرس بازگشت اتصال (OAuth Redirect URI)</h3><span class="chip me">مسئول بک‌اند</span></div>
         <ol class="how">
           <li>در بخش <strong>Set up Instagram business login</strong>، در قسمت Redirect URL دقیقاً این را وارد و ذخیره کنید:
-            <pre><code>https://api.your-domain.com/api/v1/instagram/callback</code></pre></li>
+            <pre><code>https://api.javab.app/api/v1/instagram/callback</code></pre></li>
         </ol>
         <div class="callout warn"><strong>حتی یک حرف فرق نکند</strong><p>بدون اسلش اضافه در آخر، با <code>https</code>. هر اختلافی = خطای «Invalid redirect_uri» موقع اتصال.</p></div>
       </div>
@@ -624,7 +641,7 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
         <ol class="how">
           <li>در بخش <strong>Configure webhooks</strong>:
             <div class="table-wrap" style="margin-top:6px"><table><tbody>
-              <tr><td>Callback URL</td><td><code>https://api.your-domain.com/webhooks/instagram</code></td></tr>
+              <tr><td>Callback URL</td><td><code>https://api.javab.app/webhooks/instagram</code></td></tr>
               <tr><td>Verify token</td><td>همان <code>META_WEBHOOK_VERIFY_TOKEN</code> که در ‎.env گذاشتید</td></tr>
             </tbody></table></div></li>
           <li><strong>Verify and save</strong> را بزنید. اگر سرور درست کار کند، سبز می‌شود.</li>
@@ -839,9 +856,9 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
         <p><strong>App settings ← Basic</strong>:</p>
         <div class="table-wrap"><table><tbody>
           <tr><td>App icon</td><td>لوگو ۱۰۲۴×۱۰۲۴</td></tr>
-          <tr><td>Privacy policy URL</td><td><code>https://panel.your-domain.com/privacy</code></td></tr>
-          <tr><td>Terms of service URL</td><td><code>https://panel.your-domain.com/terms</code></td></tr>
-          <tr><td>User data deletion</td><td><code>https://panel.your-domain.com/data-deletion</code></td></tr>
+          <tr><td>Privacy policy URL</td><td><code>https://app.javab.app/privacy</code></td></tr>
+          <tr><td>Terms of service URL</td><td><code>https://app.javab.app/terms</code></td></tr>
+          <tr><td>User data deletion</td><td><code>https://app.javab.app/data-deletion</code></td></tr>
           <tr><td>Category / Contact email</td><td>Business · <code>support@دامنه</code></td></tr>
         </tbody></table></div>
       </div>
@@ -970,7 +987,7 @@ openssl rand -hex 16                          # META_WEBHOOK_VERIFY_TOKEN</code>
   <div class="table-wrap"><table>
     <thead><tr><th>وقتی این آماده شد</th><th>Claude این کار را می‌کند</th></tr></thead>
     <tbody>
-      <tr><td>کلید هوش مصنوعی (۱.۳)</td><td>مقایسه‌ی مدل‌ها روی سوال‌های فارسی و تنظیم پرامپت</td></tr>
+      <tr><td>خروجی <code>check_llm</code> (۱.۳)</td><td>انتخاب مدل و تنظیم پرامپت فارسی با جواب‌های واقعی</td></tr>
       <tr><td>نوع پنل علی (۴.۳)</td><td>تنظیمات Docker و Caddy برای دیپلوی پنل</td></tr>
       <tr><td>نیاز به متن حقوقی (۴.۴)</td><td>پیش‌نویس Privacy، Terms و Data deletion</td></tr>
       <tr><td>نتیجه‌ی تست واقعی (۵.۵)</td><td>رفع اختلاف‌ها با API واقعی متا</td></tr>

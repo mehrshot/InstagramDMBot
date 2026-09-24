@@ -73,7 +73,7 @@ const privacy: Page = {
     en: (
       <>
         <p>
-          DM Assistant (“we”, “the service”) lets online shops connect their Instagram professional account so an AI assistant can answer customers' Direct
+          Javab (“we”, “the service”) lets online shops connect their Instagram professional account so an AI assistant can answer customers' Direct
           Messages using information the shop provides. This policy explains what data we process and how.
         </p>
         <h2>Data we receive from Instagram</h2>
@@ -110,7 +110,7 @@ const privacy: Page = {
     fa: (
       <>
         <p>
-          «دستیار دایرکت» به فروشگاه‌های آنلاین امکان می‌دهد حساب حرفه‌ای اینستاگرام خود را وصل کنند تا یک دستیار هوشمند با اطلاعاتی که فروشگاه وارد کرده به
+          «جواب» به فروشگاه‌های آنلاین امکان می‌دهد حساب حرفه‌ای اینستاگرام خود را وصل کنند تا یک دستیار هوشمند با اطلاعاتی که فروشگاه وارد کرده به
           دایرکت مشتری‌ها جواب بدهد. این سند توضیح می‌دهد چه داده‌ای را و چطور پردازش می‌کنیم.
         </p>
         <h2>داده‌هایی که از اینستاگرام دریافت می‌کنیم</h2>
@@ -149,9 +149,9 @@ const terms: Page = {
   body: {
     en: (
       <>
-        <p>By creating an account or connecting an Instagram account to DM Assistant you agree to these terms.</p>
+        <p>By creating an account or connecting an Instagram account to Javab you agree to these terms.</p>
         <h2>The service</h2>
-        <p>DM Assistant replies to Instagram Direct Messages on behalf of your shop using the information and products you provide, and shows the conversations in your panel.</p>
+        <p>Javab replies to Instagram Direct Messages on behalf of your shop using the information and products you provide, and shows the conversations in your panel.</p>
         <h2>Your responsibilities</h2>
         <ul>
           <li>You must own or be authorized to manage the Instagram account you connect, and comply with Instagram's Terms of Use and Meta's Platform Terms.</li>
@@ -173,9 +173,9 @@ const terms: Page = {
     ),
     fa: (
       <>
-        <p>با ساختن حساب یا اتصال پیج اینستاگرام به «دستیار دایرکت»، این شرایط را می‌پذیرید.</p>
+        <p>با ساختن حساب یا اتصال پیج اینستاگرام به «جواب»، این شرایط را می‌پذیرید.</p>
         <h2>خدمت</h2>
-        <p>دستیار دایرکت با اطلاعات و محصولاتی که وارد می‌کنید، از طرف فروشگاه شما به دایرکت‌های اینستاگرام جواب می‌دهد و گفتگوها را در پنل نشان می‌دهد.</p>
+        <p>«جواب» با اطلاعات و محصولاتی که وارد می‌کنید، از طرف فروشگاه شما به دایرکت‌های اینستاگرام جواب می‌دهد و گفتگوها را در پنل نشان می‌دهد.</p>
         <h2>مسئولیت‌های شما</h2>
         <ul>
           <li>پیجی که وصل می‌کنید باید متعلق به شما باشد یا اجازه‌ی مدیریتش را داشته باشید، و باید قوانین اینستاگرام و متا را رعایت کنید.</li>
@@ -218,7 +218,7 @@ const dataDeletion: Page = {
         </p>
         <h2>Customers of a shop</h2>
         <p>
-          If you messaged a shop that uses DM Assistant and want your messages deleted, email {mail} with your Instagram username and the shop's username. We will delete your
+          If you messaged a shop that uses Javab and want your messages deleted, email {mail} with your Instagram username and the shop's username. We will delete your
           conversation with that shop within 30 days.
         </p>
       </>
@@ -236,7 +236,7 @@ const dataDeletion: Page = {
         <h2>حذف دسترسی از خود اینستاگرام</h2>
         <p>در اینستاگرام: Settings ← Security ← Apps and websites ← حذف برنامه. با این کار ربات متوقف می‌شود؛ برای پاک شدن داده‌های ذخیره‌شده مراحل بالا را انجام دهید.</p>
         <h2>مشتری‌های فروشگاه‌ها</h2>
-        <p>اگر به فروشگاهی که از دستیار دایرکت استفاده می‌کند پیام داده‌اید و می‌خواهید پیام‌هایتان حذف شود، نام کاربری اینستاگرام خود و فروشگاه را به {mail} بفرستید تا ظرف ۳۰ روز حذف شود.</p>
+        <p>اگر به فروشگاهی که از «جواب» استفاده می‌کند پیام داده‌اید و می‌خواهید پیام‌هایتان حذف شود، نام کاربری اینستاگرام خود و فروشگاه را به {mail} بفرستید تا ظرف ۳۰ روز حذف شود.</p>
       </>
     ),
   },

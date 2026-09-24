@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from typing import Literal
 
@@ -8,9 +9,15 @@ _INSECURE_SECRET = "change-me"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # APP_ENV_FILE="" disables the .env file; the test suite uses this so a developer's local
+    # settings (dry run, real API keys) never leak into tests.
+    model_config = SettingsConfigDict(
+        env_file=os.environ.get("APP_ENV_FILE", ".env") or None,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-    app_name: str = "DM Assistant"
+    app_name: str = "Javab"
     environment: str = "development"  # development | production | test
     public_base_url: str = "http://localhost:8000"
     # The panel; users are sent back here after connecting Instagram.

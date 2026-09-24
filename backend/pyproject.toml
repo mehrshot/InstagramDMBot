@@ -1,7 +1,7 @@
 [project]
-name = "dm-assistant"
+name = "javab"
 version = "0.1.0"
-description = "AI assistant that answers Instagram DMs for online shops"
+description = "Javab: AI assistant that answers Instagram DMs for online shops"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

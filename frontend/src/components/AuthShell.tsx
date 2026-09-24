@@ -9,8 +9,10 @@ export default function AuthShell({ title, subtitle, children, footer }: { title
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-brand-50 to-slate-50 px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/favicon.svg" alt="" className="mb-3 size-12" />
-          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+          <img src="/favicon.svg" alt="" className="mb-2 size-12" />
+          <div className="text-3xl font-black tracking-tight text-brand-700">{t.appName}</div>
+          <p className="mb-6 text-xs font-medium text-brand-600">{t.tagline}</p>
+          <h1 className="text-xl font-bold text-slate-900">{title}</h1>
           <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">{children}</div>

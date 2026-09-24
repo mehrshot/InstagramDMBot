@@ -1,6 +1,8 @@
 import os
 
-# Must be set before app modules read settings.
+# Must be set before app modules read settings. Ignore any local backend/.env so tests always
+# run against these values only.
+os.environ["APP_ENV_FILE"] = ""
 os.environ["ENVIRONMENT"] = "test"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite://"
 os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-123456"
@@ -117,11 +119,25 @@ class FakeWeb:
         self.llm_replies: list[dict[str, Any]] = []
         self.llm_requests: list[dict[str, Any]] = []
         self.llm_status = 200
+        # Parameters the fake model refuses, like newer OpenAI models do with max_tokens.
+        self.llm_rejects: set[str] = set()
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         if request.url.host == "llm.test":
             body = json.loads(request.content)
             self.llm_requests.append(body)
+            for param in self.llm_rejects & body.keys():
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "message": f"Unsupported parameter: '{param}' is not supported "
+                            "with this model.",
+                            "type": "invalid_request_error",
+                            "param": param,
+                        }
+                    },
+                )
             if self.llm_status != 200:
                 return httpx.Response(self.llm_status, json={"error": "busy"})
             message = self.llm_replies.pop(0) if self.llm_replies else {"content": "باشه"}
