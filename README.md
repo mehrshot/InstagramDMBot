@@ -3,6 +3,7 @@
 بک‌اند پایتون (FastAPI) برای رباتی که با اطلاعات هر فروشگاه به دایرکت‌های اینستاگرام جواب می‌دهد.
 
 - **راهنمای کامل فرانت‌اند (برای علی):** [docs/FRONTEND.md](docs/FRONTEND.md)
+- **پنل (فرانت‌اند):** [frontend/](frontend/README.md)
 - **اسکیمای API:** [docs/openapi.json](docs/openapi.json)
 - **نقشه‌ی لانچ (کارهای بیرون از کد، قدم‌به‌قدم):** [docs/launch-guide.html](docs/launch-guide.html) — فایل را دانلود و در مرورگر باز کنید، یا [نسخه‌ی آنلاین](https://claude.ai/artifact/MjudMjNEeSQR3Yze5A3BXn)
 
