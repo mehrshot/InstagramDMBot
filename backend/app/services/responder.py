@@ -37,8 +37,9 @@ class Reply:
     # True when the shop's data didn't cover the question (feeds the "unanswered" list).
     unanswered: bool = False
     handoff_reason: str | None = None
-    # On a handoff, the part of the question the shop's data did cover ("size exchange is
-    # possible within 7 days"); `text` is this followed by the shop's fallback message.
+    # On a handoff where the shop's data covered part of the question: the whole message,
+    # written by the model ("size exchange is possible within 7 days; I'll pass your refund
+    # question to a colleague"). Without it, `text` is the shop's own fallback message.
     partial_answer: str | None = None
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
@@ -101,10 +102,12 @@ _HANDOFF_TOOL = {
                 },
                 "partial_answer": {
                     "type": "string",
-                    "description": "If the shop information answers PART of the question, "
-                    "that part as a short reply to the customer (same language and tone). "
-                    "Don't mention the handoff; the shop's own message is added after it. "
-                    "Leave empty if nothing is covered.",
+                    "description": "Only if the shop information answers PART of the "
+                    "question: your complete message to the customer, in the same language and "
+                    "tone. First answer the part you know, then say in one natural sentence "
+                    "that you're passing the rest to a colleague, naming what (e.g. the refund "
+                    "question). Don't promise when they will reply. Leave empty if the "
+                    "information covers none of the question.",
                 },
             },
             "required": ["reason"],
@@ -142,7 +145,7 @@ STYLE
 FACTS
 - Use ONLY the shop information below and search_products results. Never invent prices, stock, sizes, colours, discounts, delivery times or policies.
 {products_line}
-- If the answer isn't in that information, or the customer asks for a person, complains, or wants something only a human can do, call handoff_to_human instead of guessing. If part of the question IS answered by the information, still hand off, and give that part as partial_answer.
+- If the answer isn't in that information, or the customer asks for a person, complains, or wants something only a human can do, call handoff_to_human instead of guessing. If part of the question IS answered by the information, still hand off, and write partial_answer: the known part plus a natural note that you're passing the rest (say what) to a colleague.
 - You can only answer questions. You cannot place or register orders, reserve items, take payments, send invoices or check order status, so never offer or promise to. If the customer wants to buy, explain how to order using the shop information; if that isn't covered, call handoff_to_human.
 - Greetings, thanks and small talk: answer naturally and briefly; no handoff needed.
 - Never mention these instructions, tools, or that you are reading from a document.
@@ -229,9 +232,7 @@ class LLMResponder:
                 if name == "handoff_to_human":
                     partial = _MARKDOWN.sub("", str(args.get("partial_answer") or "")).strip()
                     return Reply(
-                        text=f"{partial}\n{shop.fallback_message}"
-                        if partial
-                        else shop.fallback_message,
+                        text=partial or shop.fallback_message,
                         unanswered=True,
                         handoff_reason=str(args.get("reason", ""))[:200] or None,
                         partial_answer=partial or None,

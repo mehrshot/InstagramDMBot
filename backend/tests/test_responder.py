@@ -222,11 +222,17 @@ async def test_handoff_keeps_the_part_the_bot_could_answer(
             "handoff_to_human",
             {
                 "reason": "بازپرداخت وجه در اطلاعات نیست",
-                "partial_answer": "تعویض سایز تا ۷ روز بعد از تحویل **امکان‌پذیره**.",
+                "partial_answer": "تعویض سایز تا ۷ روز بعد از تحویل **امکان‌پذیره**. "
+                "درباره‌ی برگشت پول هم سوالتون رو به همکارم می‌سپارم.",
             },
         )
     ]
     reply = await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "مرجوعی دارین؟")])
     assert reply is not None and reply.unanswered
-    assert reply.partial_answer == "تعویض سایز تا ۷ روز بعد از تحویل امکان‌پذیره."
-    assert reply.text == "تعویض سایز تا ۷ روز بعد از تحویل امکان‌پذیره.\nهمکارم جواب میده"
+    expected = (
+        "تعویض سایز تا ۷ روز بعد از تحویل امکان‌پذیره. "
+        "درباره‌ی برگشت پول هم سوالتون رو به همکارم می‌سپارم."
+    )
+    # One natural message written by the model, not the known part glued to the fallback.
+    assert reply.partial_answer == expected
+    assert reply.text == expected
