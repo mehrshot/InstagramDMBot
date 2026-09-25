@@ -230,3 +230,49 @@ async def test_search_normalizes_persian(db: AsyncSession) -> None:
     assert [(p.color, p.size) for p in found] == [("مشکی", "44")]
     assert await products.search_products(db, shop_id, "مانتو", color="قرمز") == []
     assert len(await products.search_products(db, shop_id, "مشکی")) == 0  # colour isn't a name
+
+
+def test_catalogue_overview_cheapest_first_and_stock() -> None:
+    import uuid
+
+    shop_id = uuid.uuid4()
+    items = [
+        Product(
+            shop_id=shop_id,
+            name="مانتو کتان",
+            category="مانتو",
+            color="مشکی",
+            size="44",
+            price=1250000,
+            stock=3,
+            extra={},
+        ),
+        Product(
+            shop_id=shop_id,
+            name="مانتو کتان",
+            category="مانتو",
+            color="سرمه‌ای",
+            size="44",
+            price=1250000,
+            stock=0,
+            extra={},
+        ),
+        Product(
+            shop_id=shop_id,
+            name="شومیز حریر",
+            color="سفید",
+            size="آزاد",
+            price=890000,
+            stock=7,
+            extra={},
+        ),
+        Product(shop_id=shop_id, name="شال", price=300000, stock=0, extra={}),
+    ]
+    lines = products.catalogue_overview(items).splitlines()
+    assert lines == [
+        "- شال; 300,000 toman; out of stock",
+        "- شومیز حریر; 890,000 toman; colours in stock: سفید; sizes in stock: آزاد",
+        "- مانتو کتان (مانتو); 1,250,000 toman; colours in stock: مشکی; sizes in stock: 44",
+    ]
+    capped = products.catalogue_overview(items, max_lines=1).splitlines()
+    assert capped[-1] == "- ...and 2 more products (use search_products)"

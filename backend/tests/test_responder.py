@@ -95,7 +95,7 @@ async def test_missing_variant_suggests_others(
     assert reply is not None
     result = reply.tool_trace[0]["result"]
     assert result["matches"] == []
-    assert result["same_product_other_variants"][0]["color"] == "مشکی"
+    assert result["other_in_stock_variants"][0]["color"] == "مشکی"
 
 
 async def test_handoff_sends_fallback_and_flags(
@@ -222,8 +222,9 @@ async def test_handoff_keeps_the_part_the_bot_could_answer(
             "handoff_to_human",
             {
                 "reason": "بازپرداخت وجه در اطلاعات نیست",
-                "partial_answer": "تعویض سایز تا ۷ روز بعد از تحویل **امکان‌پذیره**. "
+                "message": "تعویض سایز تا ۷ روز بعد از تحویل **امکان‌پذیره**. "
                 "درباره‌ی برگشت پول هم سوالتون رو به همکارم می‌سپارم.",
+                "answered_part": True,
             },
         )
     ]
@@ -236,3 +237,59 @@ async def test_handoff_keeps_the_part_the_bot_could_answer(
     # One natural message written by the model, not the known part glued to the fallback.
     assert reply.partial_answer == expected
     assert reply.text == expected
+
+
+async def test_plain_handoff_uses_the_models_own_words(
+    db: AsyncSession, shop: Shop, fake_web: FakeWeb, llm_on
+) -> None:
+    """An English customer must not get the shop's Persian template."""
+    fake_web.llm_replies = [
+        FakeWeb.tool_call(
+            "handoff_to_human",
+            {
+                "reason": "ارسال به کانادا در اطلاعات نیست",
+                "message": "Good question! I'll ask a colleague about shipping to Canada.",
+                "answered_part": False,
+            },
+        )
+    ]
+    reply = await _responder(db, fake_web).generate(
+        shop, [ChatTurn("customer", "do you ship to Ontario?")]
+    )
+    assert reply is not None and reply.unanswered
+    assert reply.text == "Good question! I'll ask a colleague about shipping to Canada."
+    assert reply.partial_answer is None  # nothing answered: not re-sent while waiting
+
+
+async def test_sold_out_variant_offers_in_stock_alternatives(
+    db: AsyncSession, shop: Shop, fake_web: FakeWeb, llm_on
+) -> None:
+    db.add(
+        Product(shop_id=shop.id, name="مانتو کتان", color="سرمه‌ای", size="44", stock=0, extra={})
+    )
+    await db.commit()
+    fake_web.llm_replies = [
+        FakeWeb.tool_call("search_products", {"query": "مانتو کتان", "color": "سرمه‌ای"}),
+        {"content": "سرمه‌ای تموم شده، مشکیش هست"},
+    ]
+    reply = await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "سرمه‌ای؟")])
+    assert reply is not None
+    result = reply.tool_trace[0]["result"]
+    assert [m["in_stock"] for m in result["matches"]] == [False]
+    # Only what can actually be sold is suggested.
+    assert [(v["color"], v["in_stock"]) for v in result["other_in_stock_variants"]] == [
+        ("مشکی", True)
+    ]
+
+
+async def test_prompt_has_catalogue_and_rules(
+    db: AsyncSession, shop: Shop, fake_web: FakeWeb, llm_on
+) -> None:
+    fake_web.llm_replies = [{"content": "سلام"}]
+    await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "چی می‌فروشید؟")])
+    system = fake_web.llm_requests[0]["messages"][0]["content"]
+    assert "PRODUCT OVERVIEW" in system
+    assert "- مانتو کتان; 1,250,000 toman; colours in stock: مشکی; sizes in stock: 44" in system
+    assert "«همکارم جواب میده»" in system  # the owner's handoff wording, as a tone guide
+    assert "Never hand these off" in system  # weather & small talk
+    assert "shop's AI assistant" in system  # honest about being a bot

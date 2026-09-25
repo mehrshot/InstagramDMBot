@@ -391,3 +391,51 @@ async def sync_due_sources(db: AsyncSession, http: httpx.AsyncClient) -> int:
         except ProductSourceError:
             continue  # already recorded on the source; the panel shows it
     return synced
+
+
+def _in_stock(p: Product) -> bool:
+    return p.stock is None or p.stock > 0
+
+
+def catalogue_overview(items: list[Product], max_lines: int = 80) -> str:
+    """One line per product name, cheapest first: price range, in-stock colours and sizes.
+
+    Gives the bot a picture of the whole shop for browsing questions ("what do you sell?",
+    "what's the cheapest?") that a name search can't answer. Exact stock stays with the
+    search tool.
+    """
+    groups: dict[str, list[Product]] = {}
+    for p in items:
+        groups.setdefault(p.name.strip(), []).append(p)
+
+    def unique(values: list[str | None]) -> list[str]:
+        return list(dict.fromkeys(v.strip() for v in values if v and v.strip()))
+
+    rows: list[tuple[int, str]] = []
+    for name, variants in groups.items():
+        prices = sorted({int(v.price) for v in variants if v.price is not None})
+        available = [v for v in variants if _in_stock(v)]
+        parts = [f"- {name}"]
+        category = next((v.category for v in variants if v.category), None)
+        if category:
+            parts[0] += f" ({category})"
+        if prices:
+            price = f"{prices[0]:,}" if len(prices) == 1 else f"{prices[0]:,} to {prices[-1]:,}"
+            parts.append(f"{price} toman")
+        if not available:
+            parts.append("out of stock")
+        else:
+            colours = unique([v.color for v in available])
+            sizes = unique([v.size for v in available])
+            if colours:
+                parts.append("colours in stock: " + ", ".join(colours))
+            if sizes:
+                parts.append("sizes in stock: " + ", ".join(sizes))
+        rows.append((prices[0] if prices else 10**15, "; ".join(parts)))
+
+    rows.sort(key=lambda row: row[0])
+    lines = [line for _, line in rows]
+    if len(lines) > max_lines:
+        hidden = len(lines) - max_lines
+        lines = lines[:max_lines] + [f"- ...and {hidden} more products (use search_products)"]
+    return "\n".join(lines)
