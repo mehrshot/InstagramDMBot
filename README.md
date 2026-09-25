@@ -9,6 +9,7 @@
 - **پنل (فرانت‌اند):** [frontend/](frontend/README.md)
 - **اسکیمای API:** [docs/openapi.json](docs/openapi.json)
 - **برنامه‌ی کانال‌های جدید (واتس‌اپ، تلگرام، بله):** [docs/channels-plan.md](docs/channels-plan.md)
+- **راهنمای اجرایی راه‌اندازی (دامنه، متا، سرور، اولین تست واقعی):** [docs/setup-guide.html](docs/setup-guide.html) — [نسخه‌ی آنلاین](https://claude.ai/artifact/Y8e2fe5JsHpLCkxrBHz8Y1)
 - **نقشه‌ی لانچ (کارهای بیرون از کد، قدم‌به‌قدم):** [docs/launch-guide.html](docs/launch-guide.html) — فایل را دانلود و در مرورگر باز کنید، یا [نسخه‌ی آنلاین](https://claude.ai/artifact/MjudMjNEeSQR3Yze5A3BXn)
 
 ## اجرای کل پروژه روی کامپیوتر خودتان (بک‌اند + پنل)
@@ -68,7 +69,7 @@ backend/
   scripts/       شبیه‌ساز دایرکت، داده‌ی نمونه، خروجی OpenAPI
   tests/
 frontend/          پنل فروشگاه (React + TypeScript + Vite) — frontend/README.md
-deploy/Caddyfile   HTTPS خودکار
+deploy/            Caddyfile (HTTPS خودکار) و web.Dockerfile (ساخت پنل)
 docker-compose.yml
 ```
 
@@ -154,13 +155,21 @@ uv run pytest
 cp .env.example .env
 ```
 
-مقادیر `.env` را پر کنید (راهنمای هر مقدار داخل فایل هست) و رکورد DNS دامنه‌ی `API_DOMAIN` را به IP سرور بزنید، بعد:
+مقادیر `.env` را پر کنید (راهنمای هر مقدار داخل فایل هست) و رکورد DNS هر دو دامنه‌ی `API_DOMAIN` و `PANEL_DOMAIN` را به IP سرور بزنید، بعد:
 
 ```bash
 docker compose up -d --build
 ```
 
-Migrationها موقع بالا آمدن سرویس `api` خودکار اجرا می‌شوند.
+این دستور همه‌چیز را بالا می‌آورد: دیتابیس، Redis، بک‌اند، worker و سرویس `web` (پنل ساخته‌شده از `frontend/` + HTTPS خودکار برای هر دو دامنه با Caddy). Migrationها موقع بالا آمدن `api` خودکار اجرا می‌شوند.
+
+به‌روزرسانی بعد از هر push:
+
+```bash
+git pull && docker compose up -d --build
+```
+
+راهنمای کامل و قدم‌به‌قدم: [docs/setup-guide.html](docs/setup-guide.html).
 
 ## قرارداد API برای فرانت
 

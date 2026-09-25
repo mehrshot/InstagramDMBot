@@ -1,0 +1,9 @@
+# Build context of deploy/web.Dockerfile is the repo root: keep local artefacts out of it.
+.git
+.claude
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/*.db
+**/.env

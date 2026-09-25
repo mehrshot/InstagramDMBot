@@ -1,6 +1,28 @@
-# Caddy obtains and renews the HTTPS certificate automatically.
-# Meta requires a valid HTTPS URL for OAuth redirects and webhooks.
+# Caddy obtains and renews the HTTPS certificates automatically for both domains.
+# Meta requires valid HTTPS URLs for OAuth redirects, webhooks and the privacy policy.
+
+# The API (webhooks, OAuth callback, panel API)
 {$API_DOMAIN} {
 	encode gzip
 	reverse_proxy api:8000
+}
+
+# The shop panel (a single-page app): every route falls back to index.html.
+{$PANEL_DOMAIN} {
+	encode gzip
+	root * /srv/panel
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	# Build files have content hashes in their names, so they can be cached for good;
+	# everything else (index.html) must always be fresh so updates show up at once.
+	@hashed path /assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@page not path /assets/*
+	header @page Cache-Control "no-cache"
+
+	try_files {path} /index.html
+	file_server
 }
