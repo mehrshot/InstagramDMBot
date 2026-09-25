@@ -12,6 +12,7 @@ Decisions that are easy to get wrong live here:
   fallback message once, and the question waits in the owner's panel until the owner replies.
 """
 
+import dataclasses
 import logging
 import uuid
 from datetime import datetime, timedelta
@@ -189,11 +190,14 @@ async def reply_to_conversation(
         return
     if reply.unanswered and conversation.handoff_open:
         # The customer already got the "a colleague will answer" message; repeating it on
-        # every follow-up is noise. The new question is added to the open handoff instead.
-        _open_handoff(conversation, history, reply.handoff_reason)
+        # every follow-up is noise. Only the part the bot could answer (if any) is sent; the
+        # question joins the open handoff below, once, after sending.
         history[-1].unanswered = True
-        await db.commit()
-        return
+        if not reply.partial_answer:
+            _open_handoff(conversation, history, reply.handoff_reason)
+            await db.commit()
+            return
+        reply = dataclasses.replace(reply, text=reply.partial_answer)
 
     token = decrypt_secret(account.access_token_encrypted)
     for index, chunk in enumerate(split_text(reply.text)):
@@ -225,7 +229,9 @@ async def reply_to_conversation(
         await db.commit()
 
     if reply.unanswered:
-        # Even if the fallback couldn't be delivered, the owner must see the question.
+        # Opens a handoff, or adds to the open one. Runs only after sending (a retryable
+        # failure raised above), so a retried job records the question exactly once. Even if
+        # the message couldn't be delivered, the owner must see the question.
         _open_handoff(conversation, history, reply.handoff_reason)
     await db.commit()
 

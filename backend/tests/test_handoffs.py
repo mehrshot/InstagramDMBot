@@ -245,3 +245,54 @@ async def test_api_times_carry_timezone(
     [item] = (await client.get("/api/v1/handoffs", headers=auth_headers)).json()["items"]
     for value in (item["last_customer_message_at"], item["handoff"]["handed_off_at"]):
         assert value.endswith(("Z", "+00:00")), value
+
+
+async def test_partial_answer_while_waiting_sends_only_the_known_part(
+    shop: Shop, db: AsyncSession, queue: RecordingQueue, fake_meta: FakeMeta
+) -> None:
+    class Partial:
+        async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply:
+            return Reply(
+                text=f"تعویض سایز تا ۷ روز هست.\n{shop.fallback_message}",
+                unanswered=True,
+                handoff_reason="بازپرداخت در اطلاعات نیست",
+                partial_answer="تعویض سایز تا ۷ روز هست.",
+            )
+
+    await _customer(db, queue, fake_meta, "فاکتور رسمی میدید؟", PlaceholderResponder())
+    await _customer(db, queue, fake_meta, "مرجوعی دارین؟", Partial())
+    # First: the fallback. Second (handoff already open): only the part it knew, no repeat.
+    assert [m["message"]["text"] for m in fake_meta.sent] == [
+        "همکارم جواب میده",
+        "تعویض سایز تا ۷ روز هست.",
+    ]
+    conversation = await _conversation(db)
+    assert conversation.handoff_open
+    assert conversation.handoff_question == "فاکتور رسمی میدید؟\nمرجوعی دارین؟"
+
+
+async def test_retried_partial_answer_records_question_once(
+    shop: Shop, db: AsyncSession, queue: RecordingQueue, fake_meta: FakeMeta
+) -> None:
+    from app.services.instagram import InstagramError
+
+    class Partial:
+        async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply:
+            return Reply(text="x", unanswered=True, handoff_reason="r", partial_answer="تعویض هست.")
+
+    await _customer(db, queue, fake_meta, "فاکتور؟", PlaceholderResponder())
+    fake_meta.send_error = (400, {"error": {"message": "rate limited", "code": 4}})
+    with pytest.raises(InstagramError):
+        await _customer(db, queue, fake_meta, "مرجوعی؟", Partial())
+    fake_meta.send_error = None
+    conversation = await _conversation(db)
+    await reply_to_conversation(
+        db,
+        conversation.id,
+        as_utc(conversation.last_customer_message_at),
+        fake_meta.client(),
+        Partial(),
+    )
+    db.expire_all()
+    assert (await _conversation(db)).handoff_question == "فاکتور؟\nمرجوعی؟"
+    assert [m["message"]["text"] for m in fake_meta.sent] == ["همکارم جواب میده", "تعویض هست."]

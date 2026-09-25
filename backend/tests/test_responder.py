@@ -72,6 +72,7 @@ async def test_answers_from_product_lookup(
     assert "پست پیشتاز ۳ روزه" in system
     assert "هیچ‌وقت تخفیف نده" in system
     assert "Never use emoji" in system
+    assert "never offer or promise" in system  # no fake "I can register your order"
     # Consecutive customer messages are merged into one user turn.
     assert first["messages"][1] == {"role": "user", "content": "سلام\nمانتو کتان مشکی ۴۴ دارید؟"}
     assert {t["function"]["name"] for t in first["tools"]} == {
@@ -210,3 +211,22 @@ async def test_other_bad_requests_still_fail_clearly(
         await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "سلام")])
     assert not exc_info.value.retryable
     assert len(fake_web.llm_requests) == 1  # no pointless resends
+
+
+async def test_handoff_keeps_the_part_the_bot_could_answer(
+    db: AsyncSession, shop: Shop, fake_web: FakeWeb, llm_on
+) -> None:
+    """Asked about refunds when the shop only covers size exchange: say what's known, hand off."""
+    fake_web.llm_replies = [
+        FakeWeb.tool_call(
+            "handoff_to_human",
+            {
+                "reason": "بازپرداخت وجه در اطلاعات نیست",
+                "partial_answer": "تعویض سایز تا ۷ روز بعد از تحویل **امکان‌پذیره**.",
+            },
+        )
+    ]
+    reply = await _responder(db, fake_web).generate(shop, [ChatTurn("customer", "مرجوعی دارین؟")])
+    assert reply is not None and reply.unanswered
+    assert reply.partial_answer == "تعویض سایز تا ۷ روز بعد از تحویل امکان‌پذیره."
+    assert reply.text == "تعویض سایز تا ۷ روز بعد از تحویل امکان‌پذیره.\nهمکارم جواب میده"

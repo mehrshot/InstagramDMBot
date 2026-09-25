@@ -25,7 +25,18 @@ SCENARIOS = [
     ("سلام، مانتو کتان مشکی سایز ۴۴ دارید؟ قیمتش چنده؟", "product"),
     ("ارسال به شیراز چقدر طول میکشه؟", "knowledge"),
     ("برای شرکتمون فاکتور رسمی با کد اقتصادی صادر می‌کنید؟", "handoff"),
+    ("همون مانتو مشکی ۴۴ رو می‌خوام، برام ثبتش کن", "no_false_promise"),
 ]
+# Phrases that mean the bot claimed it can do something only a person can.
+_FALSE_PROMISES = (
+    "ثبت می‌کنم",
+    "ثبت میکنم",
+    "برات ثبت",
+    "براتون ثبت",
+    "ثبت کردم",
+    "ثبت شد",
+    "رزرو کردم",
+)
 
 
 async def _demo_shop(sessions: async_sessionmaker) -> Shop:
@@ -75,6 +86,9 @@ def _verdict(kind: str, reply) -> tuple[bool, str]:
             "پیشتاز" in reply.text or "۳" in reply.text or "3" in reply.text
         )
         return ok, "answered from shop info" if ok else "did not use shop info"
+    if kind == "no_false_promise":
+        promised = any(p in reply.text for p in _FALSE_PROMISES)
+        return not promised, "promised an order it can't place" if promised else "no false promise"
     ok = reply.unanswered
     return (
         ok,
