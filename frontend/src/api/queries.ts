@@ -7,6 +7,7 @@ export const keys = {
   dashboard: ["dashboard"] as const,
   shop: ["shop"] as const,
   instagram: ["instagram"] as const,
+  posts: ["instagram", "posts"] as const,
   sections: ["knowledge", "sections"] as const,
   knowledge: ["knowledge", "entries"] as const,
   source: ["products", "source"] as const,

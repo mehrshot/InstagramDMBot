@@ -23,5 +23,24 @@ class InstagramAccount(UUIDPk, Timestamps, Base):
     access_token_encrypted: Mapped[str] = mapped_column(Text)
     token_expires_at: Mapped[datetime | None] = mapped_column()
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    posts_synced_at: Mapped[datetime | None] = mapped_column()
 
     shop: Mapped["Shop"] = relationship(back_populates="instagram_account")
+
+
+class InstagramPost(UUIDPk, Timestamps, Base):
+    """A post from the shop's own Instagram feed, read so the bot can share it in a DM."""
+
+    __tablename__ = "instagram_posts"
+
+    shop_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("shops.id", ondelete="CASCADE"), index=True
+    )
+    # Instagram media id: what the Send API needs to share the post as a native card.
+    ig_media_id: Mapped[str] = mapped_column(String(64))
+    permalink: Mapped[str] = mapped_column(Text)
+    caption: Mapped[str] = mapped_column(Text, default="")
+    media_type: Mapped[str] = mapped_column(String(32), default="")
+    # Image to show in the panel (thumbnail for videos).
+    preview_url: Mapped[str | None] = mapped_column(Text)
+    posted_at: Mapped[datetime | None] = mapped_column()

@@ -30,5 +30,6 @@ export type HandoffPage = S["HandoffPage"];
 export type Unanswered = S["UnansweredOut"];
 export type PlaygroundTurn = S["PlaygroundTurn"];
 export type PlaygroundReply = S["PlaygroundOut"];
+export type Posts = S["PostsOut"];
 
 export type ConversationFilter = "all" | "needs_owner" | "unanswered" | "paused";

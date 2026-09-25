@@ -17,6 +17,7 @@ from app.models import (
     Conversation,
     HandoffResolution,
     InstagramAccount,
+    InstagramPost,
     KnowledgeEntry,
     KnowledgeSection,
     Message,
@@ -82,6 +83,19 @@ CONVERSATIONS = [
         True,
     ),
 ]
+# Instagram posts of the demo page: (media id, shortcode, caption, days ago). The bot links a
+# post to a product when the caption names it (or its code); the last one names no product.
+POSTS = [
+    (
+        "17900000000000001",
+        "DEMOmanto01",
+        "مانتو کتان ترک 🖤 مشکی و سرمه‌ای، سایز ۴۰ تا ۴۴\nکد M-101 · دوخت خودمون",
+        3,
+    ),
+    ("17900000000000002", "DEMOharir02", "شومیز حریر سفید، سبک و خنک برای مهمونی‌ها 🤍 فری‌سایز", 9),
+    ("17900000000000003", "DEMOlinen03", "شومیز لینن کرم ☀️ مناسب تابستون", 15),
+    ("17900000000000004", "DEMOstudio4", "پشت صحنه‌ی عکاسی کالکشن جدید 📸", 20),
+]
 # username -> (question, reason, handed off minutes ago, resolved minutes ago or None)
 HANDOFFS = {
     "neda_k": ("سلام\nفاکتور رسمی برای شرکت میدید؟", "مشتری فاکتور رسمی می‌خواهد", 14, None),
@@ -109,10 +123,22 @@ async def main() -> None:
                 username="mahsa.boutique",
                 access_token_encrypted=encrypt_secret("demo-token"),
                 token_expires_at=now + timedelta(days=55),
+                posts_synced_at=now - timedelta(hours=2),
             )
         )
         db.add_all(
             KnowledgeEntry(shop_id=shop_id, section=s, title=t, content=c) for s, t, c in KNOWLEDGE
+        )
+        db.add_all(
+            InstagramPost(
+                shop_id=shop_id,
+                ig_media_id=media_id,
+                permalink=f"https://www.instagram.com/p/{code}/",
+                caption=caption,
+                media_type="CAROUSEL_ALBUM",
+                posted_at=now - timedelta(days=days),
+            )
+            for media_id, code, caption, days in POSTS
         )
         db.add(
             ProductSource(

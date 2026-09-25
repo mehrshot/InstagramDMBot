@@ -25,7 +25,7 @@ from app.core.timeutil import as_utc, utcnow
 from app.models import Product, ProductSource, ProductSourceKind
 
 # Our canonical fields, in the order the panel shows them. `name` is the only required one.
-FIELDS = ("name", "sku", "category", "color", "size", "price", "stock", "description")
+FIELDS = ("name", "sku", "category", "color", "size", "price", "stock", "description", "post_url")
 FIELD_LABELS = {
     "name": "نام محصول",
     "sku": "کد محصول",
@@ -35,6 +35,7 @@ FIELD_LABELS = {
     "price": "قیمت (تومان)",
     "stock": "موجودی",
     "description": "توضیحات",
+    "post_url": "لینک پست اینستاگرام",
 }
 _SYNONYMS = {
     "name": [
@@ -56,9 +57,20 @@ _SYNONYMS = {
     "price": ["قیمت", "مبلغ", "price", "فی"],
     "stock": ["موجودی", "تعداد", "انبار", "stock", "qty", "quantity", "inventory"],
     "description": ["توضیحات", "توضیح", "شرح", "جنس", "description", "desc", "details"],
+    "post_url": ["لینک پست", "پست اینستاگرام", "پست", "اینستاگرام", "post", "instagram"],
 }
 TEMPLATE_HEADERS = [FIELD_LABELS[f] for f in FIELDS]
-TEMPLATE_EXAMPLE = ["مانتو کتان", "M-101", "مانتو", "مشکی", "44", "1250000", "3", "کتان ترک"]
+TEMPLATE_EXAMPLE = [
+    "مانتو کتان",
+    "M-101",
+    "مانتو",
+    "مشکی",
+    "44",
+    "1250000",
+    "3",
+    "کتان ترک",
+    "https://www.instagram.com/p/XXXXXXXXXXX/",
+]
 
 _SHEETS_HOST = "docs.google.com"
 _DRIVE_HOST = "drive.google.com"
@@ -243,6 +255,14 @@ def parse_stock(value: str) -> int | None:
     return None
 
 
+def _instagram_url(value: str) -> str | None:
+    """Keep only real Instagram post/reel links; anything else in that column is ignored."""
+    value = value.strip()
+    return (
+        value[:500] if re.match(r"^https?://(www\.)?instagram\.com/(p|reel|tv)/", value) else None
+    )
+
+
 def _mapped_value(row: dict[str, str], mapping: dict[str, str], field: str) -> str:
     return row.get(mapping[field], "").strip() if field in mapping else ""
 
@@ -266,6 +286,7 @@ def rows_to_products(table: Table, mapping: dict[str, str]) -> list[dict[str, An
                 "price": Decimal(price) if price is not None else None,
                 "stock": parse_stock(get("stock")) if "stock" in mapping else None,
                 "description": get("description") or None,
+                "post_url": _instagram_url(get("post_url")),
                 "extra": {h: v for h, v in row.items() if h not in mapped_headers and v},
             }
         )
@@ -397,7 +418,9 @@ def _in_stock(p: Product) -> bool:
     return p.stock is None or p.stock > 0
 
 
-def catalogue_overview(items: list[Product], max_lines: int = 80) -> str:
+def catalogue_overview(
+    items: list[Product], max_lines: int = 80, post_refs: dict[str, str] | None = None
+) -> str:
     """One line per product name, cheapest first: price range, in-stock colours and sizes.
 
     Gives the bot a picture of the whole shop for browsing questions ("what do you sell?",
@@ -431,6 +454,8 @@ def catalogue_overview(items: list[Product], max_lines: int = 80) -> str:
                 parts.append("colours in stock: " + ", ".join(colours))
             if sizes:
                 parts.append("sizes in stock: " + ", ".join(sizes))
+        if post_refs and name in post_refs:
+            parts.append(f"post {post_refs[name]}")
         rows.append((prices[0] if prices else 10**15, "; ".join(parts)))
 
     rows.sort(key=lambda row: row[0])

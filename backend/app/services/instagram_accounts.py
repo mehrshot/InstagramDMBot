@@ -8,6 +8,7 @@ from app.core.security import decrypt_secret, encrypt_secret
 from app.core.timeutil import as_utc, utcnow
 from app.models import InstagramAccount, Shop
 from app.services.instagram import InstagramClient, InstagramError
+from app.services.posts import sync_posts
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,10 @@ async def connect_account(
     account.token_expires_at = token.expires_at
     account.is_active = True
     await db.commit()
+    try:
+        await sync_posts(db, account, instagram)
+    except InstagramError as exc:
+        logger.warning("could not read posts for shop %s: %s", shop.id, exc)
     return account
 
 

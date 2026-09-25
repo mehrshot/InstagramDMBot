@@ -559,3 +559,19 @@ npx openapi-typescript docs/openapi.json -o src/api/schema.d.ts
 ```bash
 cd backend && uv run python -m scripts.export_openapi
 ```
+
+---
+
+## ۱۰. پست‌های اینستاگرام (اضافه‌شده بعد از نسخه‌ی اول)
+
+ربات وقتی محصولی را پیشنهاد می‌دهد، پست اینستاگرامی همان محصول را هم به‌صورت کارت پست برای مشتری می‌فرستد. پیاده‌سازی پنل انجام شده؛ این بخش برای مرجع است.
+
+| کار | درخواست |
+|---|---|
+| پست‌ها و محصولات وصل‌شده به هر پست | `GET /instagram/posts` → `{synced_at, total, products_without_post, items: [{permalink, caption, preview_url, media_type, posted_at, products}]}` |
+| خواندن دوباره از اینستاگرام | `POST /instagram/posts/sync` (همان خروجی؛ پیج وصل نباشد → 400، خطای اینستاگرام → 502) |
+
+- **تست ربات:** پاسخ `POST /playground/chat` حالا `posts: [{permalink, caption, preview_url}]` هم دارد؛ هر کدام یک کارت پست زیر جواب ربات (`components/PostCard.tsx`).
+- **صندوق پیام:** پستی که ربات فرستاده یک پیام ربات با متن `[پست] <permalink>` است؛ به‌جای حباب متن، کارت پست نمایش داده می‌شود (`sharedPostUrl`).
+- **فایل محصولات:** فیلد جدید `post_url` («لینک پست اینستاگرام») خودکار در مرحله‌ی تطبیق ستون‌ها ظاهر می‌شود (از `GET /products/fields`).
+- **تست ربات، جستجوی محصول:** کلید جایگزین‌ها در `product_lookups` حالا `other_in_stock_variants` است (فقط رنگ/سایزهای موجود).

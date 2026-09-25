@@ -64,6 +64,12 @@ class PlaygroundIn(BaseModel):
     messages: list[PlaygroundTurn] = Field(min_length=1, max_length=30)
 
 
+class PostCard(BaseModel):
+    permalink: str
+    caption: str
+    preview_url: str | None
+
+
 class PlaygroundOut(BaseModel):
     reply: str
     # True means in a real DM the bot would hand this over to the owner.
@@ -71,6 +77,8 @@ class PlaygroundOut(BaseModel):
     handoff_reason: str | None
     # What the bot looked up in the product list (for "why did it say that?").
     product_lookups: list[dict[str, Any]]
+    # Instagram posts sent right after the reply, as post cards.
+    posts: list[PostCard] = []
     ai_ready: bool
 
 
@@ -188,5 +196,9 @@ async def playground_chat(
         unanswered=reply.unanswered,
         handoff_reason=reply.handoff_reason,
         product_lookups=reply.tool_trace,
+        posts=[
+            PostCard(permalink=p.permalink, caption=p.caption[:300], preview_url=p.preview_url)
+            for p in reply.posts
+        ],
         ai_ready=llm.configured,
     )

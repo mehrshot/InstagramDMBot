@@ -274,6 +274,23 @@ const en: Dict = {
     bot: "Bot",
   },
 
+  posts: {
+    cardTitle: "Instagram post",
+    view: "View post",
+    title: "Posts",
+    subtitle: "When the bot recommends a product, it also sends the customer that product's post.",
+    howLinked: "The bot links each product to the newest post whose caption mentions the product's name or code. To pick a specific post, put its link in the \"Instagram post link\" column of your product file.",
+    synced: (when: string) => `Last read from Instagram: ${when}`,
+    neverSynced: "Posts haven't been read from Instagram yet.",
+    total: (n: string) => `${n} posts`,
+    sync: "Read posts again",
+    syncedToast: "Posts updated",
+    linkedTo: "Product",
+    noProduct: "Not linked to a product",
+    withoutPost: (n: string) => `${n} products have no post`,
+    empty: "No posts found.",
+  },
+
   inbox: {
     title: "Inbox",
     filterAll: "All",

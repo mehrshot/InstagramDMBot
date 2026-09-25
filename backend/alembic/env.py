@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 from app.core.config import get_settings
 from app.models import Base
+from app.models.base import UTCDateTime
 
 config = context.config
 if config.config_file_name is not None:
@@ -15,12 +16,21 @@ target_metadata = Base.metadata
 database_url = get_settings().database_url
 
 
+def _render_item(type_, obj, autogen_context):
+    # Our UTCDateTime is a plain timezone-aware DateTime in the database; writing it as such
+    # keeps migrations free of app imports.
+    if type_ == "type" and isinstance(obj, UTCDateTime):
+        return "sa.DateTime(timezone=True)"
+    return False
+
+
 def _configure(connection=None) -> None:
     context.configure(
         connection=connection,
         url=None if connection else database_url,
         target_metadata=target_metadata,
         compare_type=True,
+        render_item=_render_item,
         # SQLite can't ALTER most things; batch mode makes local/dev migrations work there too.
         render_as_batch=database_url.startswith("sqlite"),
         literal_binds=connection is None,

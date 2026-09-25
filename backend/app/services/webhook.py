@@ -67,7 +67,8 @@ def parse_messaging_events(payload: dict[str, Any]) -> list[MessagingEvent]:
                     timestamp=timestamp,
                     attachment_types=tuple(
                         str(a.get("type", "attachment")) for a in message.get("attachments") or []
-                    ),
+                    )
+                    + (("story_reply",) if (message.get("reply_to") or {}).get("story") else ()),
                 )
             )
     return events

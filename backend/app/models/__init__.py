@@ -1,6 +1,6 @@
 from app.models.base import Base
 from app.models.conversation import Conversation, HandoffResolution, Message, MessageSender
-from app.models.instagram import InstagramAccount
+from app.models.instagram import InstagramAccount, InstagramPost
 from app.models.knowledge import (
     KnowledgeEntry,
     KnowledgeSection,
@@ -15,6 +15,7 @@ __all__ = [
     "Conversation",
     "HandoffResolution",
     "InstagramAccount",
+    "InstagramPost",
     "KnowledgeEntry",
     "KnowledgeSection",
     "Message",

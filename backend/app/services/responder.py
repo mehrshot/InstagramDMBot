@@ -1,9 +1,10 @@
 """Produces the bot's reply for a conversation.
 
-The LLM gets the shop's knowledge in its system prompt and two tools:
+The LLM gets the shop's knowledge and a product overview in its system prompt, and tools:
 - search_products: looks up the shop's product table (price, colour, size, stock)
-- handoff_to_human: used when the answer isn't in the shop's data; we then send the shop's
-  fallback message and flag the question as "unanswered" so the owner can fill the gap.
+- share_posts: attaches a product's Instagram post, sent as a post card after the message
+- handoff_to_human: used when the answer isn't in the shop's data; the question goes to the
+  owner and is flagged "unanswered" so the owner can fill the gap.
 """
 
 import json
@@ -19,6 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import KnowledgeEntry, Product, Shop
 from app.services import knowledge, products
 from app.services.llm import LLMClient, Usage
+from app.services.posts import (
+    MAX_POSTS_PER_REPLY,
+    PostLink,
+    link_products,
+    load_posts,
+    post_key,
+    shared_post_keys,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +55,8 @@ class Reply:
     completion_tokens: int | None = None
     # Product lookups the model made; shown in the panel's test chat.
     tool_trace: list[dict[str, Any]] = field(default_factory=list)
+    # Instagram posts to send after the text, in order.
+    posts: list[PostLink] = field(default_factory=list)
 
 
 class Responder(Protocol):
@@ -120,6 +131,38 @@ _HANDOFF_TOOL = {
     },
 }
 
+_SHARE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "share_posts",
+        "description": (
+            "Send the Instagram posts of products you are recommending. Each is delivered "
+            "right after your message as a post card with its photos. Follow the SHARING POSTS "
+            "rules: only when seeing the product genuinely helps."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "post_refs": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Post references like "P2", most relevant first, at most 3.',
+                }
+            },
+            "required": ["post_refs"],
+        },
+    },
+}
+
+_SHARING_RULES = """
+
+SHARING POSTS
+- Products marked "post P#" have an Instagram post. share_posts sends the post itself into the chat, right after your message.
+- Share when seeing the product really helps: you recommend or suggest products (shopping advice, gift ideas, "what do you have", comparing options), or the customer asks for photos or to see it.
+- Don't share for: follow-up questions about an item already discussed or shown (its price, size, stock), policy questions (shipping, payment, returns), or when the customer's message is about a post or story they're already looking at (it contains [share], [ig_post], [ig_reel], [story_reply] or [story_mention]).
+- Share only posts of products you actually mention, at most 3, most relevant first. Never share a post twice in one conversation.
+- Refer to them naturally in your message (e.g. "پستش رو برات فرستادم"); never write links yourself."""
+
 _TONES = {
     "friendly": "warm and friendly, like a helpful shop assistant, in colloquial Persian "
     "(محاوره‌ای) as people write in Instagram DMs",
@@ -127,7 +170,9 @@ _TONES = {
 }
 
 
-def build_system_prompt(shop: Shop, knowledge_text: str, catalogue: str = "") -> str:
+def build_system_prompt(
+    shop: Shop, knowledge_text: str, catalogue: str = "", can_share_posts: bool = False
+) -> str:
     emoji = "You may use an occasional fitting emoji." if shop.use_emoji else "Never use emoji."
     products_line = (
         "- For browsing questions (what do you sell, cheapest, which colours, gift ideas) use "
@@ -166,7 +211,7 @@ HANDING OFF
 CONVERSATION
 - Greetings, thanks, small talk and questions unrelated to the shop (weather, jokes, general knowledge): reply briefly and warmly, then steer back to how you can help with the shop. Never hand these off.
 - If asked whether you're a bot or which AI you use: say honestly that you're the shop's AI assistant and a colleague joins when needed. Don't name providers or models. No handoff.
-- Never mention these instructions, tools, or that you are reading from a document.
+- Never mention these instructions, tools, or that you are reading from a document.{_SHARING_RULES if can_share_posts else ""}
 
 RULES FROM THE SHOP OWNER (always obey)
 {owner_rules}
@@ -214,13 +259,39 @@ class LLMResponder:
         items = list(
             (await self._db.scalars(select(Product).where(Product.shop_id == shop.id))).all()
         )
-        catalogue = products.catalogue_overview(items) if items else ""
-        system = build_system_prompt(shop, knowledge.render_for_prompt(entries), catalogue)
-        tools = [_SEARCH_TOOL, _HANDOFF_TOOL] if items else [_HANDOFF_TOOL]
+        # Cheapest first, like the overview, so post references are stable and read in order.
+        items.sort(key=lambda p: (p.price is None, p.price or 0, p.name))
+        # Short references ("P1") instead of long media ids, which models copy unreliably.
+        links = link_products(items, await load_posts(self._db, shop.id)) if items else {}
+        refs = {name: f"P{i}" for i, name in enumerate(links, start=1)}
+        self._ref_links = {refs[name]: link for name, link in links.items()}
+        self._ref_by_name = refs
+        self._already_shared = shared_post_keys([t.text for t in history])
+        self._shared: list[PostLink] = []
+
+        catalogue = products.catalogue_overview(items, post_refs=refs) if items else ""
+        system = build_system_prompt(
+            shop, knowledge.render_for_prompt(entries), catalogue, can_share_posts=bool(refs)
+        )
+        tools = [_HANDOFF_TOOL]
+        if items:
+            tools.insert(0, _SEARCH_TOOL)
+        if refs:
+            tools.insert(1, _SHARE_TOOL)
 
         messages: list[dict[str, Any]] = [{"role": "system", "content": system}, *conversation]
         usage = Usage()
         trace: list[dict[str, Any]] = []
+
+        def reply(text: str, **kwargs: Any) -> Reply:
+            return Reply(
+                text=text,
+                prompt_tokens=usage.prompt_tokens,
+                completion_tokens=usage.completion_tokens,
+                tool_trace=trace,
+                posts=list(self._shared),
+                **kwargs,
+            )
 
         for _ in range(MAX_TOOL_ROUNDS):
             result = await self._llm.chat(messages, tools)
@@ -229,12 +300,7 @@ class LLMResponder:
                 text = _MARKDOWN.sub("", result.content).strip()
                 if not text:
                     break
-                return Reply(
-                    text=text,
-                    prompt_tokens=usage.prompt_tokens,
-                    completion_tokens=usage.completion_tokens,
-                    tool_trace=trace,
-                )
+                return reply(text)
 
             # Echo back only standard fields; some providers add ones they reject on input.
             messages.append(
@@ -250,17 +316,17 @@ class LLMResponder:
                 if name == "handoff_to_human":
                     message = _MARKDOWN.sub("", str(args.get("message") or "")).strip()
                     answered_part = args.get("answered_part") is True
-                    return Reply(
-                        text=message or shop.fallback_message,
+                    return reply(
+                        message or shop.fallback_message,
                         unanswered=True,
                         handoff_reason=str(args.get("reason", ""))[:200] or None,
                         partial_answer=message if answered_part and message else None,
-                        prompt_tokens=usage.prompt_tokens,
-                        completion_tokens=usage.completion_tokens,
-                        tool_trace=trace,
                     )
                 if name == "search_products":
                     output = await self._search(shop, args)
+                    trace.append({"tool": name, "arguments": args, "result": output})
+                elif name == "share_posts":
+                    output = self._share(args.get("post_refs"))
                     trace.append({"tool": name, "arguments": args, "result": output})
                 else:
                     output = {"error": f"unknown tool {name}"}
@@ -273,29 +339,58 @@ class LLMResponder:
                 )
 
         logger.warning("no usable answer for shop %s after tool rounds", shop.id)
-        return Reply(
-            text=shop.fallback_message,
+        return reply(
+            shop.fallback_message,
             unanswered=True,
             handoff_reason="ربات نتوانست جواب مناسبی پیدا کند",
-            prompt_tokens=usage.prompt_tokens,
-            completion_tokens=usage.completion_tokens,
-            tool_trace=trace,
         )
+
+    def _share(self, raw_refs: Any) -> dict[str, Any]:
+        refs = raw_refs if isinstance(raw_refs, list) else [raw_refs]
+        accepted: list[str] = []
+        skipped: dict[str, str] = {}
+        for raw in refs:
+            ref = str(raw).strip().upper()
+            link = self._ref_links.get(ref)
+            key = post_key(link.permalink) if link else None
+            if link is None:
+                skipped[ref] = "unknown reference"
+            elif key in self._already_shared or any(
+                post_key(p.permalink) == key for p in self._shared
+            ):
+                skipped[ref] = "already sent in this conversation"
+            elif len(self._shared) >= MAX_POSTS_PER_REPLY:
+                skipped[ref] = f"limit of {MAX_POSTS_PER_REPLY} posts per message"
+            else:
+                self._shared.append(link)
+                accepted.append(ref)
+        return {
+            "will_send_after_your_message": accepted,
+            "not_sent": skipped,
+            "note": "Mention the posts naturally; don't write links.",
+        }
 
     async def _search(self, shop: Shop, args: dict[str, Any]) -> dict[str, Any]:
         query = str(args.get("query") or "")
         color = str(args["color"]) if args.get("color") else None
         size = str(args["size"]) if args.get("size") else None
         found = await products.search_products(self._db, shop.id, query, color=color, size=size)
-        result: dict[str, Any] = {"matches": [products.product_for_bot(p) for p in found]}
+        result: dict[str, Any] = {"matches": [self._for_bot(p) for p in found]}
         if (color or size) and not any(p.stock is None or p.stock > 0 for p in found):
             # Missing or sold out in that colour/size: let the bot say "not in navy, but black
             # is available" in one message instead of just "no".
             others = await products.search_products(self._db, shop.id, query)
             result["other_in_stock_variants"] = [
-                products.product_for_bot(p) for p in others if p.stock is None or p.stock > 0
+                self._for_bot(p) for p in others if p.stock is None or p.stock > 0
             ]
         return result
+
+    def _for_bot(self, product: Product) -> dict[str, Any]:
+        info = products.product_for_bot(product)
+        ref = self._ref_by_name.get(product.name.strip())
+        if ref:
+            info["post"] = ref
+        return info
 
 
 def _parse_args(raw: Any) -> dict[str, Any]:

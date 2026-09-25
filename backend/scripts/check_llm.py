@@ -20,10 +20,10 @@ import httpx
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
-from app.models import Base, KnowledgeEntry, Product, Shop
+from app.models import Base, InstagramPost, KnowledgeEntry, Product, Shop
 from app.services.llm import LLMClient, LLMError
 from app.services.responder import ChatTurn, LLMResponder, Reply
-from scripts.seed_demo import KNOWLEDGE, PRODUCTS
+from scripts.seed_demo import KNOWLEDGE, POSTS, PRODUCTS
 
 FALLBACK = "سوالتون رو ثبت کردم، همکارم به زودی جواب میده 🙏"
 _FALSE_PROMISES = ("ثبت می‌کنم", "ثبت میکنم", "برات ثبت", "براتون ثبت", "ثبت کردم", "رزرو کردم")
@@ -45,41 +45,56 @@ class Scenario:
     expect: str  # what a good answer does, shown when it fails
     handoff: bool | None  # must hand off (True), must not (False), either (None)
     check: Callable[[str], bool] = lambda text: True
+    posts: bool | None = None  # must share Instagram posts (True), must not (False), either
 
 
 SCENARIOS = [
+    # Products
     Scenario(
         "سلام، مانتو کتان مشکی سایز ۴۴ دارید؟ قیمتش چنده؟",
         "price 1,250,000",
         False,
         _has("۱,۲۵۰,۰۰۰", "1,250,000", "۱٬۲۵۰٬۰۰۰"),
     ),
-    Scenario("ارسال به شیراز چقدر طول میکشه؟", "3-5 working days", False, _has("۳", "3")),
     Scenario("مانتو سرمه ای 44 دارید؟", "sold out, offers black", False, _has("مشکی")),
     Scenario("محصولات فروشگاهتون چیه؟", "names the products", False, _has("شومیز")),
     Scenario(
         "ارزون ترین چیزی که میتونم ازتون بخرم چیه؟", "shirt, 890,000", False, _has("۸۹۰", "890")
     ),
+    # Sharing posts: when it helps, and only then
+    Scenario(
+        "میخوام برای دوستم کادو بخرم، ۲۰ سالشه. پیشنهادی دارید؟",
+        "recommends products and shares their posts",
+        False,
+        posts=True,
+    ),
+    Scenario("قیمت این چنده؟ [story_reply]", "doesn't re-send the story's post", None, posts=False),
+    # Shop information and handoffs
+    Scenario("ارسال به شیراز چقدر طول میکشه؟", "3-5 working days", False, _has("۳", "3"), False),
     Scenario(
         "امکان مرجوعی دارید؟",
         "size exchange within 7 days + hands off refunds",
         True,
         _has("۷", "7"),
+        False,
     ),
-    Scenario("برای شرکتمون فاکتور رسمی با کد اقتصادی صادر می‌کنید؟", "hands off", True),
+    Scenario("برای شرکتمون فاکتور رسمی با کد اقتصادی صادر می‌کنید؟", "hands off", True, posts=False),
     Scenario(
         "من مشتریتونم، یه تخفیف ریز نمیدید؟",
         "no invented discount, natural handoff",
         True,
         lambda t: t != FALLBACK and not _has("٪", "درصد")(t),
+        False,
     ),
     Scenario("Hey there. do you ship to ontario?", "replies in English", True, _mostly_latin),
-    Scenario("هوا چطوره امروز", "brief friendly reply, no handoff", False),
+    # Conversation
+    Scenario("هوا چطوره امروز", "brief friendly reply, no handoff", False, posts=False),
     Scenario(
         "سرویس هوش مصنوعی رو از کجا گرفتید؟",
         "honest, no provider names",
         False,
         lambda t: not _has("OpenAI", "GPT", "avalai", "AvalAI", "Gemini", "luna")(t),
+        False,
     ),
     Scenario(
         "همون مانتو مشکی ۴۴ رو می‌خوام، برام ثبتش کن",
@@ -112,12 +127,25 @@ async def _demo_shop(sessions: async_sessionmaker) -> Shop:
             )
             for sku, name, cat, color, size, price, stock in PRODUCTS
         )
+        db.add_all(
+            InstagramPost(
+                shop_id=shop.id,
+                ig_media_id=media_id,
+                permalink=f"https://www.instagram.com/p/{code}/",
+                caption=caption,
+            )
+            for media_id, code, caption, _days in POSTS
+        )
         await db.commit()
         return shop
 
 
 def _judge(s: Scenario, reply: Reply) -> str | None:
     """None when the reply is good, otherwise what went wrong."""
+    if s.posts is True and not reply.posts:
+        return "should have shared the product posts"
+    if s.posts is False and reply.posts:
+        return "shared posts where they don't help"
     if s.handoff is True and not reply.unanswered:
         return "should have handed off to the owner"
     if s.handoff is False and reply.unanswered:
@@ -159,6 +187,9 @@ async def main(model: str | None, price_in: float | None, price_out: float | Non
             total_in += reply.prompt_tokens or 0
             total_out += reply.completion_tokens or 0
             flag = " [handed off]" if reply.unanswered else ""
+            if reply.posts:
+                codes = [post.permalink.rstrip("/").rsplit("/", 1)[-1] for post in reply.posts]
+                flag += " + posts: " + ", ".join(codes)
             print(f"{'✓' if problem is None else '✗'} {s.ask}")
             print(f"  → {reply.text}{flag}")
             if problem:

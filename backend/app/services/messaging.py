@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.services.instagram import InstagramClient, InstagramError, split_text
 from app.services.llm import LLMError
+from app.services.posts import POST_MARKER, PostLink, post_key
 from app.services.responder import ChatTurn, Responder
 from app.services.webhook import MessagingEvent
 
@@ -111,7 +112,7 @@ async def _record_echo(
         )
     )
     for message in pending:
-        if message.text == event.text:
+        if _is_our_echo(message.text, event):
             message.ig_message_id = event.mid
             await _commit_ignoring_duplicate(db)
             return
@@ -200,6 +201,7 @@ async def reply_to_conversation(
         reply = dataclasses.replace(reply, text=reply.partial_answer)
 
     token = decrypt_secret(account.access_token_encrypted)
+    delivered = True
     for index, chunk in enumerate(split_text(reply.text)):
         message = Message(
             conversation_id=conversation.id,
@@ -224,9 +226,13 @@ async def reply_to_conversation(
                 logger.warning("instagram token revoked for shop %s", shop.id)
             else:
                 logger.warning("send failed for conversation %s: %s", conversation.id, exc)
+            delivered = False
             break
         message.ig_message_id = mid
         await db.commit()
+
+    if delivered and reply.posts:
+        await _send_posts(db, conversation, account, instagram, token, reply.posts)
 
     if reply.unanswered:
         # Opens a handoff, or adds to the open one. Runs only after sending (a retryable
@@ -254,6 +260,71 @@ def _open_handoff(conversation: Conversation, history: list[Message], reason: st
     conversation.handoff_question = question
     conversation.handoff_resolved_at = None
     conversation.handoff_resolved_by = None
+
+
+# Echo attachment types that can't be a post we shared (the owner sending media by hand).
+_OWNER_MEDIA = {"image", "video", "audio", "file", "sticker", "animated_image"}
+
+
+def _is_our_echo(stored_text: str, event: MessagingEvent) -> bool:
+    """Does this echo belong to a bot message we stored before sending it?"""
+    if stored_text == event.text:
+        return True
+    if not stored_text.startswith(POST_MARKER):
+        return False
+    if event.text:  # a post sent as a plain link (no media id)
+        return post_key(event.text) == post_key(stored_text)
+    # A shared post echoes back as an attachment without text.
+    return bool(event.attachment_types) and not set(event.attachment_types) & _OWNER_MEDIA
+
+
+async def _send_posts(
+    db: AsyncSession,
+    conversation: Conversation,
+    account: InstagramAccount,
+    instagram: InstagramClient,
+    token: str,
+    posts: list[PostLink],
+) -> None:
+    """Send each post as a native post card (or as a link if we only know its URL).
+
+    Posts are an extra: a failure is logged and never fails or retries the reply itself,
+    which the customer already has.
+    """
+    for post in posts:
+        message = Message(
+            conversation_id=conversation.id,
+            sender=MessageSender.BOT,
+            text=f"{POST_MARKER} {post.permalink}",
+        )
+        db.add(message)
+        await db.commit()
+        try:
+            if post.media_id:
+                try:
+                    mid = await instagram.send_post(
+                        token, conversation.customer_igsid, post.media_id
+                    )
+                except InstagramError as exc:
+                    if exc.token_invalid:
+                        raise
+                    # e.g. the post was deleted after our last sync: the link still helps.
+                    mid = await instagram.send_text(
+                        token, conversation.customer_igsid, post.permalink
+                    )
+            else:
+                mid = await instagram.send_text(token, conversation.customer_igsid, post.permalink)
+        except InstagramError as exc:
+            await db.delete(message)
+            await db.commit()
+            if exc.token_invalid:
+                account.is_active = False
+                await db.commit()
+                return
+            logger.warning("post share failed for conversation %s: %s", conversation.id, exc)
+            continue
+        message.ig_message_id = mid
+        await db.commit()
 
 
 async def _lookup_username(

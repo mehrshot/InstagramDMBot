@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Bot, FileIcon, Image, Mic, Paperclip, Smile, UserRound, Video } from "lucide-react";
 import type { Message } from "../api/types";
 import { useI18n } from "../i18n";
+import { PostCard, sharedPostUrl } from "./PostCard";
 import { customerName } from "../lib/format";
 import { Badge, cx } from "./ui";
 
@@ -73,6 +74,7 @@ export function useMessagePreview() {
 export function MessageBubble({ message }: { message: Message }) {
   const { t, f } = useI18n();
   const mine = message.sender !== "customer";
+  const post = message.sender === "bot" ? sharedPostUrl(message.text) : null;
 
   return (
     <div className={cx("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
@@ -87,16 +89,20 @@ export function MessageBubble({ message }: { message: Message }) {
             <UserRound className="size-3.5" />
           </span>
         )}
-        <div
-          className={cx(
-            "user-text rounded-2xl px-4 py-2.5 text-sm leading-7",
-            message.sender === "customer" && "rounded-ss-sm bg-slate-100 text-slate-800",
-            message.sender === "bot" && "rounded-se-sm bg-brand-600 text-white",
-            message.sender === "owner" && "rounded-se-sm bg-emerald-600 text-white",
-          )}
-        >
-          <MessageText text={message.text} />
-        </div>
+        {post ? (
+          <PostCard post={{ permalink: post }} />
+        ) : (
+          <div
+            className={cx(
+              "user-text rounded-2xl px-4 py-2.5 text-sm leading-7",
+              message.sender === "customer" && "rounded-ss-sm bg-slate-100 text-slate-800",
+              message.sender === "bot" && "rounded-se-sm bg-brand-600 text-white",
+              message.sender === "owner" && "rounded-se-sm bg-emerald-600 text-white",
+            )}
+          >
+            <MessageText text={message.text} />
+          </div>
+        )}
       </div>
       <div className={cx("flex items-center gap-2 text-[11px] text-slate-400", mine ? "me-8" : "ms-1")}>
         {message.sender === "owner" && <span className="font-medium text-emerald-700">{t.inbox.senderOwner}</span>}

@@ -183,6 +183,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/instagram/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Posts
+         * @description The page's posts and which products the bot links to each (newest 60).
+         */
+        get: operations["list_posts_api_v1_instagram_posts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/instagram/posts/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Posts Now
+         * @description Read the page's posts again now (they are also refreshed daily).
+         */
+        post: operations["sync_posts_now_api_v1_instagram_posts_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/knowledge/sections": {
         parameters: {
             query?: never;
@@ -941,6 +981,11 @@ export interface components {
             product_lookups: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Posts
+             * @default []
+             */
+            posts: components["schemas"]["PostCard"][];
             /** Ai Ready */
             ai_ready: boolean;
         };
@@ -953,6 +998,41 @@ export interface components {
             role: "customer" | "bot";
             /** Text */
             text: string;
+        };
+        /** PostCard */
+        PostCard: {
+            /** Permalink */
+            permalink: string;
+            /** Caption */
+            caption: string;
+            /** Preview Url */
+            preview_url: string | null;
+        };
+        /** PostOut */
+        PostOut: {
+            /** Permalink */
+            permalink: string;
+            /** Caption */
+            caption: string;
+            /** Preview Url */
+            preview_url: string | null;
+            /** Media Type */
+            media_type: string;
+            /** Posted At */
+            posted_at: string | null;
+            /** Products */
+            products: string[];
+        };
+        /** PostsOut */
+        PostsOut: {
+            /** Synced At */
+            synced_at: string | null;
+            /** Total */
+            total: number;
+            /** Products Without Post */
+            products_without_post: string[];
+            /** Items */
+            items: components["schemas"]["PostOut"][];
         };
         /** PreviewOut */
         PreviewOut: {
@@ -1565,6 +1645,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectUrlOut"];
+                };
+            };
+        };
+    };
+    list_posts_api_v1_instagram_posts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostsOut"];
+                };
+            };
+        };
+    };
+    sync_posts_now_api_v1_instagram_posts_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostsOut"];
                 };
             };
         };

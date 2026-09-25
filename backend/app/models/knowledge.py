@@ -75,3 +75,5 @@ class Product(UUIDPk, Timestamps, Base):
     description: Mapped[str | None] = mapped_column(Text)
     # Any extra sheet columns we don't model explicitly, kept so the bot can still use them.
     extra: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    # Instagram post of this product, if the owner put its link in the product sheet.
+    post_url: Mapped[str | None] = mapped_column(Text)

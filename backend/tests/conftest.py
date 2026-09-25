@@ -64,6 +64,10 @@ class FakeMeta:
     # When set, the send endpoint answers with this (status, body) instead of succeeding.
     send_error: tuple[int, dict[str, Any]] | None = None
     refresh_error: tuple[int, dict[str, Any]] | None = None
+    # Posts returned by /me/media, served two per page to exercise pagination.
+    media: list[dict[str, Any]] = field(default_factory=list)
+    # When set, sharing a post (MEDIA_SHARE) fails with this; plain text still works.
+    post_error: tuple[int, dict[str, Any]] | None = None
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -86,10 +90,20 @@ class FakeMeta:
         if path.endswith("/me/subscribed_apps"):
             self.subscribed = True
             return httpx.Response(200, json={"success": True})
+        if path.endswith("/me/media"):
+            start = int(request.url.params.get("after", 0))
+            page: dict[str, Any] = {"data": self.media[start : start + 2]}
+            if start + 2 < len(self.media):
+                page["paging"] = {
+                    "next": f"https://graph.instagram.com/v23.0/me/media?after={start + 2}"
+                }
+            return httpx.Response(200, json=page)
         if path.endswith("/me/messages"):
             if self.send_error:
                 return httpx.Response(self.send_error[0], json=self.send_error[1])
             body = json.loads(request.content)
+            if self.post_error and "attachment" in body["message"]:
+                return httpx.Response(self.post_error[0], json=self.post_error[1])
             body["token"] = request.headers["Authorization"].removeprefix("Bearer ")
             self.sent.append(body)
             return httpx.Response(

@@ -176,6 +176,41 @@ class InstagramClient:
         )
         return data.get("username")
 
+    async def list_media(self, token: str, limit: int = 200) -> list[dict[str, Any]]:
+        """The account's own posts, newest first (id, caption, permalink, media, timestamp)."""
+        if self._settings.instagram_dry_run:
+            return []
+        url: str | None = f"{self._graph}/me/media"
+        params: dict[str, Any] | None = {
+            "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp",
+            "limit": 50,
+            "access_token": token,
+        }
+        media: list[dict[str, Any]] = []
+        while url and len(media) < limit:
+            data = await self._request("GET", url, params=params)
+            media.extend(data.get("data") or [])
+            # The `next` URL already carries every parameter, including the token.
+            url = (data.get("paging") or {}).get("next")
+            params = None
+        return media[:limit]
+
+    async def send_post(self, token: str, recipient_igsid: str, media_id: str) -> str:
+        """Share one of the account's own posts as a native post card; returns the mid."""
+        if self._settings.instagram_dry_run:
+            logger.info("DRY RUN: post %s to %s", media_id, recipient_igsid)
+            return f"dry-run-{uuid.uuid4().hex}"
+        data = await self._request(
+            "POST",
+            f"{self._graph}/me/messages",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "recipient": {"id": recipient_igsid},
+                "message": {"attachment": {"type": "MEDIA_SHARE", "payload": {"id": media_id}}},
+            },
+        )
+        return data["message_id"]
+
     async def send_text(self, token: str, recipient_igsid: str, text: str) -> str:
         """Send one DM; returns Meta's message id. `text` must already fit MAX_TEXT_LENGTH."""
         if self._settings.instagram_dry_run:

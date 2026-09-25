@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, CheckCircle2 } from "lucide-react";
+import { Camera, CheckCircle2, RefreshCw } from "lucide-react";
 import { api } from "../api/client";
 import { keys } from "../api/queries";
-import type { InstagramStatus } from "../api/types";
+import type { InstagramStatus, Posts } from "../api/types";
+import { PostCard } from "../components/PostCard";
 import { useToast } from "../components/toast";
 import { Alert, Badge, Button, Card, CardHeader, ConfirmDialog, PageHeader, PageLoading } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -127,6 +128,8 @@ export default function Instagram() {
         </div>
       </Card>
 
+      {data.connected && data.active && <PostsSection />}
+
       <ConfirmDialog
         open={confirm}
         onClose={() => setConfirm(false)}
@@ -139,5 +142,78 @@ export default function Instagram() {
         cancelLabel={t.common.cancel}
       />
     </div>
+  );
+}
+
+/** Which posts the bot can share, and which products it links to each. */
+function PostsSection() {
+  const { t, f } = useI18n();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const { data, isPending, error } = useQuery({ queryKey: keys.posts, queryFn: () => api<Posts>("/instagram/posts") });
+  const sync = useMutation({
+    mutationFn: () => api<Posts>("/instagram/posts/sync", { method: "POST" }),
+    onSuccess: (posts) => {
+      qc.setQueryData(keys.posts, posts);
+      toast.success(t.posts.syncedToast);
+    },
+    onError: (err) => toast.error(errorMessage(err, t)),
+  });
+
+  return (
+    <Card>
+      <CardHeader
+        title={t.posts.title}
+        subtitle={t.posts.subtitle}
+        action={
+          <Button variant="secondary" size="sm" onClick={() => sync.mutate()} loading={sync.isPending} icon={<RefreshCw className="size-4" />}>
+            {t.posts.sync}
+          </Button>
+        }
+      />
+      <div className="space-y-4 px-5 py-4 text-sm">
+        {isPending && <PageLoading />}
+        {error && <Alert kind="error">{errorMessage(error, t)}</Alert>}
+        {data && (
+          <>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500">
+              <span>{data.synced_at ? t.posts.synced(f.smart(data.synced_at)) : t.posts.neverSynced}</span>
+              <Badge>{t.posts.total(f.num(data.total))}</Badge>
+            </div>
+            <p className="text-xs leading-6 text-slate-500">{t.posts.howLinked}</p>
+
+            {data.products_without_post.length > 0 && (
+              <Alert kind="warning">
+                <div className="font-medium">{t.posts.withoutPost(f.num(data.products_without_post.length))}</div>
+                <div className="mt-1 text-xs">{data.products_without_post.join("، ")}</div>
+              </Alert>
+            )}
+
+            {data.items.length === 0 ? (
+              <p className="text-slate-400">{t.posts.empty}</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {data.items.map((post) => (
+                  <li key={post.permalink} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <PostCard post={post} />
+                    <div className="flex flex-wrap gap-1.5">
+                      {post.products.length > 0 ? (
+                        post.products.map((name) => (
+                          <Badge key={name} tone="brand">
+                            {name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">{t.posts.noProduct}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
   );
 }

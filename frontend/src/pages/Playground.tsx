@@ -7,6 +7,7 @@ import { useMe } from "../api/queries";
 import type { PlaygroundReply, PlaygroundTurn } from "../api/types";
 import { Alert, Badge, Button, Card, PageHeader, Textarea, cx } from "../components/ui";
 import { useI18n } from "../i18n";
+import { PostCard } from "../components/PostCard";
 import { errorMessage } from "../lib/errors";
 import { playgroundKey, setFlag } from "../lib/storage";
 
@@ -183,12 +184,16 @@ function BotBubble({ turn }: { turn: Turn }) {
         </div>
       )}
 
-      {r && r.product_lookups.length > 0 && <Lookups lookups={r.product_lookups} />}
+      {r?.posts.map((post) => <PostCard key={post.permalink} post={post} className="me-9" />)}
+
+      {r && r.product_lookups.some((l) => l.tool === "search_products") && (
+        <Lookups lookups={r.product_lookups.filter((l) => l.tool === "search_products")} />
+      )}
     </div>
   );
 }
 
-type Lookup = { tool?: string; arguments?: Record<string, unknown>; result?: { matches?: ProductInfo[]; same_product_other_variants?: ProductInfo[] } };
+type Lookup = { tool?: string; arguments?: Record<string, unknown>; result?: { matches?: ProductInfo[]; other_in_stock_variants?: ProductInfo[] } };
 type ProductInfo = { name?: string; color?: string; size?: string; price_toman?: number; in_stock?: boolean; stock_count?: number; sku?: string };
 
 /** "The bot checked these products" — shows owners why the bot said what it said. */
@@ -209,7 +214,7 @@ function Lookups({ lookups }: { lookups: Record<string, unknown>[] }) {
           {items.map((l, i) => {
             const args = Object.entries(l.arguments ?? {}).filter(([, v]) => v !== null && v !== "");
             const matches = l.result?.matches ?? [];
-            const others = l.result?.same_product_other_variants ?? [];
+            const others = l.result?.other_in_stock_variants ?? [];
             return (
               <div key={i}>
                 <div className="mb-1 text-slate-500">

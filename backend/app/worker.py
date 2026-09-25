@@ -12,11 +12,13 @@ from typing import Any
 import httpx
 from arq import Retry, cron
 from arq.connections import RedisSettings
+from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.queue import ArqQueue
-from app.services import instagram_accounts, messaging, products
+from app.models import InstagramAccount
+from app.services import instagram_accounts, messaging, posts, products
 from app.services.instagram import InstagramClient, InstagramError
 from app.services.llm import LLMError
 from app.services.responder import get_responder
@@ -57,6 +59,19 @@ async def sync_product_sheets(ctx: dict[str, Any]) -> None:
         await products.sync_due_sources(db, ctx["http"])
 
 
+async def sync_instagram_posts(ctx: dict[str, Any]) -> None:
+    """Daily: pick up new posts so the bot can share them."""
+    async with SessionLocal() as db:
+        accounts = (
+            await db.scalars(select(InstagramAccount).where(InstagramAccount.is_active.is_(True)))
+        ).all()
+        for account in accounts:
+            try:
+                await posts.sync_posts(db, account, InstagramClient(ctx["http"]))
+            except InstagramError as exc:
+                logger.warning("post sync failed for account %s: %s", account.id, exc)
+
+
 async def refresh_instagram_tokens(ctx: dict[str, Any]) -> None:
     async with SessionLocal() as db:
         count = await instagram_accounts.refresh_expiring_tokens(db, InstagramClient(ctx["http"]))
@@ -83,6 +98,7 @@ class WorkerSettings:
     functions = [process_event, reply_conversation]
     cron_jobs = [
         cron(refresh_instagram_tokens, hour={3}, minute={0}),
+        cron(sync_instagram_posts, hour={4}, minute={30}),
         cron(sync_product_sheets, minute=set(range(0, 60, 5))),
     ]
     on_startup = startup

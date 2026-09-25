@@ -421,6 +421,60 @@
         ]
       }
     },
+    "/api/v1/instagram/posts": {
+      "get": {
+        "tags": [
+          "instagram"
+        ],
+        "summary": "List Posts",
+        "description": "The page's posts and which products the bot links to each (newest 60).",
+        "operationId": "list_posts_api_v1_instagram_posts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostsOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/instagram/posts/sync": {
+      "post": {
+        "tags": [
+          "instagram"
+        ],
+        "summary": "Sync Posts Now",
+        "description": "Read the page's posts again now (they are also refreshed daily).",
+        "operationId": "sync_posts_now_api_v1_instagram_posts_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostsOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/knowledge/sections": {
       "get": {
         "tags": [
@@ -2509,6 +2563,14 @@
             "type": "array",
             "title": "Product Lookups"
           },
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/PostCard"
+            },
+            "type": "array",
+            "title": "Posts",
+            "default": []
+          },
           "ai_ready": {
             "type": "boolean",
             "title": "Ai Ready"
@@ -2547,6 +2609,134 @@
           "text"
         ],
         "title": "PlaygroundTurn"
+      },
+      "PostCard": {
+        "properties": {
+          "permalink": {
+            "type": "string",
+            "title": "Permalink"
+          },
+          "caption": {
+            "type": "string",
+            "title": "Caption"
+          },
+          "preview_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "permalink",
+          "caption",
+          "preview_url"
+        ],
+        "title": "PostCard"
+      },
+      "PostOut": {
+        "properties": {
+          "permalink": {
+            "type": "string",
+            "title": "Permalink"
+          },
+          "caption": {
+            "type": "string",
+            "title": "Caption"
+          },
+          "preview_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Url"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "products": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Products"
+          }
+        },
+        "type": "object",
+        "required": [
+          "permalink",
+          "caption",
+          "preview_url",
+          "media_type",
+          "posted_at",
+          "products"
+        ],
+        "title": "PostOut"
+      },
+      "PostsOut": {
+        "properties": {
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "products_without_post": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Products Without Post"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "synced_at",
+          "total",
+          "products_without_post",
+          "items"
+        ],
+        "title": "PostsOut"
       },
       "PreviewOut": {
         "properties": {
