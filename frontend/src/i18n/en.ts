@@ -1,4 +1,6 @@
 import type { Dict } from "./fa";
+import landing from "./landing.en";
+import panel from "./panel.en";
 
 const en: Dict = {
   appName: "Javab",
@@ -6,6 +8,17 @@ const en: Dict = {
   panelTitle: (shop) => `${shop} panel`,
   langName: "English",
   otherLang: "فارسی",
+
+  theme: {
+    title: "Theme",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
+    toDark: "Switch to dark mode",
+    toLight: "Switch to light mode",
+    darkMode: "Dark mode",
+    lightMode: "Light mode",
+  },
 
   common: {
     save: "Save",
@@ -424,6 +437,9 @@ const en: Dict = {
   time: {
     justNow: "just now",
   },
+
+  landing,
+  panel,
 };
 
 export default en;

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Sparkles } from "lucide-react";
+import { BookPlus, HelpCircle, MessageSquare, Sparkles } from "lucide-react";
 import { api } from "../api/client";
 import { keys } from "../api/queries";
 import type { Unanswered as Item } from "../api/types";
-import { MessageText } from "../components/conversation";
+import { Avatar, MessageText } from "../components/conversation";
 import FaqDialog from "../components/FaqDialog";
 import { useToast } from "../components/toast";
 import { Alert, Button, Card, EmptyState, LinkButton, PageHeader, PageLoading } from "../components/ui";
@@ -36,48 +36,65 @@ export default function Unanswered() {
     onError: (err) => toast.error(errorMessage(err, t)),
   });
 
-  if (list.isPending) return <PageLoading />;
-  if (list.error) return <Alert kind="error">{errorMessage(list.error, t)}</Alert>;
-
   return (
-    <div className="space-y-6">
-      <PageHeader title={t.unanswered.title} subtitle={t.unanswered.subtitle} />
+    <div className="max-w-4xl">
+      <PageHeader icon={<HelpCircle />} title={t.unanswered.title} subtitle={t.unanswered.subtitle} />
 
-      {list.data.length === 0 ? (
+      {list.isPending ? (
+        <PageLoading />
+      ) : list.error ? (
+        <Alert kind="error">{errorMessage(list.error, t)}</Alert>
+      ) : list.data.length === 0 ? (
         <Card>
-          <EmptyState icon={<Sparkles className="size-12" />} title={t.unanswered.empty} />
+          <EmptyState icon={<Sparkles />} title={t.unanswered.empty} />
         </Card>
       ) : (
-        <div className="space-y-3">
-          {list.data.map((item) => (
-            <Card key={item.message_id} className="p-4 sm:p-5">
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span dir="auto" className="font-medium text-slate-700">{item.customer_username ?? t.common.customer}</span>
-                <span>·</span>
-                <span title={f.dateTime(item.created_at)}>{f.ago(item.created_at)}</span>
-              </div>
-              <div className="user-text text-sm leading-7 text-slate-800">
-                <MessageText text={item.question} />
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => setAdding(item)}>
-                  {t.unanswered.add}
-                </Button>
-                <LinkButton to={`/inbox/${item.conversation_id}`} size="sm" variant="secondary" icon={<MessageSquare className="size-4" />}>
-                  {t.common.viewConversation}
-                </LinkButton>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  loading={ignore.isPending && ignore.variables === item.message_id}
-                  onClick={() => ignore.mutate(item.message_id)}
-                >
-                  {t.unanswered.ignore}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <ul className="space-y-4">
+          {list.data.map((item, i) => {
+            const name = item.customer_username ?? t.common.customer;
+            return (
+              <li
+                key={item.message_id}
+                className="animate-pop-in overflow-hidden rounded-2xl bg-surface shadow-soft ring-1 ring-line transition-shadow duration-200 hover:shadow-lift"
+                style={{ animationDelay: `${Math.min(i, 6) * 50}ms` }}
+              >
+                <div className="flex gap-3 px-5 pt-5 sm:px-6">
+                  <Avatar name={name} className="size-9" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                      <span dir="auto" className="font-bold text-ink-950">
+                        {name}
+                      </span>
+                      <span className="text-xs text-slate-400" title={f.dateTime(item.created_at)}>
+                        {f.ago(item.created_at)}
+                      </span>
+                    </div>
+                    <p className="user-text mt-2 w-fit max-w-full rounded-2xl rounded-ss-md bg-slate-100 px-4 py-2.5 text-sm leading-7 text-ink-900">
+                      <MessageText text={item.question} />
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
+                  <Button size="sm" icon={<BookPlus className="size-4" />} onClick={() => setAdding(item)}>
+                    {t.unanswered.add}
+                  </Button>
+                  <LinkButton to={`/inbox/${item.conversation_id}`} size="sm" variant="secondary" icon={<MessageSquare className="size-4" />}>
+                    {t.common.viewConversation}
+                  </LinkButton>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="sm:ms-auto"
+                    loading={ignore.isPending && ignore.variables === item.message_id}
+                    onClick={() => ignore.mutate(item.message_id)}
+                  >
+                    {t.unanswered.ignore}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       <FaqDialog

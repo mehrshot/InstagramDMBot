@@ -1,19 +1,227 @@
 @import "tailwindcss";
 @import "@fontsource-variable/vazirmatn";
 
+/*
+ * Javab design tokens.
+ *
+ * brand   violet from the logo tile; 600 is the exact logo colour and the primary
+ *         (white text on it: 6.7:1). Lighter steps are tints for surfaces, darker for hover/text.
+ * ink     the logo's outline black, tinted toward the brand; headings and dark surfaces.
+ * accent  lime, the violet's complement. Used sparingly as a highlighter on violet/ink only.
+ * status  success = emerald, warning = amber, error = red (Tailwind defaults).
+ * neutral slate: text 800/600/500, borders 200, page 50.
+ *
+ * Light/dark: components use these tokens as-is; `.dark` on <html> (see theme.tsx) swaps the
+ * values of the neutrals, the text inks, the tints and the status shades further down. Colours
+ * that must stay dark in both themes (sidebar, footer, toasts) use `night`, never `ink`.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
-  /* «جواب» Persian turquoise. 600 is the primary (white text on it: 5.4:1). */
-  --color-brand-50: #eefafc;
-  --color-brand-100: #d3f1f6;
-  --color-brand-200: #a9e2ec;
-  --color-brand-300: #6fcbdb;
-  --color-brand-400: #33aec3;
-  --color-brand-500: #1491a8;
-  --color-brand-600: #0e7490;
-  --color-brand-700: #0f5e75;
-  --color-brand-800: #134e61;
-  --color-brand-900: #153f4f;
+
+  --color-brand-50: #f5f1fe;
+  --color-brand-100: #ebe3fd;
+  --color-brand-200: #d9cafc;
+  --color-brand-300: #bda3f9;
+  --color-brand-400: #9c72f4;
+  --color-brand-500: #8150ef;
+  --color-brand-600: #6b2de8;
+  --color-brand-700: #5a20cb;
+  --color-brand-800: #4a1ba4;
+  --color-brand-900: #3c1a80;
+  --color-brand-950: #230f4f;
+
+  --color-ink-700: #3a3350;
+  --color-ink-800: #241d36;
+  --color-ink-900: #171126;
+  --color-ink-950: #0e0a19;
+
+  /* fixed darks for surfaces that stay dark in both themes */
+  --color-night-800: #241d36;
+  --color-night-900: #171126;
+  --color-night-950: #0e0a19;
+  /* primary button hover, fixed in both themes */
+  --color-brand-deep: #5a20cb;
+
+  /* the panel's page background: white with a breath of brand */
+  --color-canvas: #f8f6fe;
+  /* cards, inputs, menus */
+  --color-surface: #ffffff;
+  /* hairline rings around cards, and the faint fill behind tabs/tracks */
+  --color-line: rgb(14 10 25 / 0.06);
+  --color-fill: rgb(14 10 25 / 0.05);
+
+  --color-accent-200: #ecfbb5;
+  --color-accent-300: #dff78a;
+  --color-accent-400: #cdf05c;
+
+  --shadow-soft: 0 1px 2px rgb(35 15 79 / 0.05), 0 4px 16px -4px rgb(35 15 79 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(35 15 79 / 0.06), 0 16px 40px -12px rgb(35 15 79 / 0.22);
+  --shadow-float: 0 1px 1px rgb(14 10 25 / 0.08), 0 24px 64px -20px rgb(14 10 25 / 0.45);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-msg-in: msg-in 0.42s var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-pop-in: pop-in 0.24s var(--ease-out-soft) both;
+  --animate-sheet-in: sheet-in 0.32s var(--ease-out-soft) both;
+  --animate-toast-in: toast-in 0.32s var(--ease-out-soft) both;
+  --animate-send: send 0.45s var(--ease-out-soft);
+
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes sheet-in {
+    from { opacity: 0; transform: translateX(var(--sheet-from, -24px)); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+  /* the paper plane leaves in the reading direction and lands back */
+  @keyframes send {
+    0% { transform: none; opacity: 1; }
+    45% { transform: translate(calc(10px * var(--dir, 1)), -10px); opacity: 0; }
+    46% { transform: translate(calc(-8px * var(--dir, 1)), 8px); opacity: 0; }
+    100% { transform: none; opacity: 1; }
+  }
+}
+
+/*
+ * Dark theme: the same token names with night values. Neutrals and inks invert, tints become
+ * deep violet/red/amber/green washes, and the text shades of those hues lighten to stay legible.
+ */
+.dark {
+  color-scheme: dark;
+
+  --color-canvas: #0d0b14;
+  --color-surface: #16131f;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-fill: rgb(255 255 255 / 0.06);
+
+  --color-slate-50: #1b1726;
+  --color-slate-100: #231e31;
+  --color-slate-200: #2e283e;
+  --color-slate-300: #3b3450;
+  --color-slate-400: #6f6884;
+  --color-slate-500: #938ca6;
+  --color-slate-600: #aea8bf;
+  --color-slate-700: #c8c3d6;
+  --color-slate-800: #dedae8;
+  --color-slate-900: #efedf5;
+
+  --color-ink-700: #aaa4bd;
+  --color-ink-800: #d3cfe0;
+  --color-ink-900: #e9e6f1;
+  --color-ink-950: #f6f4fa;
+
+  --color-brand-50: #1e1733;
+  --color-brand-100: #291f47;
+  --color-brand-200: #3a2b66;
+  --color-brand-300: #5a44a0;
+  --color-brand-700: #c3adff;
+  --color-brand-800: #d6c7ff;
+  --color-brand-900: #e6dcff;
+
+  --color-red-50: #2a1418;
+  --color-red-100: #3a1a20;
+  --color-red-200: #5a2229;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+
+  --color-amber-50: #271e0d;
+  --color-amber-100: #3a2b10;
+  --color-amber-200: #5a4214;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+
+  --color-emerald-50: #0f2419;
+  --color-emerald-100: #123522;
+  --color-emerald-200: #17482e;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px -4px rgb(0 0 0 / 0.45);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 16px 40px -12px rgb(0 0 0 / 0.7);
+  --shadow-float: 0 1px 1px rgb(0 0 0 / 0.4), 0 24px 64px -20px rgb(0 0 0 / 0.85);
+}
+
+/* Switching themes cross-fades colours instead of flashing (skipped for reduced motion). */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-switching,
+  html.theme-switching *,
+  html.theme-switching *::before,
+  html.theme-switching *::after {
+    transition:
+      background-color 0.35s ease,
+      border-color 0.35s ease,
+      color 0.35s ease,
+      box-shadow 0.35s ease !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/*
+ * Scrollbars: a slim violet-tinted thumb on a clear track, rounded, brighter on hover.
+ * `scrollbar-color` covers Firefox and current Chrome/Edge; the ::-webkit rules cover Safari.
+ */
+:root {
+  --scroll-thumb: #cdc1f2;
+  --scroll-thumb-hover: #9c72f4;
+}
+.dark {
+  --scroll-thumb: #3a3060;
+  --scroll-thumb-hover: #6a52b8;
+}
+/* on the always-dark sidebar and footer */
+.scroll-dark {
+  --scroll-thumb: rgb(255 255 255 / 0.16);
+  --scroll-thumb-hover: rgb(255 255 255 / 0.32);
+}
+@supports (scrollbar-color: auto) {
+  html,
+  .scroll-dark {
+    scrollbar-color: var(--scroll-thumb) transparent;
+    scrollbar-width: thin;
+  }
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb-hover);
+}
+/* rows of chips/tabs that scroll sideways: no visible bar, still scrollable */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 html,
@@ -22,8 +230,45 @@ body,
   min-height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+/* Very wide / 4K screens: scale the whole rem-based system instead of stretching layouts. */
+@media (min-width: 2200px) {
+  html { font-size: 112.5%; }
+}
+@media (min-width: 3000px) {
+  html { font-size: 131.25%; }
+}
+
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-canvas text-slate-800 antialiased;
+  overflow-x: clip;
+}
+
+[dir="rtl"] {
+  --dir: -1;
+  --sheet-from: 24px;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-ink-950);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* Anchor targets clear the sticky site header */
+[id] {
+  scroll-margin-top: 5.5rem;
 }
 
 /* Text the user wrote (knowledge, messages): keep their line breaks. */
@@ -46,10 +291,130 @@ body {
   text-align: right;
 }
 
+@layer components {
+  /*
+   * Marketing type scale. Persian script needs taller lines than Latin and must never get
+   * negative letter-spacing (it breaks letter joining), so tracking is tightened for English only.
+   */
+  .t-display {
+    font-size: clamp(2.25rem, 1.35rem + 3.9vw, 4.25rem);
+    line-height: 1.28;
+    font-weight: 850;
+  }
+  .t-h2 {
+    font-size: clamp(1.75rem, 1.3rem + 1.9vw, 2.75rem);
+    line-height: 1.35;
+    font-weight: 800;
+  }
+  .t-h3 {
+    font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+    line-height: 1.5;
+    font-weight: 750;
+  }
+  .t-lead {
+    font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+    line-height: 1.95;
+  }
+  :lang(en) .t-display { letter-spacing: -0.018em; line-height: 1.1; }
+  :lang(en) .t-h2 { letter-spacing: -0.012em; line-height: 1.18; }
+  :lang(en) .t-h3 { letter-spacing: -0.01em; line-height: 1.35; }
+  :lang(en) .t-lead { line-height: 1.65; }
+
+  /* Site container: fluid gutters, 16px minimum on phones */
+  .container-site {
+    width: 100%;
+    max-width: 76rem;
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+  }
+}
+
+/* Hand-drawn underline under the hero's key word (an SVG path with pathLength="1") */
+.draw-in {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 0.9s var(--ease-out-soft) 0.6s forwards;
+}
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Scroll reveal (see components/site/motion.tsx). Only transform/opacity: GPU-cheap. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s var(--ease-out-soft),
+    transform 0.7s var(--ease-out-soft);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+/* children of a .stagger list follow one another; each sets --i */
+.stagger > * {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.55s var(--ease-out-soft),
+    transform 0.55s var(--ease-out-soft);
+  transition-delay: calc(var(--i, 0) * 110ms + 250ms);
+}
+.is-in .stagger > *,
+.is-in.stagger > * {
+  opacity: 1;
+  transform: none;
+}
+
+/* Native <dialog>: soft entrance for panel and backdrop (in a layer so utilities can opt out) */
+@layer base {
+  dialog[open] {
+    animation: var(--animate-pop-in);
+  }
+  dialog[open]::backdrop {
+    animation: var(--animate-fade-in);
+  }
+}
+
+/* Subtle dot texture for violet surfaces */
+.dot-grid {
+  background-image: radial-gradient(rgb(255 255 255 / 0.13) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+/* a short ring of the bell on the "customers waiting" card */
+@keyframes bell {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-4deg); }
+}
+
 @keyframes dot {
-  0%, 80%, 100% { opacity: 0.25; }
-  40% { opacity: 1; }
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
 }
 .typing-dot {
   animation: dot 1.2s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .reveal,
+  .stagger > * {
+    opacity: 1;
+    transform: none;
+  }
+  .draw-in {
+    stroke-dashoffset: 0;
+  }
 }

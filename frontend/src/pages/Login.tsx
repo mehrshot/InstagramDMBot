@@ -45,7 +45,7 @@ export default function Login() {
       footer={
         <>
           {t.auth.noAccount}{" "}
-          <Link to="/register" className="font-medium text-brand-600 hover:underline">
+          <Link to="/register" className="font-medium text-brand-700 hover:underline">
             {t.auth.goRegister}
           </Link>
         </>

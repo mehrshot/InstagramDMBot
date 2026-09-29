@@ -1,83 +1,163 @@
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  BookOpen,
+  Check,
+  CloudUpload,
+  CreditCard,
+  FileText,
+  MessageCircleQuestionMark,
+  NotebookPen,
+  Phone,
+  Plus,
+  Store,
+  Truck,
+  Undo2,
+} from "lucide-react";
 import { api } from "../api/client";
 import { keys, useSections } from "../api/queries";
 import type { Entry, Knowledge as KnowledgeData, KnowledgeSection, Section } from "../api/types";
+import { EntryCard, EntryEditor, useInvalidateKnowledge } from "../components/knowledge";
 import { useToast } from "../components/toast";
-import { Alert, Button, Card, ConfirmDialog, EmptyState, Field, Input, PageHeader, PageLoading, ProgressBar, Textarea } from "../components/ui";
+import { Alert, Badge, Button, Card, CardHeader, PageHeader, PageLoading, ProgressBar, Spinner, Textarea, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { localizeSection } from "../i18n/sections";
 import { errorMessage } from "../lib/errors";
 import { formatBytesMB } from "../lib/format";
 
-function useInvalidateKnowledge() {
-  const qc = useQueryClient();
-  return () => {
-    qc.invalidateQueries({ queryKey: keys.knowledge });
-    qc.invalidateQueries({ queryKey: keys.dashboard });
-  };
-}
+const ICONS: Record<string, ReactNode> = {
+  about: <Store />,
+  shipping: <Truck />,
+  payment: <CreditCard />,
+  returns: <Undo2 />,
+  contact: <Phone />,
+  faq: <MessageCircleQuestionMark />,
+  free_text: <NotebookPen />,
+  file: <FileText />,
+};
+const anchor = (key: string) => `section-${key}`;
 
 export default function Knowledge() {
-  const { t, f, lang } = useI18n();
+  const { t, lang } = useI18n();
   const sections = useSections();
   const knowledge = useQuery({ queryKey: keys.knowledge, queryFn: () => api<KnowledgeData>("/knowledge") });
 
-  if (sections.isPending || knowledge.isPending) return <PageLoading />;
-  if (sections.error || knowledge.error) return <Alert kind="error">{errorMessage(sections.error ?? knowledge.error, t)}</Alert>;
+  const header = <PageHeader icon={<BookOpen />} title={t.knowledge.title} subtitle={t.knowledge.subtitle} />;
+  if (sections.isPending || knowledge.isPending)
+    return (
+      <>
+        {header}
+        <PageLoading />
+      </>
+    );
+  if (sections.error || knowledge.error)
+    return (
+      <>
+        {header}
+        <Alert kind="error">{errorMessage(sections.error ?? knowledge.error, t)}</Alert>
+      </>
+    );
 
-  const { chars_used, char_limit } = knowledge.data;
-  const full = chars_used >= char_limit;
   const bySection = (key: KnowledgeSection) => knowledge.data.entries.filter((e) => e.section === key);
+  const list = sections.data.sections.map((raw) => localizeSection(raw, lang));
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t.knowledge.title} subtitle={t.knowledge.subtitle} />
+    <>
+      {header}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-10 lg:self-start">
+          <Usage used={knowledge.data.chars_used} limit={knowledge.data.char_limit} />
+          <SectionNav sections={list} count={(key) => bySection(key).length} />
+        </aside>
 
-      <Card className="p-5">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-medium text-slate-700">{t.knowledge.usage}</span>
-          <span className="num text-slate-500">
-            {f.num(chars_used)} / {f.num(char_limit)} {t.knowledge.chars}
-          </span>
+        <div className="min-w-0 space-y-6">
+          {list.map((section) => {
+            const entries = bySection(section.key);
+            if (!section.multiple) return <SingleSection key={section.key} section={section} entry={entries[0]} />;
+            if (section.key === "file")
+              return (
+                <FileSection
+                  key={section.key}
+                  section={section}
+                  entries={entries}
+                  types={sections.data.supported_file_types}
+                  maxBytes={sections.data.max_file_bytes}
+                />
+              );
+            return <MultiSection key={section.key} section={section} entries={entries} />;
+          })}
         </div>
-        <ProgressBar value={chars_used} max={char_limit} />
-        {full && <p className="mt-2 text-sm text-red-600">{t.knowledge.usageFull}</p>}
-      </Card>
-
-      {sections.data.sections.map((raw) => {
-        const section = localizeSection(raw, lang);
-        const entries = bySection(section.key);
-        if (!section.multiple) return <SingleSection key={section.key} section={section} entry={entries[0]} />;
-        if (section.key === "file")
-          return (
-            <FileSection
-              key={section.key}
-              section={section}
-              entries={entries}
-              types={sections.data.supported_file_types}
-              maxBytes={sections.data.max_file_bytes}
-            />
-          );
-        return <MultiSection key={section.key} section={section} entries={entries} />;
-      })}
-    </div>
+      </div>
+    </>
   );
 }
 
-function SectionCard({ section, children, action }: { section: Section; children: React.ReactNode; action?: React.ReactNode }) {
+function Usage({ used, limit }: { used: number; limit: number }) {
+  const { t, f, lang } = useI18n();
+  const full = used >= limit;
+  const pct = Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
-        <div className="min-w-0">
-          <h2 className="font-semibold text-slate-900">{section.label}</h2>
-          <p className="mt-0.5 text-sm text-slate-500">{section.hint}</p>
-        </div>
-        {action}
+    <Card className="p-5">
+      <div className="text-sm font-semibold text-slate-500">{t.knowledge.usage}</div>
+      <div className="num mb-3 mt-1 text-2xl font-extrabold text-ink-950">
+        {f.num(pct)}
+        {lang === "fa" ? "٪" : "%"}
       </div>
-      <div className="p-5">{children}</div>
+      <ProgressBar value={used} max={limit} />
+      <div className="num mt-2 text-xs text-slate-500">
+        {f.num(used)} / {f.num(limit)} {t.knowledge.chars}
+      </div>
+      {full && <p className="mt-3 text-xs font-medium leading-5 text-red-700">{t.knowledge.usageFull}</p>}
     </Card>
+  );
+}
+
+/** Jump links to each section with a filled/empty marker: a rail on desktop, chips on phones. */
+function SectionNav({ sections, count }: { sections: Section[]; count: (key: KnowledgeSection) => number }) {
+  const { t, f } = useI18n();
+  return (
+    <nav aria-label={t.panel.knowledge.navTitle}>
+      <div className="mb-2 hidden px-1 text-xs font-bold text-slate-400 lg:block">{t.panel.knowledge.navTitle}</div>
+      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar sm:-mx-6 sm:px-6 lg:m-0 lg:flex-col lg:gap-0.5 lg:p-0">
+        {sections.map((s) => {
+          const n = count(s.key);
+          return (
+            <li key={s.key} className="shrink-0">
+              <a
+                href={`#${anchor(s.key)}`}
+                className={cx(
+                  "flex items-center gap-2.5 whitespace-nowrap rounded-xl text-sm font-semibold transition-colors",
+                  "bg-surface px-3 py-2 shadow-sm ring-1 ring-line hover:text-brand-700",
+                  "lg:bg-transparent lg:shadow-none lg:ring-0 lg:hover:bg-surface lg:hover:shadow-sm",
+                  "[&>svg:first-child]:size-4 [&>svg:first-child]:shrink-0 [&>svg:first-child]:text-slate-400",
+                  n > 0 ? "text-ink-900" : "text-slate-500",
+                )}
+              >
+                {ICONS[s.key]}
+                <span className="flex-1 truncate">{s.label}</span>
+                {n > 0 &&
+                  (s.multiple ? (
+                    <span className="num rounded-full bg-brand-50 px-1.5 text-xs leading-5 text-brand-700">{f.num(n)}</span>
+                  ) : (
+                    <Check className="size-4 shrink-0 text-emerald-500" strokeWidth={3} aria-label={t.panel.knowledge.filled} />
+                  ))}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function SectionCard({ section, children, action }: { section: Section; children: ReactNode; action?: ReactNode }) {
+  return (
+    <section id={anchor(section.key)} aria-label={section.label} className="scroll-mt-24 lg:scroll-mt-10">
+      <Card>
+        <CardHeader icon={ICONS[section.key]} title={section.label} subtitle={section.hint} action={action} />
+        <div className="p-5 sm:p-6">{children}</div>
+      </Card>
+    </section>
   );
 }
 
@@ -109,15 +189,32 @@ function SingleSection({ section, entry }: { section: Section; entry: Entry | un
   });
 
   return (
-    <SectionCard section={section}>
+    <SectionCard
+      section={section}
+      action={
+        saved ? (
+          <Badge tone="green">
+            <Check aria-hidden />
+            {t.panel.knowledge.filled}
+          </Badge>
+        ) : (
+          <Badge>{t.panel.knowledge.empty}</Badge>
+        )
+      }
+    >
       <Textarea rows={4} value={text} placeholder={section.placeholder} onChange={(e) => setText(e.target.value)} aria-label={section.label} />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-xs text-slate-400">
           <span className="num">{f.num(text.length)}</span> {t.knowledge.chars}
           {dirty && saved && !text.trim() && <span className="ms-2 text-amber-600">· {t.knowledge.singleEmpty}</span>}
         </span>
-        <div className="flex items-center gap-2">
-          {dirty && <span className="text-xs text-amber-600">{t.common.unsavedChanges}</span>}
+        <div className="flex items-center gap-3">
+          {dirty && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+              <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+              {t.common.unsavedChanges}
+            </span>
+          )}
           <Button size="sm" onClick={() => save.mutate()} loading={save.isPending} disabled={!dirty}>
             {t.common.save}
           </Button>
@@ -149,7 +246,16 @@ function MultiSection({ section, entries }: { section: Section; entries: Entry[]
         {entries.map((e) => (
           <EntryCard key={e.id} section={section} entry={e} />
         ))}
-        {!adding && entries.length === 0 && <p className="text-sm text-slate-400">{t.knowledge.noItems}</p>}
+        {!adding && entries.length === 0 && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-6 text-sm font-semibold text-slate-500 transition-colors hover:border-brand-300 hover:text-brand-700"
+          >
+            <Plus className="size-4" aria-hidden />
+            {isFaq ? t.knowledge.addFaq : t.knowledge.addItem}
+          </button>
+        )}
       </div>
     </SectionCard>
   );
@@ -161,6 +267,7 @@ function FileSection({ section, entries, types, maxBytes }: { section: Section; 
   const invalidate = useInvalidateKnowledge();
   const input = useRef<HTMLInputElement>(null);
   const [fresh, setFresh] = useState<string | null>(null);
+  const [over, setOver] = useState(false);
 
   const upload = useMutation({
     mutationFn: (file: File) => {
@@ -177,7 +284,7 @@ function FileSection({ section, entries, types, maxBytes }: { section: Section; 
 
   function pick(file: File | undefined) {
     if (input.current) input.current.value = "";
-    if (!file) return;
+    if (!file || upload.isPending) return;
     const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
     if (!types.includes(ext)) return toast.error(t.errors.fileType);
     if (file.size > maxBytes) return toast.error(t.errors.fileTooBig(f.num(formatBytesMB(maxBytes))));
@@ -185,163 +292,53 @@ function FileSection({ section, entries, types, maxBytes }: { section: Section; 
   }
 
   return (
-    <SectionCard
-      section={section}
-      action={
-        <>
-          <input ref={input} type="file" className="hidden" accept={types.join(",")} onChange={(e) => pick(e.target.files?.[0])} />
-          <Button size="sm" variant="soft" icon={<Upload className="size-4" />} loading={upload.isPending} onClick={() => input.current?.click()}>
-            {t.knowledge.upload}
-          </Button>
-        </>
-      }
-    >
-      <p className="mb-3 text-xs text-slate-400" dir="auto">
-        {t.knowledge.uploadHint(types.join(" "), f.num(formatBytesMB(maxBytes)))}
-      </p>
-      {upload.isPending && <Alert kind="info" className="mb-3">{t.knowledge.uploading}</Alert>}
-      <div className="space-y-3">
-        {entries.map((e) => (
-          <EntryCard key={e.id} section={section} entry={e} startEditing={e.id === fresh} onEditEnd={() => setFresh(null)} />
-        ))}
-        {entries.length === 0 && !upload.isPending && (
-          <EmptyState icon={<FileText className="size-10" />} title={t.knowledge.noItems} />
-        )}
-      </div>
-    </SectionCard>
-  );
-}
-
-function EntryCard({
-  section,
-  entry,
-  startEditing = false,
-  onEditEnd,
-}: {
-  section: Section;
-  entry: Entry;
-  startEditing?: boolean;
-  onEditEnd?: () => void;
-}) {
-  const { t } = useI18n();
-  const toast = useToast();
-  const invalidate = useInvalidateKnowledge();
-  const [editing, setEditing] = useState(startEditing);
-  const [confirm, setConfirm] = useState(false);
-
-  useEffect(() => {
-    if (startEditing) setEditing(true);
-  }, [startEditing]);
-
-  const remove = useMutation({
-    mutationFn: () => api(`/knowledge/${entry.id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      setConfirm(false);
-      toast.success(t.knowledge.deleted);
-      invalidate();
-    },
-    onError: (err) => toast.error(errorMessage(err, t)),
-  });
-
-  if (editing)
-    return (
-      <EntryEditor
-        section={section}
-        entry={entry}
-        review={startEditing}
-        onDone={() => {
-          setEditing(false);
-          onEditEnd?.();
+    <SectionCard section={section}>
+      <input ref={input} type="file" className="hidden" accept={types.join(",")} onChange={(e) => pick(e.target.files?.[0])} />
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
         }}
-      />
-    );
-
-  return (
-    <div className="group rounded-lg border border-slate-200 p-4">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          {entry.source_filename && (
-            <div className="mb-1 inline-flex items-center gap-1 text-xs text-slate-400">
-              <FileText className="size-3.5" />
-              <span dir="auto">{entry.source_filename}</span>
-            </div>
-          )}
-          {entry.title && <div className="user-text mb-1 font-medium text-slate-900">{entry.title}</div>}
-          <div className="user-text line-clamp-6 text-sm leading-7 text-slate-600">{entry.content}</div>
-        </div>
-        <div className="flex shrink-0 gap-1">
-          <button type="button" onClick={() => setEditing(true)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title={t.common.edit}>
-            <Pencil className="size-4" />
-          </button>
-          <button type="button" onClick={() => setConfirm(true)} className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600" title={t.common.delete}>
-            <Trash2 className="size-4" />
-          </button>
-        </div>
-      </div>
-      <ConfirmDialog
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        onConfirm={() => remove.mutate()}
-        loading={remove.isPending}
-        danger
-        title={t.knowledge.deleteConfirmTitle}
-        body={t.knowledge.deleteConfirmBody}
-        confirmLabel={t.common.delete}
-        cancelLabel={t.common.cancel}
-      />
-    </div>
-  );
-}
-
-/** Create (no `entry`) or edit an entry of a multiple section. */
-function EntryEditor({ section, entry, review, onDone }: { section: Section; entry?: Entry; review?: boolean; onDone: () => void }) {
-  const { t } = useI18n();
-  const toast = useToast();
-  const invalidate = useInvalidateKnowledge();
-  const isFaq = section.key === "faq";
-  const [title, setTitle] = useState(entry?.title ?? "");
-  const [content, setContent] = useState(entry?.content ?? "");
-
-  const save = useMutation({
-    mutationFn: () =>
-      entry
-        ? api<Entry>(`/knowledge/${entry.id}`, { method: "PATCH", json: { title: title.trim(), content } })
-        : api<Entry>("/knowledge", { method: "POST", json: { section: section.key, title: title.trim(), content } }),
-    onSuccess: () => {
-      toast.success(t.common.saved);
-      invalidate();
-      onDone();
-    },
-    onError: (err) => toast.error(errorMessage(err, t)),
-  });
-
-  const canSave = content.trim().length > 0 && (!isFaq || title.trim().length > 0);
-
-  return (
-    <div className="space-y-3 rounded-lg border border-brand-200 bg-brand-50/40 p-4">
-      {review && <Alert kind="info">{t.knowledge.uploadedReview}</Alert>}
-      <Field label={isFaq ? t.knowledge.faqQuestion : t.knowledge.itemTitle}>
-        {(id) => <Input id={id} maxLength={255} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!entry} />}
-      </Field>
-      <Field label={isFaq ? t.knowledge.faqAnswer : t.knowledge.itemContent}>
-        {(id) => (
-          <Textarea
-            id={id}
-            rows={review ? 12 : 4}
-            value={content}
-            placeholder={entry ? undefined : section.placeholder}
-            onChange={(e) => setContent(e.target.value)}
-          />
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          pick(e.dataTransfer.files?.[0]);
+        }}
+        className={cx(
+          "flex flex-col items-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors duration-200",
+          over ? "border-brand-500 bg-brand-50" : "border-brand-200 bg-brand-50/40",
         )}
-      </Field>
-      <div className="flex justify-end gap-2">
-        <Button size="sm" variant="secondary" onClick={onDone}>
-          {t.common.cancel}
-        </Button>
-        <Button size="sm" onClick={() => save.mutate()} loading={save.isPending} disabled={!canSave}>
-          {t.common.save}
-        </Button>
+      >
+        {upload.isPending ? (
+          <>
+            <Spinner className="size-8" />
+            <p className="mt-3 max-w-sm text-sm font-medium text-ink-800">{t.knowledge.uploading}</p>
+          </>
+        ) : (
+          <>
+            <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-surface text-brand-700 shadow-sm ring-1 ring-brand-100">
+              <CloudUpload className="size-6" />
+            </span>
+            <p className="mt-3 text-sm font-bold text-ink-900">
+              {t.panel.knowledge.drop} <span className="font-medium text-slate-500">{t.panel.knowledge.or}</span>
+            </p>
+            <Button size="sm" variant="secondary" className="mt-2" onClick={() => input.current?.click()}>
+              {t.panel.knowledge.choose}
+            </Button>
+            <p className="mt-3 text-xs text-slate-500" dir="auto">
+              {t.knowledge.uploadHint(types.join(" "), f.num(formatBytesMB(maxBytes)))}
+            </p>
+          </>
+        )}
       </div>
-    </div>
+      {entries.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {entries.map((e) => (
+            <EntryCard key={e.id} section={section} entry={e} startEditing={e.id === fresh} onEditEnd={() => setFresh(null)} />
+          ))}
+        </div>
+      )}
+    </SectionCard>
   );
 }

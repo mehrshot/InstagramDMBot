@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, BellOff, CheckCheck, Clock, ExternalLink, MessageSquare, PartyPopper } from "lucide-react";
+import { Bell, BellOff, BellRing, Bot, BookPlus, CheckCheck, Clock, ExternalLink, Info, MessageSquare, PartyPopper } from "lucide-react";
 import { api } from "../api/client";
 import { keys } from "../api/queries";
 import type { HandoffItem, HandoffPage } from "../api/types";
@@ -42,19 +42,25 @@ export default function Handoffs() {
   const total = list.data?.pages[0]?.total;
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t.handoffs.title} subtitle={t.handoffs.subtitle} action={<NotificationButton />} />
+    <div className="max-w-4xl">
+      <PageHeader icon={<BellRing />} title={t.handoffs.title} subtitle={t.handoffs.subtitle} action={<NotificationButton />} />
 
-      <Tabs
-        value={status}
-        onChange={setStatus}
-        items={[
-          { value: "open", label: t.handoffs.tabOpen, count: status === "open" && total ? f.num(total) : undefined },
-          { value: "resolved", label: t.handoffs.tabResolved },
-        ]}
-      />
-
-      {status === "open" && items.length > 0 && <p className="text-sm text-slate-500">{t.handoffs.autoCloseNote}</p>}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          value={status}
+          onChange={setStatus}
+          items={[
+            { value: "open", label: t.handoffs.tabOpen, count: status === "open" && total ? f.num(total) : undefined },
+            { value: "resolved", label: t.handoffs.tabResolved },
+          ]}
+        />
+        {status === "open" && items.length > 0 && (
+          <p className="flex items-center gap-1.5 text-sm text-slate-500">
+            <Info className="size-4 shrink-0 text-brand-500" aria-hidden />
+            {t.handoffs.autoCloseNote}
+          </p>
+        )}
+      </div>
 
       {list.isPending ? (
         <PageLoading />
@@ -63,19 +69,19 @@ export default function Handoffs() {
       ) : items.length === 0 ? (
         <Card>
           {status === "open" ? (
-            <EmptyState icon={<PartyPopper className="size-12" />} title={t.handoffs.emptyOpen} />
+            <EmptyState icon={<PartyPopper />} title={t.handoffs.emptyOpen} />
           ) : (
-            <EmptyState icon={<CheckCheck className="size-12" />} title={t.handoffs.emptyResolved} />
+            <EmptyState icon={<CheckCheck />} title={t.handoffs.emptyResolved} />
           )}
         </Card>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <HandoffCard key={item.conversation_id} item={item} now={now} onAddFaq={() => setFaq(item.handoff.question)} />
+        <div className="space-y-4">
+          {items.map((item, i) => (
+            <HandoffCard key={item.conversation_id} item={item} now={now} index={i} onAddFaq={() => setFaq(item.handoff.question)} />
           ))}
           {list.hasNextPage && (
-            <div className="text-center">
-              <Button variant="ghost" size="sm" loading={list.isFetchingNextPage} onClick={() => list.fetchNextPage()}>
+            <div className="pt-2 text-center">
+              <Button variant="secondary" size="sm" loading={list.isFetchingNextPage} onClick={() => list.fetchNextPage()}>
                 {t.common.loadMore}
               </Button>
             </div>
@@ -88,7 +94,8 @@ export default function Handoffs() {
   );
 }
 
-function HandoffCard({ item, now, onAddFaq }: { item: HandoffItem; now: number; onAddFaq: () => void }) {
+/** One waiting customer: who, how long, what they asked, why the bot handed over, what to do. */
+function HandoffCard({ item, now, index, onAddFaq }: { item: HandoffItem; now: number; index: number; onAddFaq: () => void }) {
   const { t, f } = useI18n();
   const toast = useToast();
   const qc = useQueryClient();
@@ -109,62 +116,81 @@ function HandoffCard({ item, now, onAddFaq }: { item: HandoffItem; now: number; 
   });
 
   return (
-    <Card className={cx("p-4 sm:p-5", late && "border-amber-300")}>
-      <div className="flex flex-wrap items-start gap-3">
+    <article
+      className={cx(
+        "animate-pop-in overflow-hidden rounded-2xl bg-surface shadow-soft ring-1 transition-shadow duration-200 hover:shadow-lift",
+        late ? "ring-amber-300" : "ring-line",
+      )}
+      style={{ animationDelay: `${Math.min(index, 6) * 50}ms` }}
+    >
+      <div className="flex flex-wrap items-center gap-3 px-5 pt-5 sm:px-6">
         <Avatar name={name} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {item.customer_username ? (
-              <a href={`https://instagram.com/${item.customer_username}`} target="_blank" rel="noopener noreferrer" dir="auto" className="font-semibold text-slate-900 hover:underline">
-                {name}
-              </a>
-            ) : (
-              <span dir="auto" className="font-semibold text-slate-900">{name}</span>
-            )}
-            {open ? (
-              <Badge tone={late ? "amber" : "red"}>
-                <Clock className="size-3" />
-                {t.handoffs.waitingFor(f.duration(h.handed_off_at, now))}
-              </Badge>
-            ) : (
-              <Badge tone="green">{h.resolved_by === "owner_reply" ? t.handoffs.resolvedByOwner : t.handoffs.resolvedManual}</Badge>
-            )}
-            {!open && h.resolved_at && <span className="text-xs text-slate-400">{f.smart(h.resolved_at)}</span>}
-          </div>
-
-          <div className="mt-3 rounded-lg bg-slate-50 px-4 py-3">
-            <div className="mb-1 text-xs font-medium text-slate-500">{t.handoffs.question}</div>
-            <div className="user-text text-sm leading-7 text-slate-800">
-              <MessageText text={h.question} />
-            </div>
-          </div>
-          {h.reason && (
-            <p className="mt-2 text-xs text-slate-500">
-              {t.handoffs.reason}: {h.reason}
-            </p>
+          {item.customer_username ? (
+            <a
+              href={`https://instagram.com/${item.customer_username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              dir="auto"
+              className="font-bold text-ink-950 hover:text-brand-700 hover:underline"
+            >
+              {name}
+            </a>
+          ) : (
+            <span dir="auto" className="font-bold text-ink-950">
+              {name}
+            </span>
           )}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {open && item.instagram_url && (
-              <ExternalButton href={item.instagram_url} size="sm" icon={<ExternalLink className="size-4" />}>
-                {t.common.replyInInstagram}
-              </ExternalButton>
-            )}
-            <LinkButton to={`/inbox/${item.conversation_id}`} size="sm" variant="secondary" icon={<MessageSquare className="size-4" />}>
-              {t.common.viewConversation}
-            </LinkButton>
-            {open && (
-              <Button size="sm" variant="secondary" loading={resolve.isPending} onClick={() => resolve.mutate()} title={t.handoffs.resolveHint}>
-                {t.handoffs.resolve}
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={onAddFaq}>
-              {t.common.addToKnowledge}
-            </Button>
-          </div>
+          {!open && h.resolved_at && <div className="text-xs text-slate-400">{f.smart(h.resolved_at)}</div>}
         </div>
+        {open ? (
+          <Badge tone={late ? "amber" : "red"}>
+            <Clock aria-hidden />
+            {t.handoffs.waitingFor(f.duration(h.handed_off_at, now))}
+          </Badge>
+        ) : (
+          <Badge tone="green">
+            <CheckCheck aria-hidden />
+            {h.resolved_by === "owner_reply" ? t.handoffs.resolvedByOwner : t.handoffs.resolvedManual}
+          </Badge>
+        )}
       </div>
-    </Card>
+
+      <div className="px-5 py-4 sm:px-6">
+        <div className="mb-1.5 text-xs font-semibold text-slate-500">{t.handoffs.question}</div>
+        <p className="user-text w-fit max-w-full rounded-2xl rounded-ss-md bg-slate-100 px-4 py-2.5 text-sm leading-7 text-ink-900">
+          <MessageText text={h.question} />
+        </p>
+        {h.reason && (
+          <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-600">
+            <Bot className="mt-0.5 size-4 shrink-0 text-brand-500" aria-hidden />
+            <span>
+              <span className="font-semibold text-ink-800">{t.handoffs.reason}: </span>
+              {h.reason}
+            </span>
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
+        {open && item.instagram_url && (
+          <ExternalButton href={item.instagram_url} size="sm" icon={<ExternalLink className="size-4" />}>
+            {t.common.replyInInstagram}
+          </ExternalButton>
+        )}
+        <LinkButton to={`/inbox/${item.conversation_id}`} size="sm" variant="secondary" icon={<MessageSquare className="size-4" />}>
+          {t.common.viewConversation}
+        </LinkButton>
+        {open && (
+          <Button size="sm" variant="secondary" loading={resolve.isPending} onClick={() => resolve.mutate()} title={t.handoffs.resolveHint}>
+            {t.handoffs.resolve}
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" icon={<BookPlus className="size-4" />} onClick={onAddFaq} className="sm:ms-auto">
+          {t.common.addToKnowledge}
+        </Button>
+      </div>
+    </article>
   );
 }
 
@@ -174,20 +200,20 @@ function NotificationButton() {
   if (permission === "unsupported") return null;
   if (permission === "granted")
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm text-emerald-700">
-        <Bell className="size-4" />
+      <Badge tone="green" className="py-1.5">
+        <Bell aria-hidden />
         {t.handoffs.notificationsOn}
-      </span>
+      </Badge>
     );
   if (permission === "denied")
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm text-slate-500">
-        <BellOff className="size-4" />
+      <Badge className="py-1.5">
+        <BellOff aria-hidden />
         {t.handoffs.notificationsBlocked}
-      </span>
+      </Badge>
     );
   return (
-    <Button variant="soft" size="sm" icon={<Bell className="size-4" />} onClick={request}>
+    <Button variant="soft" size="md" icon={<Bell className="size-4" />} onClick={request}>
       {t.handoffs.enableNotifications}
     </Button>
   );

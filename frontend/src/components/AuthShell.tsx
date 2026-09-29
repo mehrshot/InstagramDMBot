@@ -1,35 +1,80 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { Languages } from "lucide-react";
+import { Check, Languages } from "lucide-react";
 import { useI18n } from "../i18n";
+import { Logo, LogoMark } from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 
 export default function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
-  const { t, toggleLang } = useI18n();
+  const { t, lang, toggleLang } = useI18n();
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-brand-50 to-slate-50 px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/favicon.svg" alt="" className="mb-2 size-12" />
-          <div className="text-3xl font-black tracking-tight text-brand-700">{t.appName}</div>
-          <p className="mb-6 text-xs font-medium text-brand-600">{t.tagline}</p>
-          <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">{children}</div>
-        <p className="mt-5 text-center text-sm text-slate-600">{footer}</p>
-        <div className="mt-8 flex items-center justify-center gap-4 text-xs text-slate-400">
-          <button type="button" onClick={toggleLang} className="inline-flex items-center gap-1 hover:text-slate-600">
-            <Languages className="size-3.5" />
-            {t.otherLang}
-          </button>
-          <Link to="/privacy" className="hover:text-slate-600">
+    <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <div className="flex min-h-dvh flex-col px-4 sm:px-8 lg:px-12">
+        <header className="flex h-16 items-center justify-between lg:h-20">
+          <Link to="/" aria-label={t.landing.nav.home} className="rounded-lg">
+            <Logo />
+          </Link>
+          <div className="flex items-center gap-1">
+            <ThemeToggle className="size-10 justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-ink-950" />
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-ink-950"
+            >
+              <Languages className="size-4" aria-hidden />
+              <span lang={lang === "fa" ? "en" : "fa"}>{t.otherLang}</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex flex-1 items-center justify-center py-10">
+          <div className="animate-pop-in w-full max-w-sm">
+            <h1 className="text-2xl font-extrabold text-ink-950 sm:text-3xl">{title}</h1>
+            <p className="mt-2 text-slate-500">{subtitle}</p>
+            <div className="mt-8">{children}</div>
+            <p className="mt-6 text-sm text-slate-600">{footer}</p>
+          </div>
+        </main>
+
+        <footer className="flex flex-wrap gap-x-5 gap-y-2 py-6 text-xs text-slate-400">
+          <Link to="/privacy" className="transition-colors hover:text-slate-600">
             {t.legal.privacy}
           </Link>
-          <Link to="/terms" className="hover:text-slate-600">
+          <Link to="/terms" className="transition-colors hover:text-slate-600">
             {t.legal.terms}
           </Link>
+        </footer>
+      </div>
+
+      <BrandPanel />
+    </div>
+  );
+}
+
+function BrandPanel() {
+  const { t } = useI18n();
+  const c = t.landing.chat;
+  return (
+    <aside className="relative hidden overflow-hidden bg-brand-600 text-white lg:flex lg:items-center lg:justify-center">
+      <div aria-hidden className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_80%_70%_at_50%_40%,black,transparent)]" />
+      <div className="relative w-full max-w-md px-10 py-16">
+        <LogoMark px={56} className="shadow-float ring-2 ring-white/25" />
+        <p className="t-h2 mt-8 text-balance">{t.tagline}</p>
+        <ul className="mt-6 space-y-2.5 text-white/85">
+          {t.landing.hero.points.map((p) => (
+            <li key={p} className="flex items-center gap-2.5">
+              <span aria-hidden className="flex size-5 items-center justify-center rounded-full bg-white/15">
+                <Check className="size-3 text-accent-300" strokeWidth={3} />
+              </span>
+              {p}
+            </li>
+          ))}
+        </ul>
+        <div aria-hidden className="mt-10 space-y-2.5 rounded-2xl bg-surface p-4 text-[13.5px] leading-6 text-ink-900 shadow-float">
+          <p className="animate-msg-in w-fit max-w-[85%] rounded-2xl rounded-ss-md bg-slate-100 px-3.5 py-2 [animation-delay:400ms]">{c.m1}</p>
+          <p className="animate-msg-in ms-auto w-fit max-w-[85%] rounded-2xl rounded-se-md bg-brand-600 px-3.5 py-2 text-white [animation-delay:1100ms]">{c.m2}</p>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

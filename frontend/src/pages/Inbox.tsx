@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ExternalLink, Inbox as InboxIcon, MessageSquare, Pause, Play, Search } from "lucide-react";
+import { ArrowRight, BellRing, Camera, ExternalLink, Inbox as InboxIcon, MessageSquare, Pause, Play, Search } from "lucide-react";
 import { api } from "../api/client";
 import { keys } from "../api/queries";
 import type { Conversation, ConversationDetail, ConversationFilter, ConversationPage } from "../api/types";
 import { Avatar, MessageBubble, isIndefinitePause, useCustomerName, useMessagePreview } from "../components/conversation";
 import { useToast } from "../components/toast";
-import { Alert, Badge, Button, EmptyState, ExternalButton, Input, PageLoading, Spinner, Tabs, cx } from "../components/ui";
+import { Alert, Button, EmptyState, ExternalButton, Input, PageLoading, Spinner, Tabs, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
 
@@ -15,19 +15,28 @@ const PAGE = 30;
 // No WebSocket: poll while the tab is visible (TanStack pauses intervals in background tabs).
 const POLL_MS = 12_000;
 
+/**
+ * Two panes: the conversation list and the open thread. Phones show one pane at a time and
+ * fill the screen between the top bar and the tab bar; desktop gets a contained card.
+ */
 export default function Inbox() {
   const { id } = useParams();
   return (
-    <div className="-mx-4 -my-6 flex h-[calc(100dvh-3.5rem)] sm:-mx-6 lg:-my-8 lg:h-dvh">
-      <div className={cx("w-full shrink-0 border-e border-slate-200 bg-white lg:flex lg:w-96 lg:flex-col", id ? "hidden" : "flex flex-col")}>
+    <div
+      className={cx(
+        "-mx-4 -my-6 flex h-[calc(100dvh-var(--chrome-top)-var(--chrome-bottom))] bg-surface sm:-mx-6",
+        "lg:m-0 lg:h-[calc(100dvh-5rem)] lg:overflow-hidden lg:rounded-2xl lg:shadow-soft lg:ring-1 lg:ring-line",
+      )}
+    >
+      <div className={cx("w-full shrink-0 flex-col border-e border-slate-100 lg:flex lg:w-[24rem]", id ? "hidden" : "flex")}>
         <ConversationList selected={id} />
       </div>
-      <div className={cx("min-w-0 flex-1", id ? "flex flex-col" : "hidden lg:flex lg:flex-col")}>
+      <div className={cx("min-w-0 flex-1 flex-col bg-canvas", id ? "flex" : "hidden lg:flex")}>
         {id ? (
           <ConversationView key={id} id={id} />
         ) : (
           <div className="m-auto">
-            <EmptyState icon={<MessageSquare className="size-12" />} title={<SelectPrompt />} />
+            <EmptyState icon={<MessageSquare />} title={<SelectPrompt />} />
           </div>
         )}
       </div>
@@ -67,8 +76,25 @@ function ConversationList({ selected }: { selected?: string }) {
   return (
     <>
       <div className="space-y-3 border-b border-slate-100 p-4">
-        <h1 className="text-lg font-bold text-slate-900">{t.inbox.title}</h1>
+        <div className="flex items-center gap-2.5">
+          <span aria-hidden className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md shadow-brand-600/25">
+            <InboxIcon className="size-[18px]" />
+          </span>
+          <h1 className="text-lg font-extrabold text-ink-950">{t.inbox.title}</h1>
+        </div>
+        <div className="relative">
+          <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
+          <Input
+            className="ps-10"
+            placeholder={t.inbox.searchPlaceholder}
+            aria-label={t.inbox.searchPlaceholder}
+            value={q}
+            maxLength={64}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
         <Tabs
+          compact
           value={filter}
           onChange={setFilter}
           items={[
@@ -78,10 +104,6 @@ function ConversationList({ selected }: { selected?: string }) {
             { value: "paused", label: t.inbox.filterPaused },
           ]}
         />
-        <div className="relative">
-          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input className="ps-9" placeholder={t.inbox.searchPlaceholder} value={q} maxLength={64} onChange={(e) => setQ(e.target.value)} />
-        </div>
       </div>
       <div className="flex-1 overflow-y-auto">
         {list.isPending ? (
@@ -91,9 +113,9 @@ function ConversationList({ selected }: { selected?: string }) {
             <Alert kind="error">{errorMessage(list.error, t)}</Alert>
           </div>
         ) : items.length === 0 ? (
-          <EmptyState icon={<InboxIcon className="size-10" />} title={t.inbox.empty} />
+          <EmptyState icon={<InboxIcon />} title={t.inbox.empty} />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="p-2">
             {items.map((c) => (
               <ConversationRow key={c.id} c={c} active={c.id === selected} />
             ))}
@@ -122,26 +144,32 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
     <li>
       <Link
         to={`/inbox/${c.id}`}
-        className={cx("flex gap-3 px-4 py-3 transition-colors", active ? "bg-brand-50" : "hover:bg-slate-50", waiting && !active && "bg-red-50/40")}
+        aria-current={active ? "page" : undefined}
+        className={cx("flex gap-3 rounded-xl px-3 py-3 transition-colors", active ? "bg-brand-50" : "hover:bg-slate-50")}
       >
-        <Avatar name={name} />
+        <span className="relative">
+          <Avatar name={name} solid={active} />
+          {waiting && <span className="absolute -end-0.5 -top-0.5 size-3 rounded-full bg-red-500 ring-2 ring-surface" />}
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span dir="auto" className="truncate font-medium text-slate-900">{name}</span>
-            {time && <span className="ms-auto shrink-0 text-xs text-slate-400">{f.smart(time)}</span>}
+            <span dir="auto" className={cx("truncate text-sm font-bold", active ? "text-brand-800" : "text-ink-950")}>
+              {name}
+            </span>
+            {time && <span className="ms-auto shrink-0 text-[11px] text-slate-400">{f.smart(time)}</span>}
           </div>
           {c.last_message && (
-            <p className="mt-0.5 truncate text-sm text-slate-500">
-              {c.last_message.sender === "bot" && <span className="text-slate-400">{t.inbox.senderBot}: </span>}
-              {c.last_message.sender === "owner" && <span className="text-slate-400">{t.inbox.senderOwner}: </span>}
+            <p className="mt-0.5 truncate text-[13px] text-slate-500">
+              {c.last_message.sender === "bot" && <span className="font-medium text-brand-700">{t.inbox.senderBot}: </span>}
+              {c.last_message.sender === "owner" && <span className="font-medium text-ink-800">{t.inbox.senderOwner}: </span>}
               {preview(c.last_message.text)}
             </p>
           )}
           {(waiting || c.bot_paused || c.open_unanswered > 0) && (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {waiting && <Badge tone="red">{t.inbox.badgeWaiting}</Badge>}
-              {c.bot_paused && <Badge tone="amber">{t.inbox.badgePaused}</Badge>}
-              {c.open_unanswered > 0 && !waiting && <Badge tone="neutral">{t.inbox.botDidntKnow}</Badge>}
+            <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] font-semibold">
+              {waiting && <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-700">{t.inbox.badgeWaiting}</span>}
+              {c.bot_paused && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-800">{t.inbox.badgePaused}</span>}
+              {c.open_unanswered > 0 && !waiting && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">{t.inbox.botDidntKnow}</span>}
             </div>
           )}
         </div>
@@ -169,6 +197,10 @@ function ConversationView({ id }: { id: string }) {
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
   }, [messageCount]);
+
+  // Only messages that arrive while the conversation is open animate in, not the history.
+  const initialIds = useRef<Set<string> | null>(null);
+  if (detail.data && !initialIds.current) initialIds.current = new Set(detail.data.messages.map((m) => m.id));
 
   const onUpdated = (c: Conversation) => {
     qc.setQueryData<ConversationDetail>(keys.conversation(id), (old) => (old ? { ...old, ...c } : old));
@@ -213,90 +245,114 @@ function ConversationView({ id }: { id: string }) {
 
   return (
     <>
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
-        <button type="button" onClick={() => navigate("/inbox")} className="rounded-md p-1 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label={t.inbox.backToList}>
-          <ArrowRight className="size-5 ltr:rotate-180" />
+      <header className="flex items-center gap-3 border-b border-slate-100 bg-surface px-3 py-3 sm:px-5">
+        <button
+          type="button"
+          onClick={() => navigate("/inbox")}
+          className="inline-flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-ink-950 lg:hidden"
+          aria-label={t.inbox.backToList}
+        >
+          <ArrowRight className="size-5 ltr:rotate-180" aria-hidden />
         </button>
-        <Avatar name={display} className="size-9" />
+        <Avatar name={display} />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-slate-900">
+          <div className="truncate font-bold text-ink-950">
             <span dir="auto">{display}</span>
           </div>
           {c.customer_username && (
-            <a href={`https://instagram.com/${c.customer_username}`} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">
+            <a href={`https://instagram.com/${c.customer_username}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-700 hover:underline">
               {t.inbox.profile}
             </a>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {c.bot_paused ? (
-            <Button size="sm" variant="secondary" icon={<Play className="size-4" />} loading={resume.isPending} onClick={() => resume.mutate()}>
-              {t.inbox.resume}
+        {c.bot_paused ? (
+          <Button size="sm" variant="secondary" icon={<Play className="size-4" />} loading={resume.isPending} onClick={() => resume.mutate()} title={t.inbox.resume}>
+            <span className="max-sm:sr-only">{t.inbox.resume}</span>
+          </Button>
+        ) : (
+          <div className="relative">
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Pause className="size-4" />}
+              onClick={() => setPauseMenu(!pauseMenu)}
+              loading={pause.isPending}
+              aria-expanded={pauseMenu}
+              aria-haspopup="menu"
+              title={t.inbox.pause}
+            >
+              <span className="max-sm:sr-only">{t.inbox.pause}</span>
             </Button>
-          ) : (
-            <div className="relative">
-              <Button size="sm" variant="secondary" icon={<Pause className="size-4" />} onClick={() => setPauseMenu(!pauseMenu)} loading={pause.isPending}>
-                {t.inbox.pause}
-              </Button>
-              {pauseMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setPauseMenu(false)} />
-                  <div className="absolute end-0 z-20 mt-1 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                    {[
-                      [120, t.inbox.pause2h],
-                      [1440, t.inbox.pause24h],
-                      [null, t.inbox.pauseForever],
-                    ].map(([mins, label]) => (
-                      <button
-                        key={String(mins)}
-                        type="button"
-                        onClick={() => pause.mutate(mins as number | null)}
-                        className="block w-full px-4 py-2 text-start text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-          {c.instagram_url && (
-            <ExternalButton href={c.instagram_url} size="sm" icon={<ExternalLink className="size-4" />}>
-              {t.common.replyInInstagram}
-            </ExternalButton>
-          )}
-        </div>
+            {pauseMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setPauseMenu(false)} />
+                <div role="menu" className="animate-pop-in absolute end-0 z-20 mt-2 w-56 overflow-hidden rounded-xl bg-surface p-1.5 shadow-lift ring-1 ring-line">
+                  {[
+                    [120, t.inbox.pause2h],
+                    [1440, t.inbox.pause24h],
+                    [null, t.inbox.pauseForever],
+                  ].map(([mins, label]) => (
+                    <button
+                      key={String(mins)}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => pause.mutate(mins as number | null)}
+                      className="block w-full rounded-lg px-3 py-2.5 text-start text-sm font-medium text-ink-900 transition-colors hover:bg-brand-50 hover:text-brand-700"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </header>
 
       {(waiting || c.bot_paused) && (
-        <div className="space-y-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="space-y-px">
           {waiting && c.handoff && (
-            <Alert kind="error">
-              <b>{t.inbox.badgeWaiting}</b>
-              {c.handoff.reason && (
-                <div className="mt-0.5">
-                  {t.inbox.handoffReason}: {c.handoff.reason}
-                </div>
-              )}
-            </Alert>
+            <div className="flex items-start gap-2.5 bg-red-50 px-4 py-2.5 text-sm text-red-800 sm:px-5">
+              <BellRing className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                <b>{t.inbox.badgeWaiting}</b>
+                {c.handoff.reason && (
+                  <>
+                    {" · "}
+                    {t.inbox.handoffReason}: {c.handoff.reason}
+                  </>
+                )}
+              </span>
+            </div>
           )}
           {c.bot_paused && (
-            <Alert kind="warning">
+            <div className="flex items-start gap-2.5 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 sm:px-5">
+              <Pause className="mt-0.5 size-4 shrink-0" aria-hidden />
               {isIndefinitePause(c.bot_paused_until) ? t.inbox.pausedIndefinitely : t.inbox.pausedUntil(f.smart(c.bot_paused_until!))}
-            </Alert>
+            </div>
           )}
         </div>
       )}
 
-      <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/50 p-4 sm:p-6">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         {c.messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
+          <MessageBubble key={m.id} message={m} animate={!initialIds.current?.has(m.id)} />
         ))}
         <div ref={bottom} />
       </div>
 
-      <footer className="border-t border-slate-200 bg-white px-4 py-3 text-center text-xs text-slate-500">{t.inbox.noSendNote}</footer>
+      {/* where a composer would be: replies happen in Instagram itself */}
+      <footer className="flex flex-wrap items-center gap-3 border-t border-slate-100 bg-surface px-4 py-3 sm:px-5">
+        <p className="flex min-w-0 flex-1 items-center gap-2 text-xs leading-5 text-slate-500">
+          <Camera className="size-4 shrink-0 text-slate-400" aria-hidden />
+          {t.inbox.noSendNote}
+        </p>
+        {c.instagram_url && (
+          <ExternalButton href={c.instagram_url} size="sm" icon={<ExternalLink className="size-4" />}>
+            {t.common.replyInInstagram}
+          </ExternalButton>
+        )}
+      </footer>
     </>
   );
 }

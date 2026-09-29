@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { keys } from "../api/queries";
-import { Button, Card, LinkButton } from "../components/ui";
+import { Button, Card, LinkButton, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { useConnectInstagram } from "./Instagram";
 
@@ -41,22 +41,32 @@ export default function InstagramCallback() {
   }
 
   return (
-    <div className="mx-auto max-w-md pt-10">
-      <Card className="flex flex-col items-center p-8 text-center">
-        {ok ? <CheckCircle2 className="mb-4 size-14 text-emerald-500" /> : <XCircle className="mb-4 size-14 text-red-500" />}
-        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+    <div className="mx-auto max-w-md pt-6 sm:pt-12">
+      <Card className="animate-pop-in flex flex-col items-center px-6 py-10 text-center sm:px-10">
+        <span
+          aria-hidden
+          className={cx(
+            "flex size-16 items-center justify-center rounded-full ring-8",
+            ok ? "bg-emerald-500 text-white ring-emerald-100" : "bg-red-500 text-white ring-red-100",
+          )}
+        >
+          {ok ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}
+        </span>
+        <h1 className="mt-6 text-xl font-extrabold text-ink-950">{title}</h1>
         {hint && <p className="mt-2 text-sm leading-7 text-slate-500">{hint}</p>}
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="mt-8 flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-center">
           {ok ? (
-            <LinkButton to="/knowledge">{t.callback.nextStep}</LinkButton>
+            <LinkButton to="/knowledge" size="lg">
+              {t.callback.nextStep}
+            </LinkButton>
           ) : (
             <>
               {reason !== "account_in_use" && (
-                <Button onClick={() => connect.mutate()} loading={connect.isPending || connect.isSuccess}>
+                <Button size="lg" onClick={() => connect.mutate()} loading={connect.isPending || connect.isSuccess}>
                   {t.callback.tryAgain}
                 </Button>
               )}
-              <LinkButton to="/instagram" variant="secondary">
+              <LinkButton to="/instagram" size="lg" variant="secondary">
                 {t.callback.backToInstagram}
               </LinkButton>
             </>

@@ -2,10 +2,25 @@
 <html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0e7490" />
-    <title>جواب</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#6b2de8" />
+    <!-- apply the saved light/dark theme before first paint (see src/theme.tsx) -->
+    <script>
+      try {
+        var t = localStorage.getItem("dm.theme");
+        if (t === "dark" || ((!t || t === "system") && matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      } catch (e) {}
+    </script>
+    <meta name="description" content="جواب با اطلاعات و محصولات فروشگاه شما، شبانه‌روز به دایرکت‌های اینستاگرام جواب می‌دهد و هر جا لازم باشد گفتگو را به شما می‌سپارد." />
+    <meta property="og:title" content="جواب — دستیار هوش مصنوعی دایرکت اینستاگرام" />
+    <meta property="og:description" content="هیچ دایرکتی بی‌جواب نمی‌مونه." />
+    <meta property="og:image" content="/brand/javab-logo-512.png" />
+    <title>جواب — دستیار هوش مصنوعی دایرکت اینستاگرام</title>
   </head>
   <body>
     <div id="root"></div>

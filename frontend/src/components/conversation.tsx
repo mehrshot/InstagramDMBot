@@ -16,10 +16,17 @@ export function useCustomerName() {
   return (username: string | null | undefined, igsid: string) => customerName(username, igsid, t, f);
 }
 
-export function Avatar({ name, className }: { name: string; className?: string }) {
+export function Avatar({ name, className, solid }: { name: string; className?: string; solid?: boolean }) {
   const letter = name.replace(/^[^\p{L}\p{N}]+/u, "").charAt(0).toUpperCase() || "?";
   return (
-    <span className={cx("flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-pink-100 font-semibold text-brand-700", className)}>
+    <span
+      aria-hidden
+      className={cx(
+        "flex size-10 shrink-0 items-center justify-center rounded-full font-bold transition-colors",
+        solid ? "bg-brand-600 text-white" : "bg-brand-100 text-brand-700",
+        className,
+      )}
+    >
       {letter}
     </span>
   );
@@ -71,13 +78,13 @@ export function useMessagePreview() {
  * bot:      end side, brand colour + bot icon
  * owner:    end side, different colour + "You" label
  */
-export function MessageBubble({ message }: { message: Message }) {
+export function MessageBubble({ message, animate }: { message: Message; animate?: boolean }) {
   const { t, f } = useI18n();
   const mine = message.sender !== "customer";
   const post = message.sender === "bot" ? sharedPostUrl(message.text) : null;
 
   return (
-    <div className={cx("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
+    <div className={cx("flex flex-col gap-1", mine ? "items-end" : "items-start", animate && "animate-msg-in")}>
       <div className={cx("flex max-w-[85%] items-end gap-2 sm:max-w-[70%]", mine && "flex-row-reverse")}>
         {message.sender === "bot" && (
           <span className="mb-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
@@ -85,7 +92,7 @@ export function MessageBubble({ message }: { message: Message }) {
           </span>
         )}
         {message.sender === "owner" && (
-          <span className="mb-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+          <span className="mb-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-night-900 text-white">
             <UserRound className="size-3.5" />
           </span>
         )}
@@ -95,9 +102,9 @@ export function MessageBubble({ message }: { message: Message }) {
           <div
             className={cx(
               "user-text rounded-2xl px-4 py-2.5 text-sm leading-7",
-              message.sender === "customer" && "rounded-ss-sm bg-slate-100 text-slate-800",
-              message.sender === "bot" && "rounded-se-sm bg-brand-600 text-white",
-              message.sender === "owner" && "rounded-se-sm bg-emerald-600 text-white",
+              message.sender === "customer" && "rounded-ss-md bg-surface text-ink-900 shadow-sm ring-1 ring-line",
+              message.sender === "bot" && "rounded-se-md bg-brand-600 text-white",
+              message.sender === "owner" && "rounded-se-md bg-night-900 text-white dark:bg-night-800 dark:ring-1 dark:ring-white/10",
             )}
           >
             <MessageText text={message.text} />
@@ -105,7 +112,7 @@ export function MessageBubble({ message }: { message: Message }) {
         )}
       </div>
       <div className={cx("flex items-center gap-2 text-[11px] text-slate-400", mine ? "me-8" : "ms-1")}>
-        {message.sender === "owner" && <span className="font-medium text-emerald-700">{t.inbox.senderOwner}</span>}
+        {message.sender === "owner" && <span className="font-semibold text-ink-800">{t.inbox.senderOwner}</span>}
         {message.sender === "bot" && <span>{t.inbox.senderBot}</span>}
         <span title={f.dateTime(message.created_at)}>{f.smart(message.created_at)}</span>
         {message.unanswered && <Badge tone="amber">{t.inbox.botDidntKnow}</Badge>}

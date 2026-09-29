@@ -1,61 +1,92 @@
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { KeyRound, Languages, Store, SunMoon, Trash, TriangleAlert, UserRound } from "lucide-react";
 import { api } from "../api/client";
 import { useMe } from "../api/queries";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/toast";
-import { Alert, Button, Card, CardHeader, ConfirmDialog, Field, Input, Modal, PageHeader, PageLoading } from "../components/ui";
-import { useI18n } from "../i18n";
+import { Alert, Button, Card, CardHeader, ConfirmDialog, Field, IconChip, Input, Modal, PageHeader, PageLoading, Tabs } from "../components/ui";
+import { useI18n, type Lang } from "../i18n";
 import { errorMessage, fieldError } from "../lib/errors";
+import { useTheme, type ThemeChoice } from "../theme";
 
 export default function Account() {
   const { t, lang, setLang } = useI18n();
+  const { choice, setChoice } = useTheme();
   const { data: me, isPending, error } = useMe();
 
-  if (isPending) return <PageLoading />;
-  if (error) return <Alert kind="error">{errorMessage(error, t)}</Alert>;
+  const header = <PageHeader icon={<UserRound />} title={t.account.title} />;
+  if (isPending)
+    return (
+      <>
+        {header}
+        <PageLoading />
+      </>
+    );
+  if (error)
+    return (
+      <>
+        {header}
+        <Alert kind="error">{errorMessage(error, t)}</Alert>
+      </>
+    );
+
+  const display = me.full_name || me.email;
+  const initial = display.replace(/^[^\p{L}\p{N}]+/u, "").charAt(0).toUpperCase() || "?";
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <PageHeader title={t.account.title} />
-
-      <Card>
-        <CardHeader title={t.account.info} />
-        <dl className="grid gap-4 p-5 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-slate-500">{t.account.email}</dt>
-            <dd className="ltr mt-0.5 font-medium text-slate-900">{me.email}</dd>
-          </div>
-          {me.full_name && (
-            <div>
-              <dt className="text-slate-500">{t.account.name}</dt>
-              <dd className="mt-0.5 font-medium text-slate-900">{me.full_name}</dd>
+    <div className="max-w-4xl">
+      {header}
+      <div className="space-y-6">
+        <Card className="animate-pop-in overflow-hidden">
+          <div className="flex flex-wrap items-center gap-5 p-5 sm:p-6">
+            <span aria-hidden className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-2xl font-extrabold text-white shadow-md shadow-brand-600/25">
+              {initial}
+            </span>
+            <div className="min-w-0 flex-1">
+              {me.full_name && <div className="truncate text-lg font-extrabold text-ink-950">{me.full_name}</div>}
+              <div className="ltr truncate text-sm font-medium text-slate-500">{me.email}</div>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700 ring-1 ring-brand-100">
+                <Store className="size-3.5" aria-hidden />
+                <span className="sr-only">{t.account.shop}: </span>
+                {me.shop.name}
+              </div>
             </div>
-          )}
-          <div>
-            <dt className="text-slate-500">{t.account.shop}</dt>
-            <dd className="mt-0.5 font-medium text-slate-900">{me.shop.name}</dd>
           </div>
-        </dl>
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 text-sm">
-          <span className="font-medium text-slate-700">{t.account.language}</span>
-          <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
-            {(["fa", "en"] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setLang(l)}
-                className={`rounded-md px-3 py-1 ${lang === l ? "bg-white shadow-sm" : "text-slate-600"}`}
-              >
-                {l === "fa" ? "فارسی" : "English"}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
+            <span className="flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <Languages className="size-4 text-slate-400" aria-hidden />
+              {t.account.language}
+            </span>
+            <Tabs<Lang>
+              value={lang}
+              onChange={setLang}
+              items={[
+                { value: "fa", label: <span lang="fa">فارسی</span> },
+                { value: "en", label: <span lang="en">English</span> },
+              ]}
+            />
           </div>
-        </div>
-      </Card>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
+            <span className="flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <SunMoon className="size-4 text-slate-400" aria-hidden />
+              {t.theme.title}
+            </span>
+            <Tabs<ThemeChoice>
+              value={choice}
+              onChange={setChoice}
+              items={[
+                { value: "light", label: t.theme.light },
+                { value: "dark", label: t.theme.dark },
+                { value: "system", label: t.theme.system },
+              ]}
+            />
+          </div>
+        </Card>
 
-      <ChangePassword />
-      <DeleteAccount />
+        <ChangePassword />
+        <DeleteAccount />
+      </div>
     </div>
   );
 }
@@ -89,13 +120,13 @@ function ChangePassword() {
 
   return (
     <Card>
-      <CardHeader title={t.account.changePassword} />
-      <form onSubmit={submit} className="space-y-4 p-5" noValidate>
+      <CardHeader icon={<KeyRound />} title={t.account.changePassword} />
+      <form onSubmit={submit} className="space-y-4 p-5 sm:p-6" noValidate>
         {change.error && !hasFieldErrors && <Alert kind="error">{errorMessage(change.error, t)}</Alert>}
         <Field label={t.account.currentPassword}>
           {(id) => <Input id={id} type="password" dir="ltr" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />}
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t.account.newPassword} hint={t.auth.passwordHint} error={short ? t.errors.field.new_password : fieldError(change.error, "new_password", t)}>
             {(id) => (
               <Input id={id} type="password" dir="ltr" autoComplete="new-password" maxLength={128} invalid={short} value={next} onChange={(e) => setNext(e.target.value)} />
@@ -107,7 +138,7 @@ function ChangePassword() {
             )}
           </Field>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end border-t border-slate-100 pt-4">
           <Button type="submit" loading={change.isPending} disabled={!current || next.length < 8 || next !== repeat}>
             {t.account.changePassword}
           </Button>
@@ -141,11 +172,16 @@ function DeleteAccount() {
   const wordOk = word.trim().toLowerCase() === t.account.deleteWord.toLowerCase();
 
   return (
-    <Card className="border-red-200">
-      <CardHeader title={<span className="text-red-700">{t.account.deleteTitle}</span>} />
-      <div className="space-y-4 p-5">
-        <p className="text-sm leading-7 text-slate-600">{t.account.deleteDesc}</p>
-        <Button variant="danger" onClick={() => setStep(1)}>
+    <Card danger>
+      <div className="flex flex-wrap items-start gap-4 p-5 sm:p-6">
+        <IconChip tone="red">
+          <TriangleAlert />
+        </IconChip>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-bold text-red-700">{t.account.deleteTitle}</h2>
+          <p className="mt-1 text-sm leading-7 text-slate-600">{t.account.deleteDesc}</p>
+        </div>
+        <Button variant="danger" icon={<Trash className="size-4" />} onClick={() => setStep(1)}>
           {t.account.deleteButton}
         </Button>
       </div>

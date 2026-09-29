@@ -1,7 +1,8 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
-import { Languages } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import SiteFooter from "../../components/site/SiteFooter";
+import SiteHeader from "../../components/site/SiteHeader";
 import { cx } from "../../components/ui";
 import { useI18n, type Lang } from "../../i18n";
 
@@ -14,7 +15,7 @@ const UPDATED = "2026-09-24";
 type Page = { title: Record<Lang, string>; body: Record<Lang, ReactNode> };
 
 function LegalShell({ page }: { page: Page }) {
-  const { t, lang, f, toggleLang } = useI18n();
+  const { t, lang, f } = useI18n();
   const { loggedIn } = useAuth();
   const { pathname } = useLocation();
   useEffect(() => {
@@ -27,40 +28,40 @@ function LegalShell({ page }: { page: Page }) {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-slate-200">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-4 px-4 py-4">
-          <Link to={loggedIn ? "/" : "/login"} className="flex items-center gap-2 font-bold text-slate-900">
-            <img src="/favicon.svg" alt="" className="size-8" />
-            {t.appName}
-          </Link>
-          <nav className="flex flex-1 flex-wrap gap-4 text-sm">
+    <div className="flex min-h-dvh flex-col bg-surface">
+      <SiteHeader />
+      <main className="container-site flex-1 py-12 lg:py-16">
+        <div className="mx-auto max-w-3xl">
+          <nav aria-label={t.landing.footer.legal} className="flex flex-wrap gap-2">
             {links.map(([to, label]) => (
-              <Link key={to} to={to} className={cx("text-slate-500 hover:text-slate-900", pathname === to && "font-medium text-slate-900")}>
+              <Link
+                key={to}
+                to={to}
+                aria-current={pathname === to ? "page" : undefined}
+                className={cx(
+                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  pathname === to ? "bg-brand-50 text-brand-700" : "text-slate-500 hover:bg-slate-100 hover:text-ink-950",
+                )}
+              >
                 {label}
               </Link>
             ))}
           </nav>
-          <button type="button" onClick={toggleLang} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
-            <Languages className="size-4" />
-            {t.otherLang}
-          </button>
+          <h1 className="mt-10 text-3xl font-extrabold text-ink-950 sm:text-4xl">{page.title[lang]}</h1>
+          <p className="mt-3 text-sm text-slate-400">
+            {t.legal.lastUpdated}: {f.date(UPDATED)}
+          </p>
+          <article className="legal mt-10 space-y-4 text-[15px] leading-8 text-slate-700 [&_a]:font-medium [&_a]:text-brand-700 [&_a]:underline [&_a]:underline-offset-2 [&_h2]:mt-10 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-ink-950 [&_li]:ms-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ul]:list-disc [&_ul]:space-y-1">
+            {page.body[lang]}
+          </article>
+          {loggedIn && (
+            <Link to="/" className="mt-12 inline-block text-sm font-semibold text-brand-700 hover:underline">
+              {t.legal.backToPanel}
+            </Link>
+          )}
         </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-3xl font-bold text-slate-900">{page.title[lang]}</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          {t.legal.lastUpdated}: {f.date(UPDATED)}
-        </p>
-        <article className="legal mt-8 space-y-4 text-[15px] leading-8 text-slate-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-slate-900 [&_li]:ms-5 [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:space-y-1 [&_ul]:space-y-1 [&_a]:text-brand-600 [&_a]:underline">
-          {page.body[lang]}
-        </article>
-        {loggedIn && (
-          <Link to="/" className="mt-10 inline-block text-sm font-medium text-brand-600 hover:underline">
-            {t.legal.backToPanel}
-          </Link>
-        )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

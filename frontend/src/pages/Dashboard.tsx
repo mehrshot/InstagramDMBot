@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BellRing, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellRing, Bot, BookOpen, Check, FlaskConical, HelpCircle, Inbox, MessagesSquare, SlidersHorizontal, Sparkles, UserRound } from "lucide-react";
 import { api } from "../api/client";
 import { keys, useDashboard, useMe } from "../api/queries";
 import type { Shop } from "../api/types";
 import { useToast } from "../components/toast";
-import { Alert, Card, ConfirmDialog, LinkButton, PageHeader, PageLoading, Toggle, cx } from "../components/ui";
+import { Alert, Card, CardHeader, ConfirmDialog, IconChip, LinkButton, PageLoading, Toggle, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
 import { getFlag, playgroundKey } from "../lib/storage";
@@ -31,20 +31,19 @@ export default function Dashboard() {
   });
 
   if (isPending) return <PageLoading />;
-  if (error) return <Alert kind="error" action={<button onClick={() => refetch()} className="underline">{t.common.retry}</button>}>{errorMessage(error, t)}</Alert>;
+  if (error) return <Alert kind="error" action={<button onClick={() => refetch()} className="font-semibold underline">{t.common.retry}</button>}>{errorMessage(error, t)}</Alert>;
 
   const s = data.setup;
   const igOk = s.instagram_connected && s.instagram_active;
   const tried = me ? getFlag(playgroundKey(me.shop.id)) : false;
 
-  const steps: { done: boolean; title: string; hint: string; to?: string; optional?: boolean }[] = [
+  const steps: Step[] = [
     { done: igOk, title: t.dashboard.stepInstagram, hint: t.dashboard.stepInstagramHint, to: "/instagram" },
     { done: s.knowledge_entries > 0, title: t.dashboard.stepKnowledge, hint: t.dashboard.stepKnowledgeHint, to: "/knowledge" },
     { done: s.products_connected, title: t.dashboard.stepProducts, hint: t.dashboard.stepProductsHint, to: "/products", optional: true },
     { done: tried, title: t.dashboard.stepPlayground, hint: t.dashboard.stepPlaygroundHint, to: "/playground" },
     { done: s.bot_enabled, title: t.dashboard.stepBot, hint: t.dashboard.stepBotHint },
   ];
-  const doneCount = steps.filter((x) => x.done).length;
   // the optional products step doesn't keep the checklist on screen
   const allDone = steps.every((x) => x.done || x.optional);
 
@@ -58,23 +57,29 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t.dashboard.title} />
+      <StatusHero
+        name={me?.full_name || me?.shop.name || t.appName}
+        on={s.bot_enabled}
+        username={s.instagram_username}
+        toggle={<Toggle checked={s.bot_enabled} onChange={setBot} disabled={toggleBot.isPending} label={t.dashboard.botStatus} />}
+      />
 
       {data.open_handoffs > 0 && (
         <Link
           to="/handoffs"
-          className="flex flex-wrap items-center gap-4 rounded-xl bg-red-600 p-5 text-white shadow-md transition hover:bg-red-700"
+          className="animate-pop-in group flex flex-wrap items-center gap-4 rounded-2xl bg-red-600 p-5 text-white shadow-lift transition-colors hover:bg-red-500 sm:p-6"
         >
-          <span className="rounded-full bg-white/15 p-3">
-            <BellRing className="size-6" />
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-white/15">
+            <BellRing className="size-6 origin-top group-hover:animate-[bell_0.6s_ease-in-out]" aria-hidden />
           </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-lg font-bold">{t.dashboard.waitingCard(f.num(data.open_handoffs))}</div>
-            <div className="text-sm text-red-100">{t.dashboard.waitingCardHint}</div>
+          {/* a real minimum width so the button wraps below on phones instead of squeezing the text */}
+          <div className="min-w-52 flex-1">
+            <div className="text-lg font-extrabold">{t.dashboard.waitingCard(f.num(data.open_handoffs))}</div>
+            <div className="mt-0.5 text-sm text-white/80">{t.dashboard.waitingCardHint}</div>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-red-700">
+          <span className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-surface px-4 text-sm font-bold text-red-700 shadow-sm">
             {t.dashboard.waitingCardAction}
-            <ArrowLeft className="size-4 ltr:rotate-180" />
+            <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5 ltr:rotate-180 ltr:group-hover:translate-x-0.5" aria-hidden />
           </span>
         </Link>
       )}
@@ -91,75 +96,41 @@ export default function Dashboard() {
       )}
       {!s.ai_ready && <Alert kind="info">{t.dashboard.alertAi}</Alert>}
 
-      <Card className="flex flex-wrap items-center gap-4 p-5">
-        <span className={cx("size-3 rounded-full", s.bot_enabled ? "bg-emerald-500 ring-4 ring-emerald-100" : "bg-slate-300 ring-4 ring-slate-100")} />
-        <div className="min-w-0 flex-1">
-          <div className="text-sm text-slate-500">{t.dashboard.botStatus}</div>
-          <div className="font-semibold text-slate-900">{s.bot_enabled ? t.dashboard.botOn : t.dashboard.botOff}</div>
-          {s.instagram_username && <div className="ltr mt-0.5 text-xs text-slate-500">@{s.instagram_username}</div>}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          {!allDone && <Checklist steps={steps} botOn={s.bot_enabled} setBot={setBot} busy={toggleBot.isPending} />}
+
+          {/* A brand-new shop sees only the checklist, not a wall of zeros. */}
+          {(allDone || hasActivity) && (
+            <section aria-labelledby="stats-title">
+              <h2 id="stats-title" className="mb-3 text-sm font-bold text-slate-500">
+                {t.dashboard.last7Days}
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+                <Stat icon={<MessagesSquare />} label={t.dashboard.statConversations} value={f.num(stats.conversations)} to="/inbox" />
+                <Stat icon={<UserRound />} label={t.dashboard.statCustomerMessages} value={f.num(stats.customer_messages)} />
+                <Stat icon={<Bot />} label={t.dashboard.statBotReplies} value={f.num(stats.bot_replies)} />
+                <Stat icon={<HelpCircle />} label={t.dashboard.statOpenUnanswered} value={f.num(stats.open_unanswered)} to="/unanswered" warn={stats.open_unanswered > 0} />
+              </div>
+            </section>
+          )}
         </div>
-        <Toggle checked={s.bot_enabled} onChange={setBot} disabled={toggleBot.isPending} label={t.dashboard.botStatus} />
-      </Card>
 
-      {!allDone && (
-        <Card>
-          <div className="border-b border-slate-100 px-5 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-semibold text-slate-900">{t.dashboard.checklistTitle}</h2>
-              <span className="text-sm text-slate-500">{t.dashboard.checklistProgress(f.num(doneCount), f.num(steps.length))}</span>
+        <aside className="min-w-0 space-y-6">
+          <Shortcuts />
+          <Card className="flex items-center gap-4 p-5">
+            <IconChip>
+              <Sparkles />
+            </IconChip>
+            <div className="min-w-0">
+              <div className="text-sm text-slate-500">{t.panel.dashboard.usageTitle}</div>
+              <div className="mt-0.5 font-bold text-ink-950">
+                <span className="num text-xl">{f.num(data.tokens_this_month)}</span> <span className="text-sm font-medium text-slate-500">{t.dashboard.tokensUnit}</span>
+              </div>
             </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
-            </div>
-          </div>
-          <ol className="divide-y divide-slate-100">
-            {steps.map((step, i) => (
-              <li key={step.title} className="flex items-center gap-4 px-5 py-4">
-                {step.done ? (
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-                    <Check className="size-4" />
-                  </span>
-                ) : (
-                  <span className="num flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-slate-200 text-sm font-semibold text-slate-400">
-                    {f.num(i + 1)}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className={cx("font-medium", step.done ? "text-slate-400 line-through" : "text-slate-900")}>
-                    {step.title}
-                    {step.optional && <span className="ms-1.5 text-xs font-normal text-slate-400">({t.common.optional})</span>}
-                  </div>
-                  {!step.done && <div className="text-sm text-slate-500">{step.hint}</div>}
-                </div>
-                {!step.done &&
-                  (step.to ? (
-                    <LinkButton to={step.to} size="sm" variant="soft">
-                      {t.dashboard.doStep}
-                    </LinkButton>
-                  ) : (
-                    <Toggle checked={s.bot_enabled} onChange={setBot} disabled={toggleBot.isPending} label={step.title} />
-                  ))}
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
-
-      {/* A brand-new shop sees only the checklist, not a wall of zeros. */}
-      {(allDone || hasActivity) && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-slate-500">{t.dashboard.last7Days}</h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label={t.dashboard.statConversations} value={f.num(stats.conversations)} />
-            <Stat label={t.dashboard.statCustomerMessages} value={f.num(stats.customer_messages)} />
-            <Stat label={t.dashboard.statBotReplies} value={f.num(stats.bot_replies)} />
-            <Stat label={t.dashboard.statOpenUnanswered} value={f.num(stats.open_unanswered)} to="/unanswered" warn={stats.open_unanswered > 0} />
-          </div>
-          <p className="mt-4 text-xs text-slate-400">
-            {t.dashboard.tokensThisMonth}: <span className="num">{f.num(data.tokens_this_month)}</span> {t.dashboard.tokensUnit}
-          </p>
-        </section>
-      )}
+          </Card>
+        </aside>
+      </div>
 
       <ConfirmDialog
         open={confirmOn}
@@ -180,19 +151,140 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ label, value, to, warn }: { label: string; value: string; to?: string; warn?: boolean }) {
+/** Greeting and the bot's master switch, on the brand violet like the site's hero. */
+function StatusHero({ name, on, username, toggle }: { name: string; on: boolean; username: string | null; toggle: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <section aria-labelledby="dash-title" className="animate-pop-in relative overflow-hidden rounded-3xl bg-brand-600 p-6 text-white shadow-lift sm:p-8">
+      <div aria-hidden className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_80%_90%_at_0%_0%,black,transparent)] rtl:[mask-image:radial-gradient(ellipse_80%_90%_at_100%_0%,black,transparent)]" />
+      <div className="relative flex flex-wrap items-center justify-between gap-6">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white/70">{t.dashboard.title}</p>
+          <h1 id="dash-title" className="mt-1 text-2xl font-extrabold sm:text-3xl">
+            {t.panel.dashboard.greeting(name)}
+          </h1>
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold ring-1 ring-white/20">
+              <span className="relative flex size-2" aria-hidden>
+                {on && <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300 opacity-70 [animation-duration:2s]" />}
+                <span className={cx("relative size-2 rounded-full", on ? "bg-emerald-300" : "bg-white/40")} />
+              </span>
+              {on ? t.dashboard.botOn : t.dashboard.botOff}
+            </span>
+            {username && (
+              <a href={`https://instagram.com/${username}`} target="_blank" rel="noopener noreferrer" className="ltr text-sm font-medium text-white/75 hover:text-white hover:underline">
+                @{username}
+              </a>
+            )}
+          </div>
+          {!on && <p className="mt-3 text-sm text-white/75">{t.panel.dashboard.offHint}</p>}
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <span className="text-sm font-semibold">{t.dashboard.botStatus}</span>
+          {toggle}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type Step = { done: boolean; title: string; hint: string; to?: string; optional?: boolean };
+
+/** Setup as a vertical stepper, drawn like the site's "four steps" section. */
+function Checklist({ steps, botOn, setBot, busy }: { steps: Step[]; botOn: boolean; setBot: (on: boolean) => void; busy: boolean }) {
+  const { t, f } = useI18n();
+  const doneCount = steps.filter((x) => x.done).length;
+  const current = steps.findIndex((x) => !x.done);
+  return (
+    <Card>
+      <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-bold text-ink-950">{t.dashboard.checklistTitle}</h2>
+          <span className="text-sm font-medium text-slate-500">{t.dashboard.checklistProgress(f.num(doneCount), f.num(steps.length))}</span>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-fill">
+          <div className="h-full rounded-full bg-brand-600 transition-[width] duration-700" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+        </div>
+      </div>
+      <ol className="px-5 py-3 sm:px-6">
+        {steps.map((step, i) => (
+          <li key={step.title} className="relative flex items-center gap-4 py-3">
+            {/* connector to the next step */}
+            {i < steps.length - 1 && <span aria-hidden className="absolute start-[0.9375rem] top-[calc(50%+1.25rem)] h-[calc(100%-2.5rem)] w-0.5 bg-slate-100" />}
+            <span
+              className={cx(
+                "num relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                step.done ? "bg-emerald-500 text-white" : i === current ? "bg-brand-600 text-white ring-4 ring-brand-100" : "bg-surface text-slate-400 ring-2 ring-slate-200",
+              )}
+            >
+              {step.done ? <Check className="size-4" strokeWidth={3} aria-hidden /> : f.num(i + 1)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className={cx("font-semibold", step.done ? "text-slate-400" : "text-ink-950")}>
+                {step.title}
+                {step.optional && <span className="ms-1.5 text-xs font-medium text-slate-400">({t.common.optional})</span>}
+              </div>
+              {!step.done && <div className="text-sm leading-6 text-slate-500">{step.hint}</div>}
+            </div>
+            {!step.done &&
+              (step.to ? (
+                <LinkButton to={step.to} size="sm" variant={i === current ? "primary" : "soft"}>
+                  {t.dashboard.doStep}
+                </LinkButton>
+              ) : (
+                <Toggle checked={botOn} onChange={setBot} disabled={busy} label={step.title} />
+              ))}
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
+function Stat({ icon, label, value, to, warn }: { icon: ReactNode; label: string; value: string; to?: string; warn?: boolean }) {
   const body = (
     <>
-      <div className="text-sm text-slate-500">{label}</div>
-      <div className={cx("num mt-1 text-2xl font-bold", warn ? "text-amber-600" : "text-slate-900")}>{value}</div>
+      <IconChip tone={warn ? "amber" : "brand"}>{icon}</IconChip>
+      <div className={cx("num mt-4 text-3xl font-extrabold", warn ? "text-amber-600" : "text-ink-950")}>{value}</div>
+      <div className="mt-0.5 text-sm text-slate-500">{label}</div>
     </>
   );
-  const cls = "block rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
+  const cls = "block rounded-2xl bg-surface p-5 shadow-soft ring-1 ring-line";
   return to ? (
-    <Link to={to} className={cx(cls, "transition hover:border-brand-200")}>
+    <Link to={to} className={cx(cls, "transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lift")}>
       {body}
     </Link>
   ) : (
     <div className={cls}>{body}</div>
+  );
+}
+
+function Shortcuts() {
+  const { t } = useI18n();
+  const Q = t.panel.dashboard.quick;
+  const links = [
+    { to: "/playground", icon: <FlaskConical />, ...Q.playground },
+    { to: "/knowledge", icon: <BookOpen />, ...Q.knowledge },
+    { to: "/inbox", icon: <Inbox />, ...Q.inbox },
+    { to: "/settings", icon: <SlidersHorizontal />, ...Q.settings },
+  ];
+  return (
+    <Card>
+      <CardHeader title={t.panel.dashboard.quickTitle} />
+      <ul className="p-2">
+        {links.map((l) => (
+          <li key={l.to}>
+            <Link to={l.to} className="group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-brand-50/70">
+              <IconChip>{l.icon}</IconChip>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-ink-950">{l.title}</span>
+                <span className="block text-xs leading-5 text-slate-500">{l.body}</span>
+              </span>
+              <ArrowRight className="size-4 text-slate-300 transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-brand-700 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

@@ -1,11 +1,25 @@
 // Persian is the source language; en.ts must have exactly the same shape (checked by TS).
 
+import landing from "./landing.fa";
+import panel from "./panel.fa";
+
 const fa = {
   appName: "جواب",
   tagline: "هیچ دایرکتی بی‌جواب نمی‌مونه",
   panelTitle: (shop: string) => `پنل ${shop}`,
   langName: "فارسی",
   otherLang: "English",
+
+  theme: {
+    title: "پوسته",
+    light: "روشن",
+    dark: "تیره",
+    system: "خودکار",
+    toDark: "رفتن به حالت تیره",
+    toLight: "رفتن به حالت روشن",
+    darkMode: "حالت تیره",
+    lightMode: "حالت روشن",
+  },
 
   common: {
     save: "ذخیره",
@@ -424,6 +438,9 @@ const fa = {
   time: {
     justNow: "همین الان",
   },
+
+  landing,
+  panel,
 };
 
 export default fa;

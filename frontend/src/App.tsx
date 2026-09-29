@@ -1,22 +1,28 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { useAuth } from "./auth/AuthContext";
-import Layout from "./components/Layout";
-import Account from "./pages/Account";
-import Dashboard from "./pages/Dashboard";
-import Handoffs from "./pages/Handoffs";
-import Inbox from "./pages/Inbox";
-import Instagram from "./pages/Instagram";
-import InstagramCallback from "./pages/InstagramCallback";
-import Knowledge from "./pages/Knowledge";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
-import Playground from "./pages/Playground";
-import Products from "./pages/Products";
 import Register from "./pages/Register";
-import Settings from "./pages/Settings";
-import Unanswered from "./pages/Unanswered";
-import { DataDeletion, Privacy, Terms } from "./pages/public/Legal";
+
+// The public site ships in the main bundle; the panel and legal pages load on demand,
+// so visitors don't download the whole panel.
+const Layout = lazy(() => import("./components/Layout"));
+const Account = lazy(() => import("./pages/Account"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Handoffs = lazy(() => import("./pages/Handoffs"));
+const Inbox = lazy(() => import("./pages/Inbox"));
+const Instagram = lazy(() => import("./pages/Instagram"));
+const InstagramCallback = lazy(() => import("./pages/InstagramCallback"));
+const Knowledge = lazy(() => import("./pages/Knowledge"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Playground = lazy(() => import("./pages/Playground"));
+const Products = lazy(() => import("./pages/Products"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Unanswered = lazy(() => import("./pages/Unanswered"));
+const Privacy = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Privacy })));
+const Terms = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Terms })));
+const DataDeletion = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.DataDeletion })));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { loggedIn } = useAuth();
@@ -34,31 +40,37 @@ function GuestOnly({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  const { loggedIn } = useAuth();
   return (
-    <Routes>
-      {/* public — Meta's app review needs these without login */}
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/data-deletion" element={<DataDeletion />} />
+    <Suspense fallback={<div className="min-h-dvh bg-slate-50" />}>
+      <Routes>
+        {/* public — Meta's app review needs these without login */}
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/data-deletion" element={<DataDeletion />} />
 
-      <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
-      <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+        <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+        <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
 
-      <Route element={<RequireAuth><Layout /></RequireAuth>}>
-        <Route index element={<Dashboard />} />
-        <Route path="handoffs" element={<Handoffs />} />
-        <Route path="inbox" element={<Inbox />} />
-        <Route path="inbox/:id" element={<Inbox />} />
-        <Route path="unanswered" element={<Unanswered />} />
-        <Route path="knowledge" element={<Knowledge />} />
-        <Route path="products" element={<Products />} />
-        <Route path="playground" element={<Playground />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="instagram" element={<Instagram />} />
-        <Route path="instagram/callback" element={<InstagramCallback />} />
-        <Route path="account" element={<Account />} />
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+        {/* "/" is the public site for visitors and the dashboard once logged in */}
+        {!loggedIn && <Route index element={<Landing />} />}
+
+        <Route element={<RequireAuth><Layout /></RequireAuth>}>
+          {loggedIn && <Route index element={<Dashboard />} />}
+          <Route path="handoffs" element={<Handoffs />} />
+          <Route path="inbox" element={<Inbox />} />
+          <Route path="inbox/:id" element={<Inbox />} />
+          <Route path="unanswered" element={<Unanswered />} />
+          <Route path="knowledge" element={<Knowledge />} />
+          <Route path="products" element={<Products />} />
+          <Route path="playground" element={<Playground />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="instagram" element={<Instagram />} />
+          <Route path="instagram/callback" element={<InstagramCallback />} />
+          <Route path="account" element={<Account />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }

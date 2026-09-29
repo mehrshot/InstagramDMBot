@@ -30,8 +30,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             className={cx(
-              "pointer-events-auto flex max-w-md items-start gap-2 rounded-lg px-4 py-3 text-sm text-white shadow-lg",
-              t.kind === "success" ? "bg-slate-900" : "bg-red-600",
+              "animate-toast-in pointer-events-auto flex max-w-md items-start gap-2 rounded-xl px-4 py-3 text-sm text-white shadow-lg",
+              t.kind === "success" ? "bg-night-900 dark:ring-1 dark:ring-white/10" : "bg-red-600",
             )}
           >
             {t.kind === "success" ? <CheckCircle2 className="size-5 shrink-0 text-emerald-400" /> : <XCircle className="size-5 shrink-0" />}
