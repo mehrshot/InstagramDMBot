@@ -26,13 +26,13 @@ async def inbox(
         now = utcnow()
         happy = Conversation(
             shop_id=shop.id,
-            customer_igsid="111",
+            customer_id="111",
             customer_username="sara",
             last_customer_message_at=now - timedelta(minutes=5),
         )
         stuck = Conversation(
             shop_id=shop.id,
-            customer_igsid="222",
+            customer_id="222",
             customer_username="",  # lookup failed
             last_customer_message_at=now,
         )
@@ -122,9 +122,15 @@ async def test_unanswered_list_and_resolve(
 async def test_dashboard(client: AsyncClient, auth_headers: dict, inbox: dict) -> None:
     body = (await client.get("/api/v1/dashboard", headers=auth_headers)).json()
     assert body["setup"] == {
+        "instagram_available": True,
         "instagram_connected": False,
         "instagram_active": False,
         "instagram_username": None,
+        "telegram_available": False,
+        "telegram_owner_linked": False,
+        "telegram_custom_bot": False,
+        "telegram_business": False,
+        "telegram_channels": 0,
         "knowledge_entries": 0,
         "products_connected": False,
         "product_count": 0,
@@ -153,7 +159,7 @@ async def test_fallback_is_not_repeated(db: AsyncSession, fake_meta: FakeMeta) -
             access_token_encrypted=encrypt_secret("t"),
         )
     )
-    conversation = Conversation(shop_id=user.shop.id, customer_igsid="9")
+    conversation = Conversation(shop_id=user.shop.id, customer_id="9")
     db.add(conversation)
     await db.flush()
 

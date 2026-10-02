@@ -56,6 +56,16 @@ class ProductSource(UUIDPk, Timestamps, Base):
     last_error: Mapped[str | None] = mapped_column(Text)
 
 
+class ProductOrigin(enum.StrEnum):
+    """How Javab learned about a product. Every product lives in Javab's own catalogue."""
+
+    MANUAL = "manual"  # typed in the panel or edited by hand
+    SHEET = "sheet"  # a live Google Sheet; re-synced, so edit it in the sheet
+    FILE = "file"  # an uploaded Excel/CSV table
+    TEACH = "teach"  # understood by the AI from text, a voice note, a document or a link
+    TELEGRAM_POST = "telegram_post"  # a product post in the shop's Telegram channel
+
+
 class Product(UUIDPk, Timestamps, Base):
     """One sellable variant: a row per product × colour × size combination."""
 
@@ -64,6 +74,21 @@ class Product(UUIDPk, Timestamps, Base):
 
     shop_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("shops.id", ondelete="CASCADE"), index=True
+    )
+    origin: Mapped[ProductOrigin] = mapped_column(
+        str_enum(ProductOrigin),
+        default=ProductOrigin.MANUAL,
+        server_default=ProductOrigin.MANUAL.value,
+    )
+    # The sheet/file the row was imported from; a re-sync replaces only that source's rows.
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("product_sources.id", ondelete="SET NULL"), index=True
+    )
+    # Public photo of the product (shown in the panel; sent as a photo on Telegram).
+    image_url: Mapped[str | None] = mapped_column(Text)
+    # The Telegram channel post this product came from; the bot can forward it to customers.
+    telegram_post_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("telegram_posts.id", ondelete="SET NULL")
     )
     sku: Mapped[str | None] = mapped_column(String(64))
     name: Mapped[str] = mapped_column(String(255))

@@ -1,8 +1,13 @@
 """Product catalogue: import from Google Sheets / Excel / CSV, column mapping, and search.
 
-Owners keep stock in a spreadsheet. We copy it into the `products` table (re-synced every
-few minutes for Google Sheets) and the bot looks products up through a tool call, so prices
-and stock always come from the owner's data instead of the model's imagination.
+Every product lives in Javab's own catalogue (`products`), whatever way the owner taught it:
+typed in the panel, a live Google Sheet (re-synced every few minutes), an Excel/CSV upload,
+something the AI understood from text/voice/a document (services/teach.py), or a post in the
+shop's Telegram channel. The bot looks products up through a tool call, so prices and stock
+always come from the owner's data instead of the model's imagination.
+
+A sheet or file import only replaces the rows that came from that same source; products added
+any other way are never touched by it.
 """
 
 import csv
@@ -22,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.text import normalize, parse_int
 from app.core.timeutil import as_utc, utcnow
-from app.models import Product, ProductSource, ProductSourceKind
+from app.models import Product, ProductOrigin, ProductSource, ProductSourceKind
 
 # Our canonical fields, in the order the panel shows them. `name` is the only required one.
 FIELDS = ("name", "sku", "category", "color", "size", "price", "stock", "description", "post_url")
@@ -255,7 +260,7 @@ def parse_stock(value: str) -> int | None:
     return None
 
 
-def _instagram_url(value: str) -> str | None:
+def instagram_url(value: str) -> str | None:
     """Keep only real Instagram post/reel links; anything else in that column is ignored."""
     value = value.strip()
     return (
@@ -286,7 +291,7 @@ def rows_to_products(table: Table, mapping: dict[str, str]) -> list[dict[str, An
                 "price": Decimal(price) if price is not None else None,
                 "stock": parse_stock(get("stock")) if "stock" in mapping else None,
                 "description": get("description") or None,
-                "post_url": _instagram_url(get("post_url")),
+                "post_url": instagram_url(get("post_url")),
                 "extra": {h: v for h, v in row.items() if h not in mapped_headers and v},
             }
         )
@@ -296,11 +301,21 @@ def rows_to_products(table: Table, mapping: dict[str, str]) -> list[dict[str, An
 # ---------------------------------------------------------------------------- storage
 
 
+def origin_for(source: ProductSource) -> ProductOrigin:
+    return (
+        ProductOrigin.SHEET if source.kind == ProductSourceKind.GOOGLE_SHEET else ProductOrigin.FILE
+    )
+
+
 async def replace_products(
-    db: AsyncSession, shop_id: uuid.UUID, products: list[dict[str, Any]]
+    db: AsyncSession, source: ProductSource, products: list[dict[str, Any]]
 ) -> int:
-    await db.execute(delete(Product).where(Product.shop_id == shop_id))
-    db.add_all(Product(shop_id=shop_id, **p) for p in products)
+    """Replace the rows imported from `source` (other products of the shop stay)."""
+    await db.execute(delete(Product).where(Product.source_id == source.id))
+    origin = origin_for(source)
+    db.add_all(
+        Product(shop_id=source.shop_id, source_id=source.id, origin=origin, **p) for p in products
+    )
     await db.commit()
     return len(products)
 
@@ -317,9 +332,7 @@ async def sync_source(
         if table is None:
             table = await fetch_table(http, source.url)
         validate_mapping(source.column_mapping, table.headers)
-        count = await replace_products(
-            db, source.shop_id, rows_to_products(table, source.column_mapping)
-        )
+        count = await replace_products(db, source, rows_to_products(table, source.column_mapping))
     except ProductSourceError as exc:
         await db.rollback()
         source.last_error = str(exc)
@@ -360,7 +373,7 @@ async def search_products(
     *,
     color: str | None = None,
     size: str | None = None,
-    limit: int = 8,
+    limit: int | None = 8,
 ) -> list[Product]:
     # A shop has at most product_row_limit rows, so scoring in Python is fine for now.
     products = (await db.scalars(select(Product).where(Product.shop_id == shop_id))).all()
@@ -374,8 +387,8 @@ async def search_products(
         if tokens and score == 0:
             continue
         scored.append((score, product))
-    scored.sort(key=lambda item: -item[0])
-    return [p for _, p in scored[:limit]]
+    scored.sort(key=lambda item: (-item[0], item[1].name))
+    return [p for _, p in (scored[:limit] if limit else scored)]
 
 
 def product_for_bot(p: Product) -> dict[str, Any]:

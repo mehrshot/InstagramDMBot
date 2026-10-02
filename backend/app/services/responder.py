@@ -2,7 +2,8 @@
 
 The LLM gets the shop's knowledge and a product overview in its system prompt, and tools:
 - search_products: looks up the shop's product table (price, colour, size, stock)
-- share_posts: attaches a product's Instagram post, sent as a post card after the message
+- share_posts: attaches a product's post (Instagram post card, Telegram channel post or photo),
+  sent after the message
 - handoff_to_human: used when the answer isn't in the shop's data; the question goes to the
   owner and is flagged "unanswered" so the owner can fill the gap.
 """
@@ -17,15 +18,14 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import KnowledgeEntry, Product, Shop
+from app.models import Channel, KnowledgeEntry, Product, Shop
 from app.services import knowledge, products
 from app.services.llm import LLMClient, Usage
 from app.services.posts import (
     MAX_POSTS_PER_REPLY,
     PostLink,
-    link_products,
-    load_posts,
     post_key,
+    shareable_posts,
     shared_post_keys,
 )
 
@@ -55,18 +55,22 @@ class Reply:
     completion_tokens: int | None = None
     # Product lookups the model made; shown in the panel's test chat.
     tool_trace: list[dict[str, Any]] = field(default_factory=list)
-    # Instagram posts to send after the text, in order.
+    # Product posts to send after the text, in order.
     posts: list[PostLink] = field(default_factory=list)
 
 
 class Responder(Protocol):
-    async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply | None: ...
+    async def generate(
+        self, shop: Shop, history: list[ChatTurn], *, channel: Channel = Channel.INSTAGRAM
+    ) -> Reply | None: ...
 
 
 class PlaceholderResponder:
     """Used while no LLM is configured: always the fallback message."""
 
-    async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply | None:
+    async def generate(
+        self, shop: Shop, history: list[ChatTurn], *, channel: Channel = Channel.INSTAGRAM
+    ) -> Reply | None:
         return Reply(
             text=shop.fallback_message, unanswered=True, handoff_reason="هوش مصنوعی فعال نیست"
         )
@@ -136,9 +140,9 @@ _SHARE_TOOL = {
     "function": {
         "name": "share_posts",
         "description": (
-            "Send the Instagram posts of products you are recommending. Each is delivered "
-            "right after your message as a post card with its photos. Follow the SHARING POSTS "
-            "rules: only when seeing the product genuinely helps."
+            "Send the posts (photos) of products you are recommending. Each is delivered "
+            "right after your message with its photos. Follow the SHARING POSTS rules: only "
+            "when seeing the product genuinely helps."
         ),
         "parameters": {
             "type": "object",
@@ -157,7 +161,7 @@ _SHARE_TOOL = {
 _SHARING_RULES = """
 
 SHARING POSTS
-- Products marked "post P#" have an Instagram post. share_posts sends the post itself into the chat, right after your message.
+- Products marked "post P#" have a post or photo. share_posts sends it into the chat, right after your message.
 - Share when seeing the product really helps: you recommend or suggest products (shopping advice, gift ideas, "what do you have", comparing options), or the customer asks for photos or to see it.
 - Don't share for: follow-up questions about an item already discussed or shown (its price, size, stock), policy questions (shipping, payment, returns), or when the customer's message is about a post or story they're already looking at (it contains [share], [ig_post], [ig_reel], [story_reply] or [story_mention]).
 - Share only posts of products you actually mention, at most 3, most relevant first. Never share a post twice in one conversation.
@@ -165,13 +169,18 @@ SHARING POSTS
 
 _TONES = {
     "friendly": "warm and friendly, like a helpful shop assistant, in colloquial Persian "
-    "(محاوره‌ای) as people write in Instagram DMs",
+    "(محاوره‌ای) as people write in chat messages",
     "formal": "polite and respectful, in standard formal Persian (رسمی و مودبانه)",
 }
+_CHANNEL_NAMES = {Channel.INSTAGRAM: "Instagram DM", Channel.TELEGRAM: "Telegram"}
 
 
 def build_system_prompt(
-    shop: Shop, knowledge_text: str, catalogue: str = "", can_share_posts: bool = False
+    shop: Shop,
+    knowledge_text: str,
+    catalogue: str = "",
+    can_share_posts: bool = False,
+    channel: Channel = Channel.INSTAGRAM,
 ) -> str:
     emoji = "You may use an occasional fitting emoji." if shop.use_emoji else "Never use emoji."
     products_line = (
@@ -190,12 +199,13 @@ def build_system_prompt(
     fallback = shop.fallback_message.strip()
     catalogue_block = f"\n\nPRODUCT OVERVIEW (cheapest first)\n{catalogue}" if catalogue else ""
     owner_rules = shop.forbidden_rules.strip() or "(none)"
-    return f"""You are the Instagram DM assistant of the online shop "{shop.name}" and reply to customers on the shop's behalf.
+    channel_name = _CHANNEL_NAMES.get(channel, "chat")
+    return f"""You are the {channel_name} assistant of the online shop "{shop.name}" and reply to customers on the shop's behalf.
 
 STYLE
 - Always reply in the customer's language (usually Persian; an English message gets an English reply, handoffs included). Tone: {_TONES.get(shop.tone, _TONES["friendly"])}.
 - {emoji}
-- Keep it short like a real DM: usually 1-3 sentences. Plain text only: no markdown, no headings, no "*" or "#".
+- Keep it short like a real chat message: usually 1-3 sentences. Plain text only: no markdown, no headings, no "*" or "#".
 - Write prices like "۱,۲۵۰,۰۰۰ تومان".
 
 FACTS
@@ -244,7 +254,9 @@ class LLMResponder:
         self._llm = llm
         self._db = db
 
-    async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply | None:
+    async def generate(
+        self, shop: Shop, history: list[ChatTurn], *, channel: Channel = Channel.INSTAGRAM
+    ) -> Reply | None:
         conversation = history_to_messages(history)
         if not conversation:
             return None
@@ -262,7 +274,7 @@ class LLMResponder:
         # Cheapest first, like the overview, so post references are stable and read in order.
         items.sort(key=lambda p: (p.price is None, p.price or 0, p.name))
         # Short references ("P1") instead of long media ids, which models copy unreliably.
-        links = link_products(items, await load_posts(self._db, shop.id)) if items else {}
+        links = await shareable_posts(self._db, shop.id, channel, items) if items else {}
         refs = {name: f"P{i}" for i, name in enumerate(links, start=1)}
         self._ref_links = {refs[name]: link for name, link in links.items()}
         self._ref_by_name = refs
@@ -271,7 +283,11 @@ class LLMResponder:
 
         catalogue = products.catalogue_overview(items, post_refs=refs) if items else ""
         system = build_system_prompt(
-            shop, knowledge.render_for_prompt(entries), catalogue, can_share_posts=bool(refs)
+            shop,
+            knowledge.render_for_prompt(entries),
+            catalogue,
+            can_share_posts=bool(refs),
+            channel=channel,
         )
         tools = [_HANDOFF_TOOL]
         if items:

@@ -1,11 +1,14 @@
+import hmac
 import json
 import logging
+import uuid
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from fastapi.responses import PlainTextResponse
 
-from app.api.deps import JobQueue
+from app.api.deps import DbSession, JobQueue
 from app.core.config import get_settings
+from app.models import TelegramBot
 from app.services.webhook import parse_messaging_events, verify_signature
 
 logger = logging.getLogger(__name__)
@@ -31,14 +34,43 @@ async def receive(request: Request, queue: JobQueue) -> dict[str, str]:
     signature = request.headers.get("X-Hub-Signature-256")
     if not verify_signature(body, signature, get_settings().meta_app_secret):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid signature")
+    payload = _json_object(body)
+    if not get_settings().instagram_enabled:
+        return {"status": "ignored"}  # Instagram is switched off; acknowledge so Meta stops
+
+    # Only enqueue here: Meta disables webhooks that answer slowly.
+    for event in parse_messaging_events(payload):
+        await queue.enqueue("process_event", event, job_id=f"event:{event.mid}")
+    return {"status": "ok"}
+
+
+@router.post("/telegram/{bot_id}")
+async def receive_telegram(
+    bot_id: uuid.UUID, request: Request, db: DbSession, queue: JobQueue
+) -> dict[str, str]:
+    """Telegram calls this for every update of one of our bots (shared or a shop's own)."""
+    bot = await db.get(TelegramBot, bot_id)
+    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if bot is None or not hmac.compare_digest(secret, bot.webhook_secret):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid secret")
+    update = _json_object(await request.body())
+    if not bot.is_active:
+        return {"status": "ignored"}
+    update_id = update.get("update_id")
+    await queue.enqueue(
+        "process_telegram_update",
+        str(bot.id),
+        update,
+        job_id=f"tg:{bot.id}:{update_id}" if update_id is not None else None,
+    )
+    return {"status": "ok"}
+
+
+def _json_object(body: bytes) -> dict:
     try:
         payload = json.loads(body)
     except ValueError:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid json") from None
     if not isinstance(payload, dict):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid payload")
-
-    # Only enqueue here: Meta disables webhooks that answer slowly.
-    for event in parse_messaging_events(payload):
-        await queue.enqueue("process_event", event, job_id=f"event:{event.mid}")
-    return {"status": "ok"}
+    return payload

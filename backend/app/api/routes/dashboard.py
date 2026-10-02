@@ -18,6 +18,12 @@ from app.models import (
     MessageSender,
     Product,
     ProductSource,
+    ProposalStatus,
+    TeachProposal,
+    TelegramAdmin,
+    TelegramBot,
+    TelegramBusinessConnection,
+    TelegramChannel,
 )
 from app.services.llm import LLMError
 from app.services.responder import ChatTurn, LLMResponder, PlaceholderResponder
@@ -26,10 +32,19 @@ router = APIRouter(tags=["dashboard"])
 
 
 class SetupStatus(BaseModel):
+    # False while Instagram is switched off on the server (waiting for Meta's approval).
+    instagram_available: bool
     instagram_connected: bool
     # False when Meta revoked access; the owner must reconnect.
     instagram_active: bool
     instagram_username: str | None
+    # Telegram: the shared bot is running, the owner linked their account, and how many
+    # ways customers reach the shop there (start link is always one; + own bot, business).
+    telegram_available: bool
+    telegram_owner_linked: bool
+    telegram_custom_bot: bool
+    telegram_business: bool
+    telegram_channels: int
     knowledge_entries: int
     products_connected: bool
     product_count: int
@@ -46,8 +61,18 @@ class Stats(BaseModel):
     open_unanswered: int
 
 
+class WalletStatus(BaseModel):
+    enabled: bool
+    balance_toman: int
+    low_balance: bool
+    plan: str
+
+
 class DashboardOut(BaseModel):
     setup: SetupStatus
+    wallet: WalletStatus
+    # Things the owner taught (in Telegram or here) that wait for their OK.
+    pending_proposals: int
     # DMs waiting for the owner right now (the bot didn't know the answer).
     open_handoffs: int
     last_7_days: Stats
@@ -128,9 +153,39 @@ async def dashboard(shop: CurrentShop, db: DbSession) -> DashboardOut:
         )
     )
 
+    async def exists(model, *conditions) -> int:  # type: ignore[no-untyped-def]
+        return (
+            await db.scalar(
+                select(func.count()).select_from(model).where(model.shop_id == shop.id, *conditions)
+            )
+            or 0
+        )
+
+    shared_bot = await db.scalar(
+        select(TelegramBot.id).where(TelegramBot.shop_id.is_(None), TelegramBot.is_active.is_(True))
+    )
+    settings = get_settings()
     return DashboardOut(
         open_handoffs=open_handoffs or 0,
+        wallet=WalletStatus(
+            enabled=settings.billing_enabled,
+            balance_toman=shop.balance_rial // 10,
+            low_balance=settings.billing_enabled and shop.balance_rial < settings.low_balance_rial,
+            plan=shop.plan.value,
+        ),
+        pending_proposals=await exists(
+            TeachProposal, TeachProposal.status == ProposalStatus.PENDING
+        ),
         setup=SetupStatus(
+            instagram_available=settings.instagram_enabled,
+            telegram_available=shared_bot is not None,
+            telegram_owner_linked=await exists(TelegramAdmin) > 0,
+            telegram_custom_bot=await exists(TelegramBot, TelegramBot.is_active.is_(True)) > 0,
+            telegram_business=await exists(
+                TelegramBusinessConnection, TelegramBusinessConnection.is_enabled.is_(True)
+            )
+            > 0,
+            telegram_channels=await exists(TelegramChannel, TelegramChannel.is_active.is_(True)),
             instagram_connected=account is not None,
             instagram_active=bool(account and account.is_active),
             instagram_username=account.username if account else None,
@@ -172,7 +227,7 @@ async def dashboard(shop: CurrentShop, db: DbSession) -> DashboardOut:
 async def playground_chat(
     body: PlaygroundIn, shop: CurrentShop, db: DbSession, llm: LLM
 ) -> PlaygroundOut:
-    """Test the bot with the shop's current data, without Instagram. Nothing is saved.
+    """Test the bot with the shop's current data, without any channel. Nothing is saved.
 
     Works while the bot is switched off, so owners can try it before going live.
     """

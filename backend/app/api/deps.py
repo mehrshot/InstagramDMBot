@@ -13,6 +13,7 @@ from app.core.security import TokenError, decode_token
 from app.models import Shop, User
 from app.services.instagram import InstagramClient
 from app.services.llm import LLMClient
+from app.services.telegram import TelegramClient
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -75,3 +76,10 @@ def get_llm(http: HttpClient) -> LLMClient:
 
 
 LLM = Annotated[LLMClient, Depends(get_llm)]
+
+
+def get_telegram_client(request: Request) -> TelegramClient:
+    return TelegramClient(request.app.state.http)
+
+
+Telegram = Annotated[TelegramClient, Depends(get_telegram_client)]

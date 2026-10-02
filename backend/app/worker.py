@@ -1,30 +1,37 @@
 """Background worker (arq). Run with: arq app.worker.WorkerSettings
 
-The webhook endpoint only verifies and enqueues, so it can answer Meta immediately;
+Webhook endpoints only verify and enqueue, so they can answer the channel immediately;
 all database and network work happens here.
 """
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
 from arq import Retry, cron
 from arq.connections import RedisSettings
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.config import get_settings
 from app.core.database import SessionLocal
+from app.core.monitoring import setup_monitoring
 from app.core.queue import ArqQueue
-from app.models import InstagramAccount
-from app.services import instagram_accounts, messaging, posts, products
+from app.core.timeutil import utcnow
+from app.models import InstagramAccount, ProposalStatus, TeachProposal, TelegramBot
+from app.services import billing, instagram_accounts, messaging, posts, products, telegram_bot
 from app.services.instagram import InstagramClient, InstagramError
-from app.services.llm import LLMError
+from app.services.llm import LLMClient, LLMError
+from app.services.notify import TelegramNotifier
 from app.services.responder import get_responder
+from app.services.telegram import TelegramClient, TelegramError
 from app.services.webhook import MessagingEvent
 
 logger = logging.getLogger(__name__)
+
+# Pending "teach" proposals the owner never confirmed are dropped after this.
+PROPOSAL_LIFETIME = timedelta(days=7)
 
 
 async def process_event(ctx: dict[str, Any], event: MessagingEvent) -> None:
@@ -38,8 +45,34 @@ async def process_event(ctx: dict[str, Any], event: MessagingEvent) -> None:
         )
 
 
+async def process_telegram_update(ctx: dict[str, Any], bot_id: str, update: dict[str, Any]) -> None:
+    async with SessionLocal() as db:
+        bot = await db.get(TelegramBot, uuid.UUID(bot_id))
+        if bot is None:
+            return
+        client = TelegramClient(ctx["http"])
+        try:
+            await telegram_bot.process_update(
+                db,
+                bot,
+                update,
+                telegram_bot.BotContext(
+                    client=client,
+                    llm=LLMClient(ctx["http"]),
+                    http=ctx["http"],
+                    queue=ctx["queue"],
+                    notifier=TelegramNotifier(db, client),
+                    debounce_seconds=get_settings().reply_debounce_seconds,
+                ),
+            )
+        except (LLMError, TelegramError) as exc:
+            logger.warning("telegram update failed (try %s), retrying: %s", ctx.get("job_try"), exc)
+            raise Retry(defer=ctx.get("job_try", 1) * 10) from exc
+
+
 async def reply_conversation(ctx: dict[str, Any], conversation_id: str, trigger_at: str) -> None:
     async with SessionLocal() as db:
+        telegram = TelegramClient(ctx["http"])
         try:
             await messaging.reply_to_conversation(
                 db,
@@ -47,8 +80,10 @@ async def reply_conversation(ctx: dict[str, Any], conversation_id: str, trigger_
                 datetime.fromisoformat(trigger_at),
                 InstagramClient(ctx["http"]),
                 get_responder(db, ctx["http"]),
+                telegram=telegram,
+                notifier=TelegramNotifier(db, telegram),
             )
-        except (InstagramError, LLMError) as exc:
+        except (InstagramError, TelegramError, LLMError) as exc:
             # Only retryable errors propagate out of reply_to_conversation.
             logger.warning("reply failed (try %s), retrying: %s", ctx.get("job_try"), exc)
             raise Retry(defer=ctx.get("job_try", 1) * 10) from exc
@@ -61,6 +96,8 @@ async def sync_product_sheets(ctx: dict[str, Any]) -> None:
 
 async def sync_instagram_posts(ctx: dict[str, Any]) -> None:
     """Daily: pick up new posts so the bot can share them."""
+    if not get_settings().instagram_enabled:
+        return
     async with SessionLocal() as db:
         accounts = (
             await db.scalars(select(InstagramAccount).where(InstagramAccount.is_active.is_(True)))
@@ -73,12 +110,37 @@ async def sync_instagram_posts(ctx: dict[str, Any]) -> None:
 
 
 async def refresh_instagram_tokens(ctx: dict[str, Any]) -> None:
+    if not get_settings().instagram_enabled:
+        return
     async with SessionLocal() as db:
         count = await instagram_accounts.refresh_expiring_tokens(db, InstagramClient(ctx["http"]))
     logger.info("refreshed %d instagram tokens", count)
 
 
+async def renew_plans(ctx: dict[str, Any]) -> None:
+    """Charge the next month of pro/business plans, or move shops back to basic."""
+    async with SessionLocal() as db:
+        notifier = TelegramNotifier(db, TelegramClient(ctx["http"]))
+        for shop, message in await billing.renew_plans(db):
+            try:
+                await notifier.message(shop, message)
+            except Exception:
+                logger.exception("could not tell shop %s about its plan", shop.id)
+
+
+async def drop_stale_proposals(ctx: dict[str, Any]) -> None:
+    async with SessionLocal() as db:
+        await db.execute(
+            delete(TeachProposal).where(
+                TeachProposal.status == ProposalStatus.PENDING,
+                TeachProposal.created_at < utcnow() - PROPOSAL_LIFETIME,
+            )
+        )
+        await db.commit()
+
+
 async def startup(ctx: dict[str, Any]) -> None:
+    setup_monitoring("worker")
     ctx["http"] = httpx.AsyncClient(timeout=20)
     ctx["queue"] = ArqQueue(ctx["redis"])
 
@@ -90,16 +152,19 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 # Used by InlineQueue for local development without Redis.
 FUNCTIONS = {
     "process_event": process_event,
+    "process_telegram_update": process_telegram_update,
     "reply_conversation": reply_conversation,
 }
 
 
 class WorkerSettings:
-    functions = [process_event, reply_conversation]
+    functions = [process_event, process_telegram_update, reply_conversation]
     cron_jobs = [
         cron(refresh_instagram_tokens, hour={3}, minute={0}),
         cron(sync_instagram_posts, hour={4}, minute={30}),
         cron(sync_product_sheets, minute=set(range(0, 60, 5))),
+        cron(renew_plans, minute={15}),
+        cron(drop_stale_proposals, hour={2}, minute={45}),
     ]
     on_startup = startup
     on_shutdown = shutdown

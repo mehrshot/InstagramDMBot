@@ -60,12 +60,68 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 700
     llm_temperature: float = 0.3
 
-    # Per-shop limits (the future paid plans will raise these).
+    # Optional speech-to-text model for voice messages the owner sends the Telegram bot
+    # (OpenAI-compatible /audio/transcriptions). Empty: voice notes are not understood.
+    llm_transcribe_model: str = ""
+
+    # Per-shop limits.
     knowledge_char_limit: int = 40_000
     product_row_limit: int = 2_000
     upload_max_bytes: int = 5 * 1024 * 1024
     # How often Google Sheets product sources are re-read.
     product_sync_interval_minutes: int = 5
+    # Longest text (a Google Doc, a pasted price list) read in one "teach the bot" request.
+    teach_max_chars: int = 60_000
+
+    # Channels. Instagram stays off until the Meta app is approved; its code is kept intact.
+    instagram_enabled: bool = False
+    # WhatsApp is not built: Meta's WhatsApp Business Platform rejects +98 numbers, so it
+    # can't serve Iranian customers (docs/channels-plan.md).
+    # whatsapp_enabled: bool = False
+
+    # Telegram: the shared "Javab" bot every shop can use with its own start link. Custom
+    # (per-shop) bots and Telegram Business connections are stored in the database.
+    telegram_bot_token: str = ""
+    # Bot API host; a local Bot API server, or later Bale's Telegram-compatible API.
+    telegram_api_base: str = "https://api.telegram.org"
+    # Log outgoing Telegram calls instead of sending them (local development).
+    telegram_dry_run: bool = False
+
+    # A safety net against one chatty customer (or a spammer) draining a shop's wallet.
+    max_bot_replies_per_customer_hour: int = 30
+
+    # Billing: shops top up a wallet and every AI answer is paid from it. Amounts in rial.
+    billing_enabled: bool = True
+    signup_credit_rial: int = 500_000
+    usage_rial_per_1k_prompt_tokens: int = 300
+    usage_rial_per_1k_completion_tokens: int = 1_200
+    usage_min_rial_per_reply: int = 500
+    usage_rial_per_voice_minute: int = 1_000
+    # The owner is told once the balance drops below this.
+    low_balance_rial: int = 100_000
+    # Monthly fees of the plans above "basic" (paid from the wallet every 30 days).
+    plan_pro_monthly_rial: int = 2_000_000
+    plan_business_monthly_rial: int = 4_000_000
+    topup_min_rial: int = 500_000
+    topup_max_rial: int = 500_000_000
+
+    # Zarinpal payment gateway, for wallet top-ups.
+    zarinpal_merchant_id: str = ""
+    zarinpal_sandbox: bool = False
+
+    # Outgoing email (password reset). Without SMTP_HOST the link is only logged.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "Javab <no-reply@javab.app>"
+    smtp_starttls: bool = True
+    password_reset_minutes: int = 30
+
+    # Error monitoring: Sentry (or a Sentry-compatible service such as GlitchTip), and/or
+    # error alerts sent by the shared Telegram bot to an operations chat.
+    sentry_dsn: str = ""
+    ops_telegram_chat_id: str = ""
 
     @property
     def is_production(self) -> bool:

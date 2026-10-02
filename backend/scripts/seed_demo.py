@@ -23,15 +23,17 @@ from app.models import (
     Message,
     MessageSender,
     Product,
-    ProductSource,
-    ProductSourceKind,
+    ProductOrigin,
     Shop,
     User,
+    WalletEntry,
+    WalletEntryKind,
 )
 from app.services.accounts import delete_user
 
 EMAIL = "demo@shop.ir"
 PASSWORD = "demopass123"
+DEMO_CREDIT_RIAL = 5_000_000  # 500,000 toman
 
 KNOWLEDGE = [
     (KnowledgeSection.ABOUT, "", "مزون مهسا، تولیدکننده‌ی مانتو و شومیز زنانه از سال ۱۳۹۸."),
@@ -110,7 +112,9 @@ async def main() -> None:
             await delete_user(db, old)
 
         user = User(email=EMAIL, password_hash=hash_password(PASSWORD), full_name="مهسا")
-        user.shop = Shop(name="مزون مهسا", bot_enabled=True)
+        user.shop = Shop(
+            name="مزون مهسا", slug="demo-mahsa", bot_enabled=True, balance_rial=DEMO_CREDIT_RIAL
+        )
         db.add(user)
         await db.flush()
         shop_id = user.shop.id
@@ -141,12 +145,13 @@ async def main() -> None:
             for media_id, code, caption, days in POSTS
         )
         db.add(
-            ProductSource(
+            WalletEntry(
                 shop_id=shop_id,
-                kind=ProductSourceKind.GOOGLE_SHEET,
-                url="https://docs.google.com/spreadsheets/d/DEMO/edit",
-                column_mapping={"name": "نام محصول", "price": "قیمت"},
-                last_synced_at=now - timedelta(minutes=3),
+                kind=WalletEntryKind.BONUS,
+                amount_rial=DEMO_CREDIT_RIAL,
+                balance_after_rial=DEMO_CREDIT_RIAL,
+                description="هدیه‌ی ثبت‌نام",
+                details={},
             )
         )
         db.add_all(
@@ -160,14 +165,15 @@ async def main() -> None:
                 price=price,
                 stock=stock,
                 extra={},
+                origin=ProductOrigin.MANUAL if index < 3 else ProductOrigin.TEACH,
             )
-            for sku, name, cat, color, size, price, stock in PRODUCTS
+            for index, (sku, name, cat, color, size, price, stock) in enumerate(PRODUCTS)
         )
         for index, (username, messages, paused) in enumerate(CONVERSATIONS):
             last_customer = max(m[3] for m in messages if m[0] == "customer")
             conversation = Conversation(
                 shop_id=shop_id,
-                customer_igsid=f"90000000000000{index}",
+                customer_id=f"90000000000000{index}",
                 customer_username=username,
                 last_customer_message_at=now - timedelta(minutes=last_customer),
                 bot_paused_until=now + timedelta(minutes=100) if paused else None,

@@ -33,7 +33,7 @@ class ScriptedResponder:
     def __init__(self, known: dict[str, str]) -> None:
         self.known = known
 
-    async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply:
+    async def generate(self, shop: Shop, history: list[ChatTurn], **_: object) -> Reply:
         last = history[-1].text
         if last in self.known:
             return Reply(text=self.known[last])
@@ -251,7 +251,7 @@ async def test_partial_answer_while_waiting_sends_only_the_known_part(
     shop: Shop, db: AsyncSession, queue: RecordingQueue, fake_meta: FakeMeta
 ) -> None:
     class Partial:
-        async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply:
+        async def generate(self, shop: Shop, history: list[ChatTurn], **_: object) -> Reply:
             return Reply(
                 text=f"تعویض سایز تا ۷ روز هست.\n{shop.fallback_message}",
                 unanswered=True,
@@ -277,7 +277,7 @@ async def test_retried_partial_answer_records_question_once(
     from app.services.instagram import InstagramError
 
     class Partial:
-        async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply:
+        async def generate(self, shop: Shop, history: list[ChatTurn], **_: object) -> Reply:
             return Reply(text="x", unanswered=True, handoff_reason="r", partial_answer="تعویض هست.")
 
     await _customer(db, queue, fake_meta, "فاکتور؟", PlaceholderResponder())

@@ -14,8 +14,16 @@ from sqlalchemy import delete, func, select
 
 from app.api.deps import CurrentShop, DbSession, HttpClient
 from app.api.uploads import read_upload
+from app.core.config import get_settings
 from app.core.timeutil import utcnow
-from app.models import Product, ProductSource, ProductSourceKind, Shop
+from app.models import (
+    Product,
+    ProductOrigin,
+    ProductSource,
+    ProductSourceKind,
+    Shop,
+    TelegramPost,
+)
 from app.services import products
 from app.services.products import ProductSourceError
 
@@ -66,15 +74,73 @@ class ProductOut(BaseModel):
     category: str | None
     color: str | None
     size: str | None
+    # Toman.
     price: Decimal | None
+    # None: unknown; 0: out of stock.
     stock: int | None
     description: str | None
     extra: dict[str, Any]
+    # How Javab learned this product: manual | sheet | file | teach | telegram_post
+    origin: ProductOrigin
+    # False for rows read from a live Google Sheet: change them in the sheet instead.
+    editable: bool = True
+    image_url: str | None
+    post_url: str | None
+    # The Telegram channel post the product came from, when the channel is public.
+    telegram_post_url: str | None = None
+    # Exactly what the bot sees about this product when a customer asks.
+    bot_view: dict[str, Any] = {}
+    created_at: datetime
+    updated_at: datetime
 
 
 class ProductPage(BaseModel):
     items: list[ProductOut]
     total: int
+
+
+class ProductSummary(BaseModel):
+    total: int
+    in_stock: int
+    out_of_stock: int
+    # Stock not given (the bot then just says it's available to order).
+    stock_unknown: int
+    by_origin: dict[str, int]
+    limit: int
+
+
+class ProductIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    sku: str | None = Field(default=None, max_length=64)
+    category: str | None = Field(default=None, max_length=120)
+    color: str | None = Field(default=None, max_length=64)
+    size: str | None = Field(default=None, max_length=64)
+    price: int | None = Field(default=None, ge=0, le=10**13, description="Toman")
+    stock: int | None = Field(default=None, ge=0, le=10**7)
+    description: str | None = Field(default=None, max_length=5000)
+    image_url: str | None = Field(default=None, max_length=2000)
+    post_url: str | None = Field(default=None, max_length=500)
+
+
+class ProductPatch(BaseModel):
+    """Only the fields sent are changed; send null to clear one (except name)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    sku: str | None = Field(default=None, max_length=64)
+    category: str | None = Field(default=None, max_length=120)
+    color: str | None = Field(default=None, max_length=64)
+    size: str | None = Field(default=None, max_length=64)
+    price: int | None = Field(default=None, ge=0, le=10**13, description="Toman")
+    stock: int | None = Field(default=None, ge=0, le=10**7)
+    description: str | None = Field(default=None, max_length=5000)
+    image_url: str | None = Field(default=None, max_length=2000)
+    post_url: str | None = Field(default=None, max_length=500)
+
+
+SHEET_LOCKED = (
+    "این محصول از گوگل شیت خوانده می‌شود و هر چند دقیقه دوباره از آن به‌روز می‌شود؛ "
+    "تغییرش را در خود شیت بدهید."
+)
 
 
 @router.get("/fields", response_model=list[FieldOut])
@@ -156,7 +222,7 @@ async def import_file(
     except ProductSourceError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
     source = await _upsert_source(db, shop, ProductSourceKind.UPLOAD, None, mapping)
-    await products.replace_products(db, shop.id, products.rows_to_products(table, mapping))
+    await products.replace_products(db, source, products.rows_to_products(table, mapping))
     source.last_synced_at = utcnow()
     source.last_error = None
     await db.commit()
@@ -182,34 +248,169 @@ async def get_source(shop: CurrentShop, db: DbSession) -> SourceOut:
 
 @router.delete("/source", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_source(shop: CurrentShop, db: DbSession) -> None:
-    """Disconnect the product table and delete the imported products."""
-    await db.execute(delete(Product).where(Product.shop_id == shop.id))
-    await db.execute(delete(ProductSource).where(ProductSource.shop_id == shop.id))
-    await db.commit()
+    """Disconnect the product table and delete the products imported from it.
+
+    Products added any other way (by hand, taught to the AI, channel posts) stay.
+    """
+    source = await _get_source(db, shop)
+    if source is not None:
+        await db.execute(delete(Product).where(Product.source_id == source.id))
+        await db.delete(source)
+        await db.commit()
 
 
 @router.get("", response_model=ProductPage)
 async def list_products(
     shop: CurrentShop,
     db: DbSession,
-    q: str | None = Query(default=None, max_length=100, description="search name/code"),
+    q: str | None = Query(default=None, max_length=100, description="search name/code/text"),
+    origin: ProductOrigin | None = None,
+    stock: Literal["in_stock", "out_of_stock", "unknown"] | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> ProductPage:
+    """The shop's catalogue: everything Javab knows, however it was taught. Searchable."""
     if q:
-        found = await products.search_products(db, shop.id, q, limit=limit)
-        return ProductPage(items=[ProductOut.model_validate(p) for p in found], total=len(found))
-    total = await db.scalar(
+        found = await products.search_products(db, shop.id, q, limit=None)
+        found = [p for p in found if _matches(p, origin, stock)]
+        return ProductPage(
+            items=await _out_many(db, found[offset : offset + limit]), total=len(found)
+        )
+    query = select(Product).where(Product.shop_id == shop.id)
+    if origin is not None:
+        query = query.where(Product.origin == origin)
+    if stock == "in_stock":
+        query = query.where(Product.stock > 0)
+    elif stock == "out_of_stock":
+        query = query.where(Product.stock == 0)
+    elif stock == "unknown":
+        query = query.where(Product.stock.is_(None))
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
+    rows = (
+        await db.scalars(
+            query.order_by(Product.name, Product.color, Product.size).offset(offset).limit(limit)
+        )
+    ).all()
+    return ProductPage(items=await _out_many(db, list(rows)), total=total or 0)
+
+
+@router.get("/summary", response_model=ProductSummary)
+async def summary(shop: CurrentShop, db: DbSession) -> ProductSummary:
+    rows = (await db.scalars(select(Product).where(Product.shop_id == shop.id))).all()
+    by_origin: dict[str, int] = {}
+    for p in rows:
+        by_origin[p.origin.value] = by_origin.get(p.origin.value, 0) + 1
+    return ProductSummary(
+        total=len(rows),
+        in_stock=sum(1 for p in rows if p.stock is not None and p.stock > 0),
+        out_of_stock=sum(1 for p in rows if p.stock == 0),
+        stock_unknown=sum(1 for p in rows if p.stock is None),
+        by_origin=by_origin,
+        limit=get_settings().product_row_limit,
+    )
+
+
+@router.post("", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
+async def create_product(body: ProductIn, shop: CurrentShop, db: DbSession) -> ProductOut:
+    """Add one product by hand."""
+    await check_room(db, shop, 1)
+    product = Product(shop_id=shop.id, origin=ProductOrigin.MANUAL, extra={})
+    _apply(product, body.model_dump())
+    db.add(product)
+    await db.commit()
+    return await _out(db, product)
+
+
+@router.get("/{product_id}", response_model=ProductOut)
+async def get_product(product_id: uuid.UUID, shop: CurrentShop, db: DbSession) -> ProductOut:
+    return await _out(db, await _get_product(db, shop, product_id))
+
+
+@router.patch("/{product_id}", response_model=ProductOut)
+async def update_product(
+    product_id: uuid.UUID, body: ProductPatch, shop: CurrentShop, db: DbSession
+) -> ProductOut:
+    """Change a product (price, stock, ...). Rows from a live Google Sheet can't be edited."""
+    product = await _get_product(db, shop, product_id)
+    if product.origin == ProductOrigin.SHEET:
+        raise HTTPException(status.HTTP_409_CONFLICT, SHEET_LOCKED)
+    _apply(product, body.model_dump(exclude_unset=True))
+    await db.commit()
+    return await _out(db, product)
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(product_id: uuid.UUID, shop: CurrentShop, db: DbSession) -> None:
+    product = await _get_product(db, shop, product_id)
+    if product.origin == ProductOrigin.SHEET:
+        raise HTTPException(status.HTTP_409_CONFLICT, SHEET_LOCKED)
+    await db.delete(product)
+    await db.commit()
+
+
+def _apply(product: Product, values: dict[str, Any]) -> None:
+    for field, raw in values.items():
+        value = raw.strip() or None if isinstance(raw, str) else raw
+        if field == "name" and not value:
+            continue  # the name can be changed, never cleared
+        if field == "price" and value is not None:
+            value = Decimal(value)
+        if field == "post_url" and value is not None:
+            value = products.instagram_url(value) or value[:500]
+        setattr(product, field, value)
+
+
+def _matches(product: Product, origin: ProductOrigin | None, stock: str | None) -> bool:
+    if origin is not None and product.origin != origin:
+        return False
+    if stock == "in_stock":
+        return product.stock is not None and product.stock > 0
+    if stock == "out_of_stock":
+        return product.stock == 0
+    if stock == "unknown":
+        return product.stock is None
+    return True
+
+
+async def _get_product(db: DbSession, shop: Shop, product_id: uuid.UUID) -> Product:
+    product = await db.get(Product, product_id)
+    if product is None or product.shop_id != shop.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "محصول پیدا نشد")
+    return product
+
+
+async def check_room(db: DbSession, shop: Shop, adding: int) -> None:
+    limit = get_settings().product_row_limit
+    count = await db.scalar(
         select(func.count()).select_from(Product).where(Product.shop_id == shop.id)
     )
-    rows = await db.scalars(
-        select(Product)
-        .where(Product.shop_id == shop.id)
-        .order_by(Product.name, Product.color, Product.size)
-        .offset(offset)
-        .limit(limit)
-    )
-    return ProductPage(items=[ProductOut.model_validate(p) for p in rows], total=total or 0)
+    if (count or 0) + adding > limit:
+        raise HTTPException(
+            status.HTTP_413_CONTENT_TOO_LARGE,
+            f"تعداد محصولات از سقف مجاز ({limit:,}) بیشتر می‌شود.",
+        )
+
+
+async def _out_many(db: DbSession, items: list[Product]) -> list[ProductOut]:
+    post_ids = {p.telegram_post_id for p in items if p.telegram_post_id}
+    posts: dict[uuid.UUID, TelegramPost] = {}
+    if post_ids:
+        found = await db.scalars(select(TelegramPost).where(TelegramPost.id.in_(post_ids)))
+        posts = {p.id: p for p in found}
+    out = []
+    for product in items:
+        item = ProductOut.model_validate(product)
+        item.editable = product.origin != ProductOrigin.SHEET
+        item.bot_view = products.product_for_bot(product)
+        post = posts.get(product.telegram_post_id) if product.telegram_post_id else None
+        item.telegram_post_url = post.public_url if post else None
+        out.append(item)
+    return out
+
+
+async def _out(db: DbSession, product: Product) -> ProductOut:
+    await db.refresh(product)
+    return (await _out_many(db, [product]))[0]
 
 
 def _preview(table: products.Table) -> PreviewOut:
@@ -262,7 +463,7 @@ async def _source_out(db: DbSession, shop: Shop) -> SourceOut:
         return SourceOut(connected=False)
     await db.refresh(source)
     count = await db.scalar(
-        select(func.count()).select_from(Product).where(Product.shop_id == shop.id)
+        select(func.count()).select_from(Product).where(Product.source_id == source.id)
     )
     return SourceOut(
         connected=True,

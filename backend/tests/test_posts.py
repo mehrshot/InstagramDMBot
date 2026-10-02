@@ -225,7 +225,7 @@ class WithPosts:
     def __init__(self, *posts: PostLink) -> None:
         self.posts = list(posts)
 
-    async def generate(self, shop: Shop, history: list[ChatTurn]) -> Reply:
+    async def generate(self, shop: Shop, history: list[ChatTurn], **_: object) -> Reply:
         return Reply(text="پستش رو برات فرستادم", posts=self.posts)
 
 

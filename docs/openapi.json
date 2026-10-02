@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Javab",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
     "/health": {
@@ -164,6 +164,82 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Forgot Password",
+        "description": "Email a password reset link. Same answer whether or not the email is registered,\nso the endpoint doesn't reveal who has an account.",
+        "operationId": "forgot_password_api_v1_auth_password_forgot_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_api_v1_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -473,6 +549,269 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/telegram": {
+      "get": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status_api_v1_telegram_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_v1_telegram_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/telegram/link": {
+      "post": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Create Link",
+        "description": "A one-time link that connects the owner's Telegram account to this shop.",
+        "operationId": "create_link_api_v1_telegram_link_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/telegram/admins/{admin_id}": {
+      "delete": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Remove Admin",
+        "operationId": "remove_admin_api_v1_telegram_admins__admin_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "admin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Admin Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/telegram/custom-bot": {
+      "put": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Set Custom Bot",
+        "description": "Connect the shop's own bot by the token @BotFather gave (pro and business plans).",
+        "operationId": "set_custom_bot_api_v1_telegram_custom_bot_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomBotIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Remove Custom Bot",
+        "operationId": "remove_custom_bot_api_v1_telegram_custom_bot_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/telegram/business": {
+      "delete": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Disable Business",
+        "description": "Stop answering in the owner's account. (To remove it fully, the owner also removes the\nbot in Telegram > Settings > Telegram Business > Chatbots.)",
+        "operationId": "disable_business_api_v1_telegram_business_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/telegram/channels/{channel_id}": {
+      "delete": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Remove Channel",
+        "operationId": "remove_channel_api_v1_telegram_channels__channel_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/knowledge/sections": {
@@ -1059,7 +1398,7 @@
           "products"
         ],
         "summary": "Remove Source",
-        "description": "Disconnect the product table and delete the imported products.",
+        "description": "Disconnect the product table and delete the products imported from it.\n\nProducts added any other way (by hand, taught to the AI, channel posts) stay.",
         "operationId": "remove_source_api_v1_products_source_delete",
         "responses": {
           "204": {
@@ -1079,6 +1418,7 @@
           "products"
         ],
         "summary": "List Products",
+        "description": "The shop's catalogue: everything Javab knows, however it was taught. Searchable.",
         "operationId": "list_products_api_v1_products_get",
         "security": [
           {
@@ -1100,10 +1440,47 @@
                   "type": "null"
                 }
               ],
-              "description": "search name/code",
+              "description": "search name/code/text",
               "title": "Q"
             },
-            "description": "search name/code"
+            "description": "search name/code/text"
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProductOrigin"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin"
+            }
+          },
+          {
+            "name": "stock",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "in_stock",
+                    "out_of_stock",
+                    "unknown"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stock"
+            }
           },
           {
             "name": "offset",
@@ -1151,6 +1528,647 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Create Product",
+        "description": "Add one product by hand.",
+        "operationId": "create_product_api_v1_products_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/summary": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Summary",
+        "operationId": "summary_api_v1_products_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Get Product",
+        "operationId": "get_product_api_v1_products__product_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Update Product",
+        "description": "Change a product (price, stock, ...). Rows from a live Google Sheet can't be edited.",
+        "operationId": "update_product_api_v1_products__product_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Delete Product",
+        "operationId": "delete_product_api_v1_products__product_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teach/text": {
+      "post": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Teach Text",
+        "description": "Anything in words: a price list, \"X is sold out\", shipping rules, a pasted document.",
+        "operationId": "teach_text_api_v1_teach_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teach/url": {
+      "post": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Teach Url",
+        "description": "A Google Doc, Google Sheet or Google Drive file link. A sheet with recognisable\ncolumns becomes a live product source; anything else is read by the AI.",
+        "operationId": "teach_url_api_v1_teach_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UrlIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teach/file": {
+      "post": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Teach File",
+        "description": "PDF, Word, Excel/CSV, text or a photo of a price list.",
+        "operationId": "teach_file_api_v1_teach_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_teach_file_api_v1_teach_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teach/proposals": {
+      "get": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "List Proposals",
+        "operationId": "list_proposals_api_v1_teach_proposals_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "applied",
+                    "discarded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teach/proposals/{proposal_id}": {
+      "get": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Get Proposal",
+        "operationId": "get_proposal_api_v1_teach_proposals__proposal_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teach/proposals/{proposal_id}/apply": {
+      "post": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Apply Proposal",
+        "operationId": "apply_proposal_api_v1_teach_proposals__proposal_id__apply_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teach/proposals/{proposal_id}/discard": {
+      "post": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Discard Proposal",
+        "operationId": "discard_proposal_api_v1_teach_proposals__proposal_id__discard_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teach/proposals/{proposal_id}/undo": {
+      "post": {
+        "tags": [
+          "teach"
+        ],
+        "summary": "Undo Proposal",
+        "description": "Remove the products an applied proposal added (e.g. a channel post read by mistake).",
+        "operationId": "undo_proposal_api_v1_teach_proposals__proposal_id__undo_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/conversations": {
@@ -1183,6 +2201,22 @@
             }
           },
           {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Channel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Channel"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "required": false,
@@ -1196,10 +2230,10 @@
                   "type": "null"
                 }
               ],
-              "description": "customer username",
+              "description": "customer username or name",
               "title": "Q"
             },
-            "description": "customer username"
+            "description": "customer username or name"
           },
           {
             "name": "offset",
@@ -1280,6 +2314,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/reply": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Reply",
+        "description": "The owner answers the customer from the panel, on the conversation's channel.\n\nCounts as the owner's own reply: the bot steps back and an open handoff is closed.",
+        "operationId": "reply_api_v1_conversations__conversation_id__reply_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
                 }
               }
             }
@@ -1410,7 +2503,7 @@
           "conversations"
         ],
         "summary": "List Handoffs",
-        "description": "DMs the bot passed to the owner because it didn't know the answer.\n\nOpen ones come oldest first (the customer who has waited longest is on top); resolved\nones newest first. A handoff resolves itself when the owner replies on Instagram.",
+        "description": "DMs the bot passed to the owner because it didn't know the answer.\n\nOpen ones come oldest first (the customer who has waited longest is on top); resolved\nones newest first. A handoff resolves itself when the owner replies to the customer.",
         "operationId": "list_handoffs_api_v1_handoffs_get",
         "security": [
           {
@@ -1650,7 +2743,7 @@
           "dashboard"
         ],
         "summary": "Playground Chat",
-        "description": "Test the bot with the shop's current data, without Instagram. Nothing is saved.\n\nWorks while the bot is switched off, so owners can try it before going live.",
+        "description": "Test the bot with the shop's current data, without any channel. Nothing is saved.\n\nWorks while the bot is switched off, so owners can try it before going live.",
         "operationId": "playground_chat_api_v1_playground_chat_post",
         "requestBody": {
           "content": {
@@ -1690,6 +2783,203 @@
           }
         ]
       }
+    },
+    "/api/v1/billing": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Get Billing",
+        "operationId": "get_billing_api_v1_billing_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/billing/entries": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "List Entries",
+        "description": "The wallet history, newest first.",
+        "operationId": "list_entries_api_v1_billing_entries_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WalletEntryKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletEntryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/plan": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Change Plan",
+        "description": "Upgrade (starts now, the month's fee is paid from the wallet) or downgrade (applies\nwhen the paid month ends).",
+        "operationId": "change_plan_api_v1_billing_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/billing/topup": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Topup",
+        "operationId": "topup_api_v1_billing_topup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1706,6 +2996,147 @@
           "password"
         ],
         "title": "AccountDelete"
+      },
+      "AdminOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "telegram_user_id": {
+            "type": "integer",
+            "title": "Telegram User Id"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "notify": {
+            "type": "boolean",
+            "title": "Notify"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "telegram_user_id",
+          "username",
+          "first_name",
+          "notify"
+        ],
+        "title": "AdminOut"
+      },
+      "ApplyIn": {
+        "properties": {
+          "skip_products": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Skip Products",
+            "default": []
+          },
+          "skip_knowledge": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Skip Knowledge",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ApplyIn"
+      },
+      "BillingOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "balance_toman": {
+            "type": "integer",
+            "title": "Balance Toman"
+          },
+          "low_balance": {
+            "type": "boolean",
+            "title": "Low Balance"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "plan_renews_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Renews At"
+          },
+          "plan_next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Plan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/PlanOut"
+            },
+            "type": "array",
+            "title": "Plans"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/PricingOut"
+          },
+          "topup_available": {
+            "type": "boolean",
+            "title": "Topup Available"
+          },
+          "topup_min_toman": {
+            "type": "integer",
+            "title": "Topup Min Toman"
+          },
+          "topup_max_toman": {
+            "type": "integer",
+            "title": "Topup Max Toman"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "balance_toman",
+          "low_balance",
+          "plan",
+          "plan_renews_at",
+          "plan_next",
+          "plans",
+          "pricing",
+          "topup_available",
+          "topup_min_toman",
+          "topup_max_toman"
+        ],
+        "title": "BillingOut"
       },
       "Body_import_file_api_v1_products_file_post": {
         "properties": {
@@ -1741,6 +3172,20 @@
         ],
         "title": "Body_preview_file_api_v1_products_file_preview_post"
       },
+      "Body_teach_file_api_v1_teach_file_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_teach_file_api_v1_teach_file_post"
+      },
       "Body_upload_file_api_v1_knowledge_upload_post": {
         "properties": {
           "file": {
@@ -1754,6 +3199,86 @@
           "file"
         ],
         "title": "Body_upload_file_api_v1_knowledge_upload_post"
+      },
+      "BusinessOut": {
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "can_reply": {
+            "type": "boolean",
+            "title": "Can Reply"
+          },
+          "telegram_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connected",
+          "enabled",
+          "can_reply",
+          "telegram_user_id"
+        ],
+        "title": "BusinessOut"
+      },
+      "Channel": {
+        "type": "string",
+        "enum": [
+          "instagram",
+          "telegram"
+        ],
+        "title": "Channel",
+        "description": "Where a conversation happens. The bot itself is the same on every channel."
+      },
+      "ChannelOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "username",
+          "active"
+        ],
+        "title": "ChannelOut"
       },
       "ConnectUrlOut": {
         "properties": {
@@ -1775,6 +3300,18 @@
             "format": "uuid",
             "title": "Id"
           },
+          "channel": {
+            "$ref": "#/components/schemas/Channel"
+          },
+          "telegram_business": {
+            "type": "boolean",
+            "title": "Telegram Business",
+            "default": false
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
           "customer_igsid": {
             "type": "string",
             "title": "Customer Igsid"
@@ -1789,6 +3326,28 @@
               }
             ],
             "title": "Customer Username"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "chat_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Url"
           },
           "instagram_url": {
             "anyOf": [
@@ -1864,8 +3423,12 @@
         "type": "object",
         "required": [
           "id",
+          "channel",
+          "customer_id",
           "customer_igsid",
           "customer_username",
+          "customer_name",
+          "chat_url",
           "instagram_url",
           "last_customer_message_at",
           "bot_paused_until",
@@ -1884,6 +3447,18 @@
             "format": "uuid",
             "title": "Id"
           },
+          "channel": {
+            "$ref": "#/components/schemas/Channel"
+          },
+          "telegram_business": {
+            "type": "boolean",
+            "title": "Telegram Business",
+            "default": false
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
           "customer_igsid": {
             "type": "string",
             "title": "Customer Igsid"
@@ -1898,6 +3473,28 @@
               }
             ],
             "title": "Customer Username"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "chat_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Url"
           },
           "instagram_url": {
             "anyOf": [
@@ -1966,8 +3563,12 @@
         "type": "object",
         "required": [
           "id",
+          "channel",
+          "customer_id",
           "customer_igsid",
           "customer_username",
+          "customer_name",
+          "chat_url",
           "instagram_url",
           "last_customer_message_at",
           "bot_paused_until",
@@ -1999,10 +3600,68 @@
         ],
         "title": "ConversationPage"
       },
+      "CustomBotIn": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 10,
+            "pattern": "^\\d+:[\\w-]+$",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "CustomBotIn"
+      },
+      "CustomBotOut": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "active",
+          "last_error",
+          "link"
+        ],
+        "title": "CustomBotOut"
+      },
       "DashboardOut": {
         "properties": {
           "setup": {
             "$ref": "#/components/schemas/SetupStatus"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletStatus"
+          },
+          "pending_proposals": {
+            "type": "integer",
+            "title": "Pending Proposals"
           },
           "open_handoffs": {
             "type": "integer",
@@ -2019,6 +3678,8 @@
         "type": "object",
         "required": [
           "setup",
+          "wallet",
+          "pending_proposals",
           "open_handoffs",
           "last_7_days",
           "tokens_this_month"
@@ -2156,6 +3817,33 @@
         ],
         "title": "FieldOut"
       },
+      "ForgotPasswordOut": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ForgotPasswordOut"
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2176,6 +3864,14 @@
             "format": "uuid",
             "title": "Conversation Id"
           },
+          "channel": {
+            "$ref": "#/components/schemas/Channel"
+          },
+          "telegram_business": {
+            "type": "boolean",
+            "title": "Telegram Business",
+            "default": false
+          },
           "customer_igsid": {
             "type": "string",
             "title": "Customer Igsid"
@@ -2190,6 +3886,28 @@
               }
             ],
             "title": "Customer Username"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "chat_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Url"
           },
           "instagram_url": {
             "anyOf": [
@@ -2221,8 +3939,11 @@
         "type": "object",
         "required": [
           "conversation_id",
+          "channel",
           "customer_igsid",
           "customer_username",
+          "customer_name",
+          "chat_url",
           "instagram_url",
           "last_customer_message_at",
           "handoff"
@@ -2325,6 +4046,11 @@
       },
       "InstagramStatusOut": {
         "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": true
+          },
           "connected": {
             "type": "boolean",
             "title": "Connected"
@@ -2414,6 +4140,25 @@
           "file"
         ],
         "title": "KnowledgeSection"
+      },
+      "LinkOut": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "title": "LinkOut"
       },
       "LoginRequest": {
         "properties": {
@@ -2515,6 +4260,58 @@
         },
         "type": "object",
         "title": "PauseIn"
+      },
+      "Plan": {
+        "type": "string",
+        "enum": [
+          "basic",
+          "pro",
+          "business"
+        ],
+        "title": "Plan",
+        "description": "What a shop pays for on top of usage. Usage (AI answers) costs the same on every plan."
+      },
+      "PlanChange": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan"
+        ],
+        "title": "PlanChange"
+      },
+      "PlanOut": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "monthly_fee_toman": {
+            "type": "integer",
+            "title": "Monthly Fee Toman"
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "monthly_fee_toman",
+          "features"
+        ],
+        "title": "PlanOut"
       },
       "PlaygroundIn": {
         "properties": {
@@ -2778,6 +4575,178 @@
         ],
         "title": "PreviewOut"
       },
+      "PricingOut": {
+        "properties": {
+          "per_1k_prompt_tokens_toman": {
+            "type": "number",
+            "title": "Per 1K Prompt Tokens Toman"
+          },
+          "per_1k_completion_tokens_toman": {
+            "type": "number",
+            "title": "Per 1K Completion Tokens Toman"
+          },
+          "min_per_answer_toman": {
+            "type": "number",
+            "title": "Min Per Answer Toman"
+          },
+          "per_voice_minute_toman": {
+            "type": "number",
+            "title": "Per Voice Minute Toman"
+          },
+          "typical_answer_toman": {
+            "type": "integer",
+            "title": "Typical Answer Toman"
+          }
+        },
+        "type": "object",
+        "required": [
+          "per_1k_prompt_tokens_toman",
+          "per_1k_completion_tokens_toman",
+          "min_per_answer_toman",
+          "per_voice_minute_toman",
+          "typical_answer_toman"
+        ],
+        "title": "PricingOut",
+        "description": "What usage costs (toman). An answer costs by the AI tokens it used, with a minimum."
+      },
+      "ProductIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "Toman"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "post_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProductIn"
+      },
+      "ProductOrigin": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "sheet",
+          "file",
+          "teach",
+          "telegram_post"
+        ],
+        "title": "ProductOrigin",
+        "description": "How Javab learned about a product. Every product lives in Javab's own catalogue."
+      },
       "ProductOut": {
         "properties": {
           "id": {
@@ -2871,6 +4840,63 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Extra"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/ProductOrigin"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "default": true
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "post_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Url"
+          },
+          "telegram_post_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Post Url"
+          },
+          "bot_view": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bot View",
+            "default": {}
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -2884,7 +4910,12 @@
           "price",
           "stock",
           "description",
-          "extra"
+          "extra",
+          "origin",
+          "image_url",
+          "post_url",
+          "created_at",
+          "updated_at"
         ],
         "title": "ProductOut"
       },
@@ -2908,6 +4939,283 @@
           "total"
         ],
         "title": "ProductPage"
+      },
+      "ProductPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "Toman"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "post_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Url"
+          }
+        },
+        "type": "object",
+        "title": "ProductPatch",
+        "description": "Only the fields sent are changed; send null to clear one (except name)."
+      },
+      "ProductSummary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "in_stock": {
+            "type": "integer",
+            "title": "In Stock"
+          },
+          "out_of_stock": {
+            "type": "integer",
+            "title": "Out Of Stock"
+          },
+          "stock_unknown": {
+            "type": "integer",
+            "title": "Stock Unknown"
+          },
+          "by_origin": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Origin"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "in_stock",
+          "out_of_stock",
+          "stock_unknown",
+          "by_origin",
+          "limit"
+        ],
+        "title": "ProductSummary"
+      },
+      "ProposalOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_label": {
+            "type": "string",
+            "title": "Source Label"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProposalStatus"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          },
+          "changes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Changes"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "source_label",
+          "status",
+          "summary",
+          "preview",
+          "changes",
+          "result",
+          "created_at",
+          "applied_at"
+        ],
+        "title": "ProposalOut"
+      },
+      "ProposalPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProposalPage"
+      },
+      "ProposalStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "applied",
+          "discarded"
+        ],
+        "title": "ProposalStatus"
       },
       "RefreshRequest": {
         "properties": {
@@ -2955,6 +5263,43 @@
           "shop_name"
         ],
         "title": "RegisterRequest"
+      },
+      "ReplyIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ReplyIn"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Token"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest"
       },
       "SectionOut": {
         "properties": {
@@ -3024,6 +5369,10 @@
       },
       "SetupStatus": {
         "properties": {
+          "instagram_available": {
+            "type": "boolean",
+            "title": "Instagram Available"
+          },
           "instagram_connected": {
             "type": "boolean",
             "title": "Instagram Connected"
@@ -3042,6 +5391,26 @@
               }
             ],
             "title": "Instagram Username"
+          },
+          "telegram_available": {
+            "type": "boolean",
+            "title": "Telegram Available"
+          },
+          "telegram_owner_linked": {
+            "type": "boolean",
+            "title": "Telegram Owner Linked"
+          },
+          "telegram_custom_bot": {
+            "type": "boolean",
+            "title": "Telegram Custom Bot"
+          },
+          "telegram_business": {
+            "type": "boolean",
+            "title": "Telegram Business"
+          },
+          "telegram_channels": {
+            "type": "integer",
+            "title": "Telegram Channels"
           },
           "knowledge_entries": {
             "type": "integer",
@@ -3077,9 +5446,15 @@
         },
         "type": "object",
         "required": [
+          "instagram_available",
           "instagram_connected",
           "instagram_active",
           "instagram_username",
+          "telegram_available",
+          "telegram_owner_linked",
+          "telegram_custom_bot",
+          "telegram_business",
+          "telegram_channels",
           "knowledge_entries",
           "products_connected",
           "product_count",
@@ -3138,6 +5513,10 @@
             "type": "string",
             "title": "Name"
           },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
           "bot_enabled": {
             "type": "boolean",
             "title": "Bot Enabled"
@@ -3167,6 +5546,7 @@
         "required": [
           "id",
           "name",
+          "slug",
           "bot_enabled",
           "tone",
           "use_emoji",
@@ -3387,6 +5767,133 @@
         ],
         "title": "Stats"
       },
+      "TelegramStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "shared_bot_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Bot Username"
+          },
+          "shop_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Link"
+          },
+          "admins": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOut"
+            },
+            "type": "array",
+            "title": "Admins"
+          },
+          "custom_bot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomBotOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "custom_bot_allowed": {
+            "type": "boolean",
+            "title": "Custom Bot Allowed"
+          },
+          "business": {
+            "$ref": "#/components/schemas/BusinessOut"
+          },
+          "business_allowed": {
+            "type": "boolean",
+            "title": "Business Allowed"
+          },
+          "business_bot_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Bot Username"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelOut"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "enabled",
+          "shared_bot_username",
+          "shop_link",
+          "admins",
+          "custom_bot",
+          "custom_bot_allowed",
+          "business",
+          "business_allowed",
+          "business_bot_username",
+          "channels",
+          "plan"
+        ],
+        "title": "TelegramStatus"
+      },
+      "TelegramUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "TelegramUpdate"
+      },
+      "TextIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 60000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TextIn"
+      },
       "TokenPair": {
         "properties": {
           "access_token": {
@@ -3409,6 +5916,34 @@
           "refresh_token"
         ],
         "title": "TokenPair"
+      },
+      "TopupIn": {
+        "properties": {
+          "amount_toman": {
+            "type": "integer",
+            "maximum": 1000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Toman"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount_toman"
+        ],
+        "title": "TopupIn"
+      },
+      "TopupOut": {
+        "properties": {
+          "payment_url": {
+            "type": "string",
+            "title": "Payment Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment_url"
+        ],
+        "title": "TopupOut"
       },
       "UnansweredOut": {
         "properties": {
@@ -3452,6 +5987,21 @@
           "created_at"
         ],
         "title": "UnansweredOut"
+      },
+      "UrlIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "UrlIn"
       },
       "UserOut": {
         "properties": {
@@ -3520,6 +6070,111 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WalletEntryKind": {
+        "type": "string",
+        "enum": [
+          "topup",
+          "usage",
+          "plan_fee",
+          "bonus",
+          "adjustment"
+        ],
+        "title": "WalletEntryKind"
+      },
+      "WalletEntryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WalletEntryKind"
+          },
+          "amount_toman": {
+            "type": "number",
+            "title": "Amount Toman"
+          },
+          "balance_after_toman": {
+            "type": "number",
+            "title": "Balance After Toman"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "amount_toman",
+          "balance_after_toman",
+          "description",
+          "details",
+          "created_at"
+        ],
+        "title": "WalletEntryOut"
+      },
+      "WalletEntryPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WalletEntryOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "WalletEntryPage"
+      },
+      "WalletStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "balance_toman": {
+            "type": "integer",
+            "title": "Balance Toman"
+          },
+          "low_balance": {
+            "type": "boolean",
+            "title": "Low Balance"
+          },
+          "plan": {
+            "type": "string",
+            "title": "Plan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "balance_toman",
+          "low_balance",
+          "plan"
+        ],
+        "title": "WalletStatus"
       }
     },
     "securitySchemes": {

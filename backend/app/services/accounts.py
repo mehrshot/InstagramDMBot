@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -9,10 +9,19 @@ from app.models import (
     InstagramPost,
     KnowledgeEntry,
     Message,
+    Payment,
     Product,
     ProductSource,
     Shop,
+    TeachProposal,
+    TelegramAdmin,
+    TelegramBot,
+    TelegramBusinessConnection,
+    TelegramChannel,
+    TelegramPost,
+    TelegramSession,
     User,
+    WalletEntry,
 )
 
 
@@ -25,6 +34,12 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
     if shop_id is not None:
         conversations = select(Conversation.id).where(Conversation.shop_id == shop_id)
         await db.execute(delete(Message).where(Message.conversation_id.in_(conversations)))
+        custom_bots = select(TelegramBot.id).where(TelegramBot.shop_id == shop_id)
+        await db.execute(
+            delete(TelegramSession).where(
+                or_(TelegramSession.shop_id == shop_id, TelegramSession.bot_id.in_(custom_bots))
+            )
+        )
         for model in (
             Conversation,
             Product,
@@ -32,6 +47,14 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
             KnowledgeEntry,
             InstagramPost,
             InstagramAccount,
+            TeachProposal,
+            TelegramPost,
+            TelegramChannel,
+            TelegramBusinessConnection,
+            TelegramAdmin,
+            TelegramBot,
+            WalletEntry,
+            Payment,
         ):
             await db.execute(delete(model).where(model.shop_id == shop_id))
         await db.execute(delete(Shop).where(Shop.id == shop_id))

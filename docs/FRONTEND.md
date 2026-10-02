@@ -522,12 +522,12 @@ uv run python -m scripts.simulate dm --text "سلام، شومیز حریر دا
 
 | قابلیت | وضعیت |
 |---|---|
-| پرداخت و اشتراک ماهانه | فاز بعد (درگاه ایرانی) |
+| پرداخت و اشتراک ماهانه | انجام شد (کیف پول + زرین‌پال)؛ بخش ۱۱.۵ |
 | ورود با شماره موبایل و کد پیامکی | فاز بعد |
-| ارسال پیام از داخل پنل | فعلا از خود اینستاگرام |
+| ارسال پیام از داخل پنل | انجام شد؛ بخش ۱۱.۱ |
 | جواب به کامنت‌ها | قابلیت پولی جداگانه، فاز بعد |
-| اعلان (ایمیل/پیامک) برای سوال بی‌جواب | فاز بعد |
-| فراموشی رمز | فاز بعد (نیاز به سرویس ایمیل/پیامک) |
+| اعلان برای سوال بی‌جواب | انجام شد (در تلگرام صاحب فروشگاه)؛ بخش ۱۱.۲ |
+| فراموشی رمز | انجام شد (ایمیل)؛ بخش ۱۱.۶ |
 
 ---
 
@@ -575,3 +575,96 @@ cd backend && uv run python -m scripts.export_openapi
 - **صندوق پیام:** پستی که ربات فرستاده یک پیام ربات با متن `[پست] <permalink>` است؛ به‌جای حباب متن، کارت پست نمایش داده می‌شود (`sharedPostUrl`).
 - **فایل محصولات:** فیلد جدید `post_url` («لینک پست اینستاگرام») خودکار در مرحله‌ی تطبیق ستون‌ها ظاهر می‌شود (از `GET /products/fields`).
 - **تست ربات، جستجوی محصول:** کلید جایگزین‌ها در `product_lookups` حالا `other_in_stock_variants` است (فقط رنگ/سایزهای موجود).
+
+---
+
+## ۱۱. تلگرام، کیف پول، کاتالوگ محصولات و «یاد دادن به جواب» (مهر ۱۴۰۵)
+
+> **وضعیت (۱۰ مهر ۱۴۰۵):** همه‌ی این بخش در پنل پیاده شده است: صفحه‌های `pages/Telegram.tsx`، `pages/Billing.tsx`، `pages/ForgotPassword.tsx`، `pages/ResetPassword.tsx`؛ کاتالوگ و «به جواب یاد بده» در `pages/Products.tsx` و `components/teach.tsx`؛ کادر جواب در صندوق پیام؛ متن‌ها در `i18n/launch.fa.ts` و `launch.en.ts`. این بخش برای مرجع و توسعه‌ی بعدی است.
+
+بک‌اند حالا چندکاناله است: **تلگرام اولین کانال فعال است** و اینستاگرام تا تأیید متا خاموش است (کدش سر جایش است). همه‌ی endpointها زیر `/api/v1` و در `docs/openapi.json` هستند؛ تایپ‌ها را دوباره بساز (بخش ۹).
+
+### ۱۱.۱ تغییرهای سازگار با نسخه‌ی فعلی پنل
+- **گفتگوها** (`GET /conversations`، `/conversations/{id}`، `/handoffs`): فیلدهای تازه‌ی `channel` (`instagram` | `telegram`)، `customer_id`، `customer_name` و `chat_url` (لینک باز کردن چت در اپ همان کانال). `customer_igsid` و `instagram_url` برای سازگاری مانده‌اند؛ از این به بعد از `chat_url` استفاده کن. فیلتر تازه: `?channel=telegram`. آیکن کانال کنار هر گفتگو لازم است.
+- **جواب دادن از پنل:** `POST /conversations/{id}/reply` با `{text}`. پیام در همان کانال برای مشتری می‌رود، ربات در آن گفتگو کنار می‌کشد و ارجاع بسته می‌شود. اگر کانال وصل نباشد یا از پیام مشتری بیش از ۲۴ ساعت گذشته باشد (اینستاگرام و تلگرام بیزینس)، پاسخ `409` با پیام فارسی است.
+- **اینستاگرام:** `GET /instagram` فیلد `available` دارد. وقتی `false` است، دکمه‌ی اتصال را با متن «به‌زودی» غیرفعال کن (`GET /instagram/connect-url` در این حالت `503` می‌دهد).
+- **داشبورد:** در `setup` این فیلدها اضافه شده‌اند: `instagram_available`، `telegram_available`، `telegram_owner_linked`، `telegram_custom_bot`، `telegram_business`، `telegram_channels`. فیلد تازه‌ی `wallet` (`{enabled, balance_toman, low_balance, plan}`) و `pending_proposals` هم هست. چک‌لیست راه‌اندازی باید قدم‌های تلگرام را نشان بدهد.
+- **فروشگاه:** `GET /shop` فیلد `slug` دارد (شناسه‌ی عمومی در لینک تلگرام).
+
+### ۱۱.۲ صفحه‌ی «تلگرام» (تازه)
+| کار | درخواست |
+|---|---|
+| وضعیت کامل | `GET /telegram` → `{available, enabled, shared_bot_username, shop_link, admins[], custom_bot, custom_bot_allowed, business{connected, enabled, can_reply}, business_allowed, business_bot_username, channels[], plan}` |
+| خاموش/روشن کردن کل تلگرام | `PATCH /telegram` با `{enabled}` |
+| وصل کردن اکانت تلگرام صاحب فروشگاه | `POST /telegram/link` → `{url, expires_at}`. لینک را دکمه کن و QR آن را هم نشان بده (روی گوشی باز شود). ۳۰ دقیقه و یک بار اعتبار دارد. |
+| حذف اکانت وصل‌شده | `DELETE /telegram/admins/{id}` |
+| ربات اختصاصی (پلن حرفه‌ای به بالا) | `PUT /telegram/custom-bot` با `{token}` (از @BotFather)؛ خطای فارسی با `422`. حذف: `DELETE /telegram/custom-bot` |
+| قطع تلگرام بیزینس | `DELETE /telegram/business` |
+| حذف کانال | `DELETE /telegram/channels/{id}` |
+
+محتوای صفحه، به ترتیب:
+1. **لینک فروشگاه** (`shop_link`) با دکمه‌ی کپی و QR، با این توضیح: «این لینک را در بیو اینستاگرام، کانال و استوری بگذارید؛ مشتری با زدنش مستقیم با دستیار فروشگاه شما حرف می‌زند».
+2. **اتصال اکانت تلگرام خودتان:** «خبرِ مشتری‌هایی که منتظر شما هستند همان‌جا می‌آید، همان‌جا جواب می‌دهید، و با پیام متنی یا صوتی به ربات محصول یاد می‌دهید».
+3. **کانال تلگرام:** راهنمای «ربات (`@{shared_bot_username}`) را ادمین کانالتان کنید» و لیست `channels`.
+4. **ربات اختصاصی:** راهنمای ۳ قدمی BotFather (`/newbot` → نام → کپی توکن) و فیلد توکن. اگر `custom_bot_allowed=false` است، قفل باشد با لینک به صفحه‌ی کیف پول/پلن.
+5. **تلگرام بیزینس:** راهنما: «تلگرام پرمیوم ← Settings ← Telegram Business ← Chatbots ← `@{business_bot_username}` را اضافه کنید و اجازه‌ی Reply to messages بدهید». پیش‌نیاز این است که اکانت در قدم ۲ وصل شده باشد. اگر `business_allowed=false` است، قفل باشد.
+
+### ۱۱.۳ صفحه‌ی «محصولات»، کاتالوگ داخل جواب
+همه‌ی محصولات، از هر راهی که آمده باشند، در یک لیست هستند. هر محصول `origin` دارد:
+`manual` (دستی)، `sheet` (گوگل شیت زنده)، `file` (اکسل)، `teach` (یاد گرفته از متن، صوت، داک یا لینک)، `telegram_post` (پست کانال). یک برچسب کوچک برای هر کدام نشان بده.
+
+| کار | درخواست |
+|---|---|
+| لیست + جستجو + فیلتر | `GET /products?q=&origin=&stock=in_stock\|out_of_stock\|unknown&offset&limit` |
+| خلاصه برای بالای صفحه | `GET /products/summary` → `{total, in_stock, out_of_stock, stock_unknown, by_origin, limit}` |
+| افزودن دستی | `POST /products` با `{name, sku?, category?, color?, size?, price? (تومان), stock?, description?, image_url?, post_url?}` |
+| ویرایش سریع (قیمت، موجودی…) | `PATCH /products/{id}` فقط با فیلدهای تغییرکرده؛ `null` یعنی پاک کردن |
+| حذف | `DELETE /products/{id}` |
+
+- `editable=false` یعنی ردیف از گوگل شیت زنده است: ویرایش و حذف ندارد (سرور `409` می‌دهد) و باید آیکن قفل با توضیح «در خود شیت تغییر دهید» داشته باشد.
+- **«جواب از این محصول چه می‌داند»:** فیلد `bot_view` دقیقاً همان چیزی است که ربات می‌بیند. آن را در جزئیات محصول نشان بده.
+- ویرایش سریع موجودی (دکمه‌های + و −) خیلی کاربردی است.
+- حذف منبع شیت (`DELETE /products/source`) فقط ردیف‌های همان شیت را پاک می‌کند، نه محصولات دستی و بقیه.
+
+### ۱۱.۴ «به جواب یاد بده» (تازه؛ دل این نسخه)
+یک کادر بزرگ بالای صفحه‌ی محصولات (یا صفحه‌ی جدا): «هر جور راحتید توضیح بدهید». سه ورودی:
+
+| ورودی | درخواست |
+|---|---|
+| متن آزاد (لیست قیمت، «فلان تموم شد»، شرایط ارسال، متن کپی‌شده) | `POST /teach/text` با `{text}` |
+| لینک گوگل داک، گوگل شیت یا فایل درایو | `POST /teach/url` با `{url}` |
+| فایل (PDF، Word، Excel، CSV، عکس لیست قیمت) | `POST /teach/file` (multipart، فیلد `file`) |
+
+هر سه یک **پیشنهاد** (proposal) برمی‌گردانند و هنوز چیزی تغییر نکرده است:
+```
+{id, status: "pending", summary, preview, changes: {
+   products: [{action: "create"|"update"|"delete", product_id, before, fields, locked}],
+   knowledge: [{section, title, content, mode: "replace"|"add"}],
+   questions: [...], sheet?: {url, mapping, rows}
+}}
+```
+- پیش‌نمایش را با تیک برای هر ردیف نشان بده: برای `update`، مقدار `before` در مقابل `fields` (مثلاً «قیمت: ۸۹۰٬۰۰۰ ← ۹۵۰٬۰۰۰»). `locked=true` یعنی ردیف گوگل شیت است و اعمال نمی‌شود. `questions` سوال‌های هوش مصنوعی از صاحب فروشگاه است. اگر وقت نداری، فیلد `preview` همان متن آماده‌ای است که ربات تلگرام نشان می‌دهد.
+- **ثبت:** `POST /teach/proposals/{id}/apply` با `{skip_products: [index…], skip_knowledge: [index…]}` (اندیس ردیف‌هایی که تیکشان برداشته شده). **رد:** `POST /teach/proposals/{id}/discard`.
+- **لیست:** `GET /teach/proposals?status=pending`. پیشنهادهایی که صاحب فروشگاه از تلگرام فرستاده (صوت، عکس، پست فورواردشده) هم اینجا هستند؛ عددش در داشبورد `pending_proposals` است.
+- **برگرداندن:** `POST /teach/proposals/{id}/undo` محصولاتی را که یک پیشنهادِ ثبت‌شده اضافه کرده حذف می‌کند (مثلاً پست کانالی که اشتباهی محصول تشخیص داده شده).
+- خطاها `422` با پیام فارسی‌اند (لینک غیر گوگل، فایل خراب، کیف پول خالی)، و `502` یعنی سرویس هوش مصنوعی جواب نداد.
+
+### ۱۱.۵ صفحه‌ی «کیف پول و پلن» (تازه، مسیر `/billing`)
+| کار | درخواست |
+|---|---|
+| موجودی، پلن، تعرفه‌ها | `GET /billing` → `{enabled, balance_toman, low_balance, plan, plan_renews_at, plan_next, plans: [{key, label, monthly_fee_toman, features}], pricing: {..., typical_answer_toman}, topup_available, topup_min_toman, topup_max_toman}` |
+| تاریخچه | `GET /billing/entries?kind=&offset&limit` → `{items: [{kind: topup\|usage\|plan_fee\|bonus\|adjustment, amount_toman, balance_after_toman, description, created_at}], total}` |
+| شارژ | `POST /billing/topup` با `{amount_toman}` → `{payment_url}`؛ مرورگر را به آن بفرست. بعد از پرداخت، کاربر به `/billing?payment=success&ref=…` یا `/billing?payment=failed` برمی‌گردد؛ پیام موفقیت یا خطا نشان بده. |
+| تغییر پلن | `POST /billing/plan` با `{plan}`. ارتقا فوری است و هزینه‌ی ماه از کیف پول کم می‌شود (اگر موجودی کم باشد `402` با پیام فارسی). کاهش پلن آخر ماه اعمال می‌شود (`plan_next`). |
+
+- منطق قیمت‌گذاری: هر جواب ربات به اندازه‌ی مصرف هوش مصنوعی‌اش از کیف پول کم می‌شود. `typical_answer_toman` را برای حس عدد نشان بده: «هر جواب حدود X تومان». پلن‌های بالاتر فقط ماهانه‌ی ثابت اضافه دارند.
+- اگر `topup_available=false` است (درگاه هنوز وصل نشده)، به جای دکمه‌ی پرداخت بنویس «برای شارژ با پشتیبانی تماس بگیرید».
+- وقتی `low_balance` است، یک نوار هشدار بالای همه‌ی صفحه‌های پنل لازم است.
+
+### ۱۱.۶ فراموشی رمز عبور (تازه)
+- **صفحه‌ی «فراموشی رمز»** (لینکش زیر فرم ورود): `POST /auth/password/forgot` با `{email}`. همیشه `202` با یک `message` ثابت برمی‌گردد (برای امنیت). همان پیام را نشان بده.
+- **صفحه‌ی `/reset-password?token=...`** (لینکی که در ایمیل می‌آید): فرم رمز جدید (حداقل ۸ کاراکتر) → `POST /auth/password/reset` با `{token, new_password}` → `204`، بعد برو به صفحه‌ی ورود. توکن نامعتبر، منقضی یا استفاده‌شده `400` با پیام فارسی می‌دهد.
+
+### ۱۱.۷ سایت عمومی
+- **واتس‌اپ:** کاشی واتس‌اپ در `components/site/channels.tsx` کامنت شد (API واتس‌اپ شماره‌های ایران را قبول نمی‌کند). اگر متن‌های landing جایی هنوز از واتس‌اپ یا اتصال اینستاگرام حرف می‌زنند، بازنویسی‌شان با تصمیم شما و مهرشاد است.
+- در `CHANNELS`، `telegram` حالا `live: true` و `instagram` `live: false` است.

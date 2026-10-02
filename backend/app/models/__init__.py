@@ -1,17 +1,35 @@
 from app.models.base import Base
-from app.models.conversation import Conversation, HandoffResolution, Message, MessageSender
+from app.models.billing import Payment, PaymentStatus, WalletEntry, WalletEntryKind
+from app.models.conversation import (
+    Channel,
+    Conversation,
+    HandoffResolution,
+    Message,
+    MessageSender,
+)
 from app.models.instagram import InstagramAccount, InstagramPost
 from app.models.knowledge import (
     KnowledgeEntry,
     KnowledgeSection,
     Product,
+    ProductOrigin,
     ProductSource,
     ProductSourceKind,
 )
-from app.models.user import Shop, User
+from app.models.teach import ProposalStatus, TeachProposal
+from app.models.telegram import (
+    TelegramAdmin,
+    TelegramBot,
+    TelegramBusinessConnection,
+    TelegramChannel,
+    TelegramPost,
+    TelegramSession,
+)
+from app.models.user import Plan, Shop, User
 
 __all__ = [
     "Base",
+    "Channel",
     "Conversation",
     "HandoffResolution",
     "InstagramAccount",
@@ -20,9 +38,23 @@ __all__ = [
     "KnowledgeSection",
     "Message",
     "MessageSender",
+    "Payment",
+    "PaymentStatus",
+    "Plan",
     "Product",
+    "ProductOrigin",
     "ProductSource",
     "ProductSourceKind",
+    "ProposalStatus",
     "Shop",
+    "TeachProposal",
+    "TelegramAdmin",
+    "TelegramBot",
+    "TelegramBusinessConnection",
+    "TelegramChannel",
+    "TelegramPost",
+    "TelegramSession",
     "User",
+    "WalletEntry",
+    "WalletEntryKind",
 ]

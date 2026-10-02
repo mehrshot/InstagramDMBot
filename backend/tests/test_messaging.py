@@ -92,7 +92,7 @@ async def test_customer_message_is_stored_and_answered(
     customer, bot = await _messages(db)
     assert customer.sender == MessageSender.CUSTOMER
     assert bot.sender == MessageSender.BOT
-    assert bot.ig_message_id == "bot-mid-1"
+    assert bot.external_id == "bot-mid-1"
     assert bot.unanswered is True
 
 
@@ -179,7 +179,7 @@ async def test_echo_racing_the_send_is_matched_to_bot_message(
     await db.refresh(conversation)
     assert conversation.bot_paused_until is None
     bot = await db.scalar(select(Message).where(Message.sender == MessageSender.BOT))
-    assert bot is not None and bot.ig_message_id == "bot-mid-9"
+    assert bot is not None and bot.external_id == "bot-mid-9"
 
 
 async def test_unknown_account_is_ignored(db: AsyncSession, queue: RecordingQueue) -> None:
@@ -236,7 +236,7 @@ async def test_long_reply_is_split_into_chunks(
     db: AsyncSession, shop: Shop, queue: RecordingQueue, fake_meta: FakeMeta
 ) -> None:
     class LongResponder:
-        async def generate(self, shop: Shop, history: list[Message]) -> Reply:
+        async def generate(self, shop: Shop, history: list[Message], **_: object) -> Reply:
             return Reply(text=("جمله‌ای درباره‌ی محصول. " * 120).strip())
 
     await _receive(db, queue, _event("m1"))
@@ -252,4 +252,4 @@ async def test_long_reply_is_split_into_chunks(
     assert len(fake_meta.sent) >= 2
     bots = [m for m in await _messages(db) if m.sender == MessageSender.BOT]
     assert len(bots) == len(fake_meta.sent)
-    assert all(m.ig_message_id for m in bots)
+    assert all(m.external_id for m in bots)

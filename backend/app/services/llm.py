@@ -67,7 +67,9 @@ class LLMClient:
         *,
         model: str | None = None,
         max_tokens: int | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResult:
+        """`tool_choice` names a tool the model must call (for structured output)."""
         if not self.configured:
             raise LLMNotConfiguredError()
         body: dict[str, Any] = {
@@ -78,6 +80,8 @@ class LLMClient:
         }
         if tools:
             body["tools"] = tools
+        if tools and tool_choice:
+            body["tool_choice"] = {"type": "function", "function": {"name": tool_choice}}
         data = await self._post("/chat/completions", body)
         try:
             choice = data["choices"][0]
@@ -111,6 +115,37 @@ class LLMClient:
             max_tokens=2000,
         )
         return result.content
+
+    @property
+    def can_transcribe(self) -> bool:
+        return self.configured and bool(self._settings.llm_transcribe_model)
+
+    async def transcribe(self, audio: bytes, filename: str) -> str:
+        """Speech to text (OpenAI-compatible /audio/transcriptions), e.g. a voice note."""
+        if not self.can_transcribe:
+            raise LLMNotConfiguredError()
+        url = self._settings.llm_base_url.rstrip("/") + "/audio/transcriptions"
+        try:
+            resp = await self._http.post(
+                url,
+                data={"model": self._settings.llm_transcribe_model, "response_format": "json"},
+                files={"file": (filename, audio)},
+                headers={"Authorization": f"Bearer {self._settings.llm_api_key}"},
+                timeout=self._settings.llm_timeout_seconds * 2,
+            )
+        except httpx.HTTPError as exc:
+            raise LLMError(f"network error: {type(exc).__name__}", retryable=True) from None
+        if resp.status_code == 429 or resp.status_code >= 500:
+            raise LLMError(f"provider busy (HTTP {resp.status_code})", retryable=True)
+        if resp.is_error:
+            raise LLMError(
+                f"transcription rejected (HTTP {resp.status_code}): {resp.text[:300]}",
+                retryable=False,
+            )
+        try:
+            return str(resp.json().get("text") or "").strip()
+        except ValueError:
+            return resp.text.strip()
 
     async def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         url = self._settings.llm_base_url.rstrip("/") + path

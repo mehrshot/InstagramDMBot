@@ -43,6 +43,21 @@ services:
     depends_on:
       - api
 
+  # Database backups every few hours into ./backups (+ an encrypted off-site copy in the
+  # operations Telegram chat when BACKUP_PASSPHRASE is set). See deploy/backup/RESTORE.md.
+  backup:
+    build: ./deploy/backup
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
   # HTTPS entry point: the shop panel (built from ./frontend) and a proxy to the API.
   web:
     build:

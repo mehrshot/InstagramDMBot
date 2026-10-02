@@ -67,6 +67,7 @@ async def test_connect_flow(
     assert (await client.delete("/api/v1/instagram", headers=auth_headers)).status_code == 204
     status = (await client.get("/api/v1/instagram", headers=auth_headers)).json()
     assert status == {
+        "available": True,
         "connected": False,
         "active": False,
         "username": None,

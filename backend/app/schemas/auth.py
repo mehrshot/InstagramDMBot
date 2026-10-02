@@ -41,6 +41,8 @@ class ShopOut(BaseModel):
 
     id: uuid.UUID
     name: str
+    # Public id in the shop's Telegram start link (t.me/<bot>?start=s_<slug>).
+    slug: str
     bot_enabled: bool
     tone: str
     use_emoji: bool

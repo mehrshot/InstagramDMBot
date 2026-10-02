@@ -8,9 +8,10 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, exists, func, or_, select
 
-from app.api.deps import CurrentShop, DbSession
+from app.api.deps import CurrentShop, DbSession, HttpClient, Telegram
 from app.core.timeutil import as_utc, utcnow
-from app.models import Conversation, HandoffResolution, Message, MessageSender, Shop
+from app.models import Channel, Conversation, HandoffResolution, Message, MessageSender, Shop
+from app.services.telegram_bot import send_owner_reply
 
 router = APIRouter(tags=["conversations"])
 
@@ -44,9 +45,19 @@ class HandoffOut(BaseModel):
 
 class ConversationOut(BaseModel):
     id: uuid.UUID
+    channel: Channel
+    # Telegram only: the customer wrote to the owner's own account (Telegram Business).
+    telegram_business: bool = False
+    # The customer's id on the channel (Instagram IGSID, Telegram chat id).
+    customer_id: str
+    # Same as customer_id; kept for older panel builds.
     customer_igsid: str
     customer_username: str | None
-    # Opens the DM thread in Instagram (app or web), for replying to the customer.
+    # Display name where the channel gives one (Telegram).
+    customer_name: str | None
+    # Opens the chat with the customer in the channel's app, for replying by hand.
+    chat_url: str | None
+    # Instagram only (same as chat_url there); kept for older panel builds.
     instagram_url: str | None
     last_customer_message_at: datetime | None
     bot_paused_until: datetime | None
@@ -65,6 +76,10 @@ class ConversationDetail(ConversationOut):
     messages: list[MessageOut]
 
 
+class ReplyIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
 class PauseIn(BaseModel):
     # Omit (null) to pause until resumed by hand.
     minutes: int | None = Field(default=None, ge=1, le=60 * 24 * 30)
@@ -72,8 +87,12 @@ class PauseIn(BaseModel):
 
 class HandoffItem(BaseModel):
     conversation_id: uuid.UUID
+    channel: Channel
+    telegram_business: bool = False
     customer_igsid: str
     customer_username: str | None
+    customer_name: str | None
+    chat_url: str | None
     instagram_url: str | None
     last_customer_message_at: datetime | None
     handoff: HandoffOut
@@ -106,7 +125,8 @@ async def list_conversations(
     shop: CurrentShop,
     db: DbSession,
     filter: Literal["all", "needs_owner", "unanswered", "paused"] = "all",
-    q: str | None = Query(default=None, max_length=64, description="customer username"),
+    channel: Channel | None = None,
+    q: str | None = Query(default=None, max_length=64, description="customer username or name"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=30, ge=1, le=100),
 ) -> ConversationPage:
@@ -119,11 +139,14 @@ async def list_conversations(
         )
     elif filter == "paused":
         query = query.where(Conversation.bot_paused_until > utcnow())
+    if channel is not None:
+        query = query.where(Conversation.channel == channel)
     if q:
         query = query.where(
             or_(
                 Conversation.customer_username.ilike(f"%{q}%"),
-                Conversation.customer_igsid == q,
+                Conversation.customer_name.ilike(f"%{q}%"),
+                Conversation.customer_id == q,
             )
         )
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
@@ -164,6 +187,27 @@ async def get_conversation(
     )
 
 
+@router.post("/conversations/{conversation_id}/reply", response_model=ConversationOut)
+async def reply(
+    conversation_id: uuid.UUID,
+    body: ReplyIn,
+    shop: CurrentShop,
+    db: DbSession,
+    telegram: Telegram,
+    http: HttpClient,
+) -> ConversationOut:
+    """The owner answers the customer from the panel, on the conversation's channel.
+
+    Counts as the owner's own reply: the bot steps back and an open handoff is closed.
+    """
+    conversation = await _get(db, shop, conversation_id)
+    error = await send_owner_reply(db, shop, conversation, body.text.strip(), telegram, http)
+    if error:
+        raise HTTPException(status.HTTP_409_CONFLICT, error)
+    await db.refresh(conversation)
+    return await _conversation_out(db, conversation)
+
+
 @router.post("/conversations/{conversation_id}/pause", response_model=ConversationOut)
 async def pause_bot(
     conversation_id: uuid.UUID, body: PauseIn, shop: CurrentShop, db: DbSession
@@ -197,7 +241,7 @@ async def list_handoffs(
     """DMs the bot passed to the owner because it didn't know the answer.
 
     Open ones come oldest first (the customer who has waited longest is on top); resolved
-    ones newest first. A handoff resolves itself when the owner replies on Instagram.
+    ones newest first. A handoff resolves itself when the owner replies to the customer.
     """
     query = select(Conversation).where(Conversation.shop_id == shop.id)
     if status_filter == "open":
@@ -215,8 +259,12 @@ async def list_handoffs(
         items.append(
             HandoffItem(
                 conversation_id=conversation.id,
-                customer_igsid=conversation.customer_igsid,
+                channel=conversation.channel,
+                telegram_business=conversation.channel_ref.startswith("biz:"),
+                customer_igsid=conversation.customer_id,
                 customer_username=conversation.customer_username or None,
+                customer_name=conversation.customer_name,
+                chat_url=_chat_url(conversation),
                 instagram_url=_instagram_url(conversation),
                 last_customer_message_at=conversation.last_customer_message_at,
                 handoff=handoff,
@@ -306,9 +354,17 @@ async def _get(db: DbSession, shop: Shop, conversation_id: uuid.UUID) -> Convers
 
 
 def _instagram_url(conversation: Conversation) -> str | None:
-    if conversation.customer_username:
+    if conversation.channel == Channel.INSTAGRAM and conversation.customer_username:
         return f"https://ig.me/m/{conversation.customer_username}"
     return None
+
+
+def _chat_url(conversation: Conversation) -> str | None:
+    if conversation.channel == Channel.TELEGRAM:
+        if conversation.customer_username:
+            return f"https://t.me/{conversation.customer_username}"
+        return f"tg://user?id={conversation.customer_id}"
+    return _instagram_url(conversation)
 
 
 def _handoff_out(conversation: Conversation) -> HandoffOut | None:
@@ -339,8 +395,13 @@ async def _conversation_out(db: DbSession, conversation: Conversation) -> Conver
     paused_until = conversation.bot_paused_until
     return ConversationOut(
         id=conversation.id,
-        customer_igsid=conversation.customer_igsid,
+        channel=conversation.channel,
+        telegram_business=conversation.channel_ref.startswith("biz:"),
+        customer_id=conversation.customer_id,
+        customer_igsid=conversation.customer_id,
         customer_username=conversation.customer_username or None,
+        customer_name=conversation.customer_name,
+        chat_url=_chat_url(conversation),
         instagram_url=_instagram_url(conversation),
         last_customer_message_at=conversation.last_customer_message_at,
         bot_paused_until=paused_until,

@@ -1,15 +1,20 @@
-"""The DM pipeline: record incoming webhook events, then reply after a short debounce.
+"""The message pipeline: record incoming customer messages, then reply after a short debounce.
 
-    webhook ──► handle_event ──(enqueue, delayed)──► reply_to_conversation ──► Instagram
+    channel webhook ──► record_customer_message ──(enqueue, delayed)──► reply_to_conversation
+                                                                              │
+                                    ChannelSender (Instagram / Telegram) ◄────┘
 
 Decisions that are easy to get wrong live here:
-- Meta retries webhooks, so everything is idempotent on the message id (`mid`).
+- Channels retry webhooks, so everything is idempotent on the message's external id.
 - Customers send bursts of short messages; each schedules a reply, but only the job for the
   newest message actually answers.
-- When the owner answers by hand the bot steps back for `shop.handoff_pause_minutes`. Our own
-  sends also come back as echoes and must not be mistaken for the owner.
-- When the bot can't answer, the conversation is handed off: the customer gets the shop's
-  fallback message once, and the question waits in the owner's panel until the owner replies.
+- When the owner answers by hand the bot steps back for `shop.handoff_pause_minutes`. On
+  Instagram our own sends come back as echoes and must not be mistaken for the owner.
+- When the bot can't answer, the conversation is handed off: the customer gets a message
+  once, the question waits in the owner's panel, and the owner is alerted in Telegram.
+- Every AI answer is paid from the shop's wallet, once, after it is delivered. With an empty
+  wallet the bot doesn't call the AI: the customer gets the fallback message and the
+  conversation goes to the owner.
 """
 
 import dataclasses
@@ -17,14 +22,16 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.queue import Queue
 from app.core.security import decrypt_secret
 from app.core.timeutil import as_utc, utcnow
 from app.models import (
+    Channel,
     Conversation,
     HandoffResolution,
     InstagramAccount,
@@ -32,18 +39,23 @@ from app.models import (
     MessageSender,
     Shop,
 )
-from app.services.instagram import InstagramClient, InstagramError, split_text
+from app.services import billing
+from app.services.channels import ChannelSender, Gateways, SendError, sender_for, split_text
+from app.services.instagram import InstagramClient, InstagramError
 from app.services.llm import LLMError
+from app.services.notify import CHANNEL_LABELS, Notifier, NullNotifier
 from app.services.posts import POST_MARKER, PostLink, post_key
 from app.services.responder import ChatTurn, Responder
+from app.services.telegram import TelegramClient
 from app.services.webhook import MessagingEvent
 
 logger = logging.getLogger(__name__)
 
-# Instagram only allows replies within 24h of the customer's last message. Keep a margin so
-# a slow job doesn't hit the boundary.
-MESSAGING_WINDOW = timedelta(hours=24) - timedelta(minutes=5)
 HISTORY_LIMIT = 20
+EMPTY_WALLET_REASON = "موجودی کیف پول جواب تمام شده است"
+
+
+# ---------------------------------------------------------------------------- incoming
 
 
 async def handle_event(
@@ -54,6 +66,9 @@ async def handle_event(
     debounce_seconds: float,
     instagram: InstagramClient | None = None,
 ) -> None:
+    """An Instagram webhook message event."""
+    if not get_settings().instagram_enabled:
+        return
     account = await db.scalar(
         select(InstagramAccount).where(
             InstagramAccount.ig_user_id == event.account_ig_id,
@@ -63,12 +78,14 @@ async def handle_event(
     if account is None:
         logger.info("webhook for unknown or inactive account %s", event.account_ig_id)
         return
-    if await _message_exists(db, event.mid):
+    if await message_exists(db, event.mid):
         return
 
     shop = await db.get(Shop, account.shop_id)
     assert shop is not None  # FK guarantees it
-    conversation = await _get_or_create_conversation(db, shop.id, event.customer_igsid)
+    conversation = await get_or_create_conversation(
+        db, shop.id, Channel.INSTAGRAM, "", event.customer_igsid
+    )
 
     if event.is_echo:
         await _record_echo(db, shop, conversation, event)
@@ -76,27 +93,74 @@ async def handle_event(
     if conversation.customer_username is None and instagram is not None:
         await _lookup_username(db, conversation, account, instagram)
 
+    await record_customer_message(
+        db,
+        conversation,
+        external_id=event.mid,
+        text=event.display_text,
+        at=event.timestamp,
+        queue=queue,
+        debounce_seconds=debounce_seconds,
+    )
+
+
+async def record_customer_message(
+    db: AsyncSession,
+    conversation: Conversation,
+    *,
+    external_id: str,
+    text: str,
+    at: datetime,
+    queue: Queue,
+    debounce_seconds: float,
+) -> bool:
+    """Store a customer message and schedule the reply. False if it was a duplicate."""
     db.add(
         Message(
             conversation_id=conversation.id,
             sender=MessageSender.CUSTOMER,
-            text=event.display_text,
-            ig_message_id=event.mid,
+            text=text,
+            external_id=external_id,
         )
     )
     last = conversation.last_customer_message_at
-    if last is None or event.timestamp > as_utc(last):
-        conversation.last_customer_message_at = event.timestamp
+    if last is None or at > as_utc(last):
+        conversation.last_customer_message_at = at
     if not await _commit_ignoring_duplicate(db):
-        return
-
+        return False
     await queue.enqueue(
         "reply_conversation",
         str(conversation.id),
-        event.timestamp.isoformat(),
-        job_id=f"reply:{event.mid}",
+        at.isoformat(),
+        job_id=f"reply:{external_id}",
         defer_seconds=debounce_seconds,
     )
+    return True
+
+
+async def record_owner_message(
+    db: AsyncSession,
+    shop: Shop,
+    conversation: Conversation,
+    *,
+    text: str,
+    external_id: str | None,
+) -> None:
+    """The owner answered the customer by hand: the bot steps back and the handoff closes."""
+    db.add(
+        Message(
+            conversation_id=conversation.id,
+            sender=MessageSender.OWNER,
+            text=text,
+            external_id=external_id,
+        )
+    )
+    if shop.handoff_pause_minutes > 0:
+        conversation.bot_paused_until = utcnow() + timedelta(minutes=shop.handoff_pause_minutes)
+    if conversation.handoff_open:
+        conversation.handoff_resolved_at = utcnow()
+        conversation.handoff_resolved_by = HandoffResolution.OWNER_REPLY
+    await _commit_ignoring_duplicate(db)
 
 
 async def _record_echo(
@@ -108,42 +172,38 @@ async def _record_echo(
         select(Message).where(
             Message.conversation_id == conversation.id,
             Message.sender == MessageSender.BOT,
-            Message.ig_message_id.is_(None),
+            Message.external_id.is_(None),
         )
     )
     for message in pending:
         if _is_our_echo(message.text, event):
-            message.ig_message_id = event.mid
+            message.external_id = event.mid
             await _commit_ignoring_duplicate(db)
             return
-
-    db.add(
-        Message(
-            conversation_id=conversation.id,
-            sender=MessageSender.OWNER,
-            text=event.display_text,
-            ig_message_id=event.mid,
-        )
+    await record_owner_message(
+        db, shop, conversation, text=event.display_text, external_id=event.mid
     )
-    if shop.handoff_pause_minutes > 0:
-        conversation.bot_paused_until = utcnow() + timedelta(minutes=shop.handoff_pause_minutes)
-    if conversation.handoff_open:
-        conversation.handoff_resolved_at = utcnow()
-        conversation.handoff_resolved_by = HandoffResolution.OWNER_REPLY
-    await _commit_ignoring_duplicate(db)
+
+
+# ---------------------------------------------------------------------------- replying
 
 
 async def reply_to_conversation(
     db: AsyncSession,
     conversation_id: uuid.UUID,
     trigger_at: datetime,
-    instagram: InstagramClient,
+    instagram: InstagramClient | None,
     responder: Responder,
+    *,
+    telegram: TelegramClient | None = None,
+    notifier: Notifier | None = None,
 ) -> None:
     """Answer the conversation, unless something newer or someone else already took over.
 
-    Raises InstagramError when the failure is retryable, so the worker can retry the job.
+    Raises the channel's error (InstagramError, TelegramError) or LLMError when the failure
+    is retryable, so the worker can retry the job.
     """
+    notifier = notifier or NullNotifier()
     conversation = await db.get(Conversation, conversation_id)
     if conversation is None or conversation.last_customer_message_at is None:
         return
@@ -152,16 +212,18 @@ async def reply_to_conversation(
         return  # a newer message arrived; its own job will answer everything at once
 
     shop = await db.get(Shop, conversation.shop_id)
-    account = await db.scalar(
-        select(InstagramAccount).where(InstagramAccount.shop_id == conversation.shop_id)
+    if shop is None or not shop.bot_enabled:
+        return
+    sender = await sender_for(
+        db, shop, conversation, Gateways(instagram=instagram, telegram=telegram)
     )
-    if shop is None or not shop.bot_enabled or account is None or not account.is_active:
+    if sender is None:
         return
     now = utcnow()
     if conversation.bot_paused_until and as_utc(conversation.bot_paused_until) > now:
         return
-    if now - last_customer_at > MESSAGING_WINDOW:
-        logger.info("conversation %s is outside the 24h window", conversation.id)
+    if sender.reply_window is not None and now - last_customer_at > sender.reply_window:
+        logger.info("conversation %s is outside the reply window", conversation.id)
         return
 
     history = list(
@@ -178,10 +240,17 @@ async def reply_to_conversation(
     )
     if not history or history[-1].sender != MessageSender.CUSTOMER:
         return  # already answered, by us or by the owner
+    if await _too_many_replies(db, conversation):
+        logger.warning("conversation %s hit the hourly reply limit", conversation.id)
+        return
+    if not billing.can_spend(shop):
+        await _answer_with_empty_wallet(db, shop, conversation, history, sender, notifier)
+        return
 
+    await sender.typing()
     turns = [ChatTurn(sender=m.sender.value, text=m.text) for m in history]
     try:
-        reply = await responder.generate(shop, turns)
+        reply = await responder.generate(shop, turns, channel=conversation.channel)
     except LLMError as exc:
         if exc.retryable:
             raise
@@ -189,61 +258,131 @@ async def reply_to_conversation(
         return
     if reply is None or not reply.text.strip():
         return
+    tokens = (reply.prompt_tokens, reply.completion_tokens)
     if reply.unanswered and conversation.handoff_open:
         # The customer already got the "a colleague will answer" message; repeating it on
         # every follow-up is noise. Only the part the bot could answer (if any) is sent; the
         # question joins the open handoff below, once, after sending.
         history[-1].unanswered = True
         if not reply.partial_answer:
-            _open_handoff(conversation, history, reply.handoff_reason)
-            await db.commit()
+            await _open_handoff(db, shop, conversation, history, reply.handoff_reason, notifier)
+            await _charge(db, shop, conversation, tokens, notifier)
             return
         reply = dataclasses.replace(reply, text=reply.partial_answer)
 
-    token = decrypt_secret(account.access_token_encrypted)
-    delivered = True
-    for index, chunk in enumerate(split_text(reply.text)):
-        message = Message(
-            conversation_id=conversation.id,
-            sender=MessageSender.BOT,
-            text=chunk,
-            unanswered=reply.unanswered,
-            prompt_tokens=reply.prompt_tokens if index == 0 else None,
-            completion_tokens=reply.completion_tokens if index == 0 else None,
-        )
-        db.add(message)
-        await db.commit()
-        try:
-            mid = await instagram.send_text(token, conversation.customer_igsid, chunk)
-        except InstagramError as exc:
-            await db.delete(message)
-            await db.commit()
-            if exc.retryable:
-                # Nothing is recorded as handed off yet, so the retry sends the fallback.
-                raise
-            if exc.token_invalid:
-                account.is_active = False
-                logger.warning("instagram token revoked for shop %s", shop.id)
-            else:
-                logger.warning("send failed for conversation %s: %s", conversation.id, exc)
-            delivered = False
-            break
-        message.ig_message_id = mid
-        await db.commit()
-
+    delivered = await _send_text(db, conversation, sender, reply.text, reply.unanswered, tokens)
     if delivered and reply.posts:
-        await _send_posts(db, conversation, account, instagram, token, reply.posts)
+        await _send_posts(db, conversation, sender, reply.posts)
 
     if reply.unanswered:
         # Opens a handoff, or adds to the open one. Runs only after sending (a retryable
         # failure raised above), so a retried job records the question exactly once. Even if
         # the message couldn't be delivered, the owner must see the question.
-        _open_handoff(conversation, history, reply.handoff_reason)
+        await _open_handoff(db, shop, conversation, history, reply.handoff_reason, notifier)
     await db.commit()
+    await _charge(db, shop, conversation, tokens, notifier)
 
 
-def _open_handoff(conversation: Conversation, history: list[Message], reason: str | None) -> None:
-    """Start a handoff, or add the customer's latest question to the one already open."""
+async def _send_text(
+    db: AsyncSession,
+    conversation: Conversation,
+    sender: ChannelSender,
+    text: str,
+    unanswered: bool,
+    tokens: tuple[int | None, int | None] = (None, None),
+) -> bool:
+    """Send `text` in chunks, storing each bot message first. False if it couldn't be
+    delivered; raises the channel's error when it is worth retrying."""
+    for index, chunk in enumerate(split_text(text, sender.max_text_length)):
+        message = Message(
+            conversation_id=conversation.id,
+            sender=MessageSender.BOT,
+            text=chunk,
+            unanswered=unanswered,
+            prompt_tokens=tokens[0] if index == 0 else None,
+            completion_tokens=tokens[1] if index == 0 else None,
+        )
+        db.add(message)
+        await db.commit()
+        try:
+            external_id = await sender.send_text(chunk)
+        except SendError as exc:
+            await db.delete(message)
+            await db.commit()
+            if exc.retryable:
+                # Nothing is recorded as handed off or charged yet, so the retry starts clean.
+                raise exc.original from exc
+            if not exc.endpoint_dead:
+                logger.warning("send failed for conversation %s: %s", conversation.id, exc)
+            return False
+        message.external_id = external_id
+        await db.commit()
+    return True
+
+
+async def _answer_with_empty_wallet(
+    db: AsyncSession,
+    shop: Shop,
+    conversation: Conversation,
+    history: list[Message],
+    sender: ChannelSender,
+    notifier: Notifier,
+) -> None:
+    """No credit left: no AI call. The customer hears from a person instead."""
+    history[-1].unanswered = True
+    if not conversation.handoff_open:
+        await _send_text(db, conversation, sender, shop.fallback_message, unanswered=True)
+    await _open_handoff(db, shop, conversation, history, EMPTY_WALLET_REASON, notifier)
+    await db.commit()
+    if await billing.should_remind_empty(db, shop):
+        await _safe_notify(notifier.wallet_empty(shop))
+
+
+async def _charge(
+    db: AsyncSession,
+    shop: Shop,
+    conversation: Conversation,
+    tokens: tuple[int | None, int | None],
+    notifier: Notifier,
+) -> None:
+    label = CHANNEL_LABELS.get(conversation.channel, conversation.channel.value)
+    running_low = await billing.charge_usage(
+        db,
+        shop,
+        prompt_tokens=tokens[0],
+        completion_tokens=tokens[1],
+        description=f"پاسخ به مشتری در {label}",
+        details={"conversation_id": str(conversation.id)},
+    )
+    if running_low:
+        await _safe_notify(notifier.wallet_low(shop))
+
+
+async def _too_many_replies(db: AsyncSession, conversation: Conversation) -> bool:
+    limit = get_settings().max_bot_replies_per_customer_hour
+    if limit <= 0:
+        return False
+    recent = await db.scalar(
+        select(func.count())
+        .select_from(Message)
+        .where(
+            Message.conversation_id == conversation.id,
+            Message.sender == MessageSender.BOT,
+            Message.created_at >= utcnow() - timedelta(hours=1),
+        )
+    )
+    return (recent or 0) >= limit
+
+
+async def _open_handoff(
+    db: AsyncSession,
+    shop: Shop,
+    conversation: Conversation,
+    history: list[Message],
+    reason: str | None,
+    notifier: Notifier,
+) -> None:
+    """Start a handoff (and alert the owner), or add the latest question to the open one."""
     asked: list[str] = []
     for message in reversed(history):
         if message.sender != MessageSender.CUSTOMER:
@@ -254,12 +393,23 @@ def _open_handoff(conversation: Conversation, history: list[Message], reason: st
         conversation.handoff_question = "\n".join(
             filter(None, [conversation.handoff_question, question])
         )
+        await db.commit()
         return
     conversation.handoff_at = utcnow()
     conversation.handoff_reason = (reason or "")[:255] or None
     conversation.handoff_question = question
     conversation.handoff_resolved_at = None
     conversation.handoff_resolved_by = None
+    await db.commit()
+    await _safe_notify(notifier.handoff(shop, conversation))
+
+
+async def _safe_notify(call) -> None:  # type: ignore[no-untyped-def]
+    """Alerts are best effort: a Telegram hiccup must never fail or retry a customer reply."""
+    try:
+        await call
+    except Exception:
+        logger.exception("owner notification failed")
 
 
 # Echo attachment types that can't be a post we shared (the owner sending media by hand).
@@ -279,14 +429,10 @@ def _is_our_echo(stored_text: str, event: MessagingEvent) -> bool:
 
 
 async def _send_posts(
-    db: AsyncSession,
-    conversation: Conversation,
-    account: InstagramAccount,
-    instagram: InstagramClient,
-    token: str,
-    posts: list[PostLink],
+    db: AsyncSession, conversation: Conversation, sender: ChannelSender, posts: list[PostLink]
 ) -> None:
-    """Send each post as a native post card (or as a link if we only know its URL).
+    """Send each product post after the reply (a native post card, a copied channel post, a
+    photo or a link, depending on the channel).
 
     Posts are an extra: a failure is logged and never fails or retries the reply itself,
     which the customer already has.
@@ -300,31 +446,19 @@ async def _send_posts(
         db.add(message)
         await db.commit()
         try:
-            if post.media_id:
-                try:
-                    mid = await instagram.send_post(
-                        token, conversation.customer_igsid, post.media_id
-                    )
-                except InstagramError as exc:
-                    if exc.token_invalid:
-                        raise
-                    # e.g. the post was deleted after our last sync: the link still helps.
-                    mid = await instagram.send_text(
-                        token, conversation.customer_igsid, post.permalink
-                    )
-            else:
-                mid = await instagram.send_text(token, conversation.customer_igsid, post.permalink)
-        except InstagramError as exc:
+            external_id = await sender.send_post(post)
+        except SendError as exc:
             await db.delete(message)
             await db.commit()
-            if exc.token_invalid:
-                account.is_active = False
-                await db.commit()
+            if exc.endpoint_dead:
                 return
             logger.warning("post share failed for conversation %s: %s", conversation.id, exc)
             continue
-        message.ig_message_id = mid
+        message.external_id = external_id
         await db.commit()
+
+
+# ---------------------------------------------------------------------------- helpers
 
 
 async def _lookup_username(
@@ -335,29 +469,36 @@ async def _lookup_username(
 ) -> None:
     try:
         username = await instagram.get_customer_username(
-            decrypt_secret(account.access_token_encrypted), conversation.customer_igsid
+            decrypt_secret(account.access_token_encrypted), conversation.customer_id
         )
     except InstagramError as exc:
-        logger.info("username lookup failed for %s: %s", conversation.customer_igsid, exc)
+        logger.info("username lookup failed for %s: %s", conversation.customer_id, exc)
         username = None
     conversation.customer_username = (username or "")[:64]
     await db.commit()
 
 
-async def _message_exists(db: AsyncSession, mid: str) -> bool:
-    return await db.scalar(select(Message.id).where(Message.ig_message_id == mid)) is not None
+async def message_exists(db: AsyncSession, external_id: str) -> bool:
+    return (
+        await db.scalar(select(Message.id).where(Message.external_id == external_id))
+    ) is not None
 
 
-async def _get_or_create_conversation(
-    db: AsyncSession, shop_id: uuid.UUID, customer_igsid: str
+async def get_or_create_conversation(
+    db: AsyncSession, shop_id: uuid.UUID, channel: Channel, channel_ref: str, customer_id: str
 ) -> Conversation:
     query = select(Conversation).where(
-        Conversation.shop_id == shop_id, Conversation.customer_igsid == customer_igsid
+        Conversation.shop_id == shop_id,
+        Conversation.channel == channel,
+        Conversation.channel_ref == channel_ref,
+        Conversation.customer_id == customer_id,
     )
     conversation = await db.scalar(query)
     if conversation is not None:
         return conversation
-    conversation = Conversation(shop_id=shop_id, customer_igsid=customer_igsid)
+    conversation = Conversation(
+        shop_id=shop_id, channel=channel, channel_ref=channel_ref, customer_id=customer_id
+    )
     db.add(conversation)
     try:
         await db.commit()

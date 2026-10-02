@@ -23,7 +23,12 @@ class ConnectUrlOut(BaseModel):
     url: str
 
 
+INSTAGRAM_OFF = "اتصال اینستاگرام به‌زودی فعال می‌شود. فعلا از تلگرام استفاده کنید."
+
+
 class InstagramStatusOut(BaseModel):
+    # False while Instagram is switched off on the server (waiting for Meta's approval).
+    available: bool = True
     connected: bool
     # False when Meta revoked access (password change, app removed): owner must reconnect.
     active: bool = False
@@ -34,10 +39,12 @@ class InstagramStatusOut(BaseModel):
 
 @router.get("", response_model=InstagramStatusOut)
 async def get_status(shop: CurrentShop, db: DbSession) -> InstagramStatusOut:
+    available = get_settings().instagram_enabled
     account = await db.scalar(select(InstagramAccount).where(InstagramAccount.shop_id == shop.id))
     if account is None:
-        return InstagramStatusOut(connected=False)
+        return InstagramStatusOut(available=available, connected=False)
     return InstagramStatusOut(
+        available=available,
         connected=True,
         active=account.is_active,
         username=account.username,
@@ -49,6 +56,8 @@ async def get_status(shop: CurrentShop, db: DbSession) -> InstagramStatusOut:
 @router.get("/connect-url", response_model=ConnectUrlOut)
 async def connect_url(shop: CurrentShop, instagram: Instagram) -> ConnectUrlOut:
     """URL of Instagram's consent screen. The panel sends the browser there."""
+    if not get_settings().instagram_enabled:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, INSTAGRAM_OFF)
     return ConnectUrlOut(url=instagram.authorize_url(create_token(shop.id, "ig_oauth")))
 
 

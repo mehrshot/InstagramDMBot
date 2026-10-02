@@ -14,6 +14,12 @@ os.environ["PUBLIC_BASE_URL"] = "https://api.test"
 os.environ["FRONTEND_URL"] = "https://panel.test"
 os.environ["LLM_BASE_URL"] = "https://llm.test/v1"
 os.environ["LLM_MODEL"] = "test-model"
+# The suite covers Instagram even while it is switched off in production.
+os.environ["INSTAGRAM_ENABLED"] = "true"
+# Wallet charging is covered by its own tests (which switch it on).
+os.environ["BILLING_ENABLED"] = "false"
+os.environ["TELEGRAM_API_BASE"] = "https://tg.test"
+os.environ["ZARINPAL_SANDBOX"] = "true"
 
 import json
 from collections.abc import AsyncIterator
@@ -27,12 +33,13 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.api.deps import get_http, get_instagram_client, get_queue
+from app.api.deps import get_http, get_instagram_client, get_queue, get_telegram_client
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.main import app
 from app.models import Base
 from app.services.instagram import InstagramClient
+from app.services.telegram import TelegramClient
 
 
 @dataclass
@@ -121,14 +128,90 @@ class FakeMeta:
         return InstagramClient(httpx.AsyncClient(transport=httpx.MockTransport(self.handler)))
 
 
+@dataclass
+class FakeTelegram:
+    """The Telegram Bot API (https://tg.test/bot<token>/<method>)."""
+
+    # token -> getMe result
+    bots: dict[str, dict[str, Any]] = field(default_factory=dict)
+    calls: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
+    # method -> (error_code, description)
+    errors: dict[str, tuple[int, str]] = field(default_factory=dict)
+    files: dict[str, bytes] = field(default_factory=dict)
+    next_message_id: int = 1000
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.startswith("/file/bot"):
+            name = path.split("/", 3)[3]
+            return httpx.Response(200, content=self.files.get(name, b"audio"))
+        token, _, method = path.removeprefix("/bot").partition("/")
+        payload = json.loads(request.content or b"{}")
+        self.calls.append((token, method, payload))
+        if method in self.errors:
+            code, description = self.errors[method]
+            return httpx.Response(
+                code, json={"ok": False, "error_code": code, "description": description}
+            )
+        if method == "getMe":
+            if token not in self.bots:
+                return httpx.Response(
+                    401, json={"ok": False, "error_code": 401, "description": "Unauthorized"}
+                )
+            return httpx.Response(200, json={"ok": True, "result": self.bots[token]})
+        if method == "getFile":
+            file_id = payload["file_id"]
+            return httpx.Response(
+                200,
+                json={"ok": True, "result": {"file_path": f"files/{file_id}", "file_size": 10}},
+            )
+        if method in ("sendMessage", "sendPhoto", "copyMessage"):
+            self.next_message_id += 1
+            return httpx.Response(
+                200, json={"ok": True, "result": {"message_id": self.next_message_id}}
+            )
+        return httpx.Response(200, json={"ok": True, "result": True})
+
+    def sent(self, method: str = "sendMessage") -> list[dict[str, Any]]:
+        return [payload for _, m, payload in self.calls if m == method]
+
+
+@dataclass
+class FakeZarinpal:
+    """Zarinpal's sandbox payment API."""
+
+    requests: list[dict[str, Any]] = field(default_factory=list)
+    verifies: list[dict[str, Any]] = field(default_factory=list)
+    verify_code: int = 100
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if request.url.path.endswith("/request.json"):
+            self.requests.append(body)
+            return httpx.Response(
+                200, json={"data": {"code": 100, "authority": f"A{len(self.requests):035d}"}}
+            )
+        self.verifies.append(body)
+        if self.verify_code not in (100, 101):
+            return httpx.Response(200, json={"data": [], "errors": {"code": self.verify_code}})
+        return httpx.Response(
+            200,
+            json={"data": {"code": self.verify_code, "ref_id": 201, "card_pan": "6037****1234"}},
+        )
+
+
 class FakeWeb:
-    """Google Sheets/Drive downloads and an OpenAI-compatible LLM, behind httpx.MockTransport.
+    """Google Sheets/Drive downloads, an OpenAI-compatible LLM, Telegram and Zarinpal, behind
+    httpx.MockTransport.
 
     - `files[url] = (status, body, content_type)` serves a Google download URL.
     - `llm_replies` is a queue of assistant messages the fake LLM returns in order.
     """
 
     def __init__(self) -> None:
+        self.telegram = FakeTelegram()
+        self.zarinpal = FakeZarinpal()
+        self.transcript = "مانتو کتان مشکی تموم شد"
         self.files: dict[str, tuple[int, bytes, str]] = {}
         self.llm_replies: list[dict[str, Any]] = []
         self.llm_requests: list[dict[str, Any]] = []
@@ -137,6 +220,12 @@ class FakeWeb:
         self.llm_rejects: set[str] = set()
 
     def handler(self, request: httpx.Request) -> httpx.Response:
+        if request.url.host == "tg.test":
+            return self.telegram.handler(request)
+        if request.url.host == "sandbox.zarinpal.com":
+            return self.zarinpal.handler(request)
+        if request.url.host == "llm.test" and request.url.path.endswith("/audio/transcriptions"):
+            return httpx.Response(200, json={"text": self.transcript})
         if request.url.host == "llm.test":
             body = json.loads(request.content)
             self.llm_requests.append(body)
@@ -238,6 +327,7 @@ async def client(
     app.dependency_overrides[get_queue] = lambda: queue
     app.dependency_overrides[get_instagram_client] = fake_meta.client
     app.dependency_overrides[get_http] = fake_web.client
+    app.dependency_overrides[get_telegram_client] = lambda: TelegramClient(fake_web.client())
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
@@ -250,3 +340,9 @@ async def auth_headers(client: AsyncClient) -> dict[str, str]:
         json={"email": "owner@shop.ir", "password": "strongpass1", "shop_name": "Mahsa Shop"},
     )
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+@pytest.fixture
+def billing_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Charge AI answers to the shop's wallet, as in production."""
+    monkeypatch.setattr(get_settings(), "billing_enabled", True)
