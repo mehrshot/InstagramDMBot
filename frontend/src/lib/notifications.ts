@@ -46,7 +46,7 @@ export function useHandoffWatcher(dashboard: Dashboard | undefined) {
       .then((page) => {
         const newest = [...page.items].sort((a, b) => b.handoff.handed_off_at.localeCompare(a.handoff.handed_off_at))[0];
         if (!newest) return;
-        const name = customerName(newest.customer_username, newest.customer_igsid, t, f);
+        const name = customerName(newest.customer_username, newest.customer_igsid, t, f, newest.customer_name);
         const n = new Notification(t.handoffs.notificationTitle(name), {
           body: newest.handoff.question.replace(/\s+/g, " ").slice(0, 140),
           tag: `handoff-${newest.conversation_id}`,

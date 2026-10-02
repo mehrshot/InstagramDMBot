@@ -12,8 +12,10 @@ import {
   LogOut,
   Menu,
   Package,
+  Send,
   Settings,
   UserRound,
+  Wallet,
   X,
 } from "lucide-react";
 import { useDashboard, useMe } from "../api/queries";
@@ -24,7 +26,7 @@ import { Logo, LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle";
 import { CountBadge, PageLoading, cx } from "./ui";
 
-type Item = { to: string; label: string; icon: ReactNode; badge?: number; badgeTone?: "red" | "neutral"; end?: boolean };
+type Item = { to: string; label: string; icon: ReactNode; badge?: number; badgeTone?: "red" | "neutral"; end?: boolean; tag?: string };
 type Group = { label?: string; items: Item[] };
 
 /**
@@ -65,15 +67,17 @@ export default function Layout() {
       label: t.panel.nav.groupTrain,
       items: [
         { to: "/knowledge", label: t.nav.knowledge, icon: <BookOpen /> },
-        { to: "/products", label: t.nav.products, icon: <Package /> },
+        { to: "/products", label: t.nav.products, icon: <Package />, badge: dash?.pending_proposals, badgeTone: "neutral" },
         { to: "/playground", label: t.nav.playground, icon: <FlaskConical /> },
       ],
     },
     {
       label: t.panel.nav.groupSetup,
       items: [
+        { to: "/telegram", label: t.launch.nav.telegram, icon: <Send /> },
         { to: "/settings", label: t.nav.settings, icon: <Settings /> },
-        { to: "/instagram", label: t.nav.instagram, icon: <Camera /> },
+        { to: "/billing", label: t.launch.nav.billing, icon: <Wallet /> },
+        { to: "/instagram", label: t.nav.instagram, icon: <Camera />, tag: dash && !dash.setup.instagram_available ? t.launch.nav.soon : undefined },
         { to: "/account", label: t.nav.account, icon: <UserRound /> },
       ],
     },
@@ -90,6 +94,18 @@ export default function Layout() {
       <main className="min-w-0 flex-1 pb-[var(--chrome-bottom)]">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
           {/* pages load on demand; the shell stays put meanwhile */}
+          {dash?.wallet.enabled && dash.wallet.low_balance && location.pathname !== "/billing" && (
+            <Link
+              to="/billing"
+              className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 transition-colors hover:bg-amber-100"
+            >
+              <Wallet className="size-5 shrink-0 text-amber-500" aria-hidden />
+              <span className="min-w-0 flex-1">
+                {dash.wallet.balance_toman <= 0 ? t.launch.emptyBalance : t.launch.lowBalance(f.num(dash.wallet.balance_toman))}
+              </span>
+              <span className="font-bold">{t.launch.topUpNow}</span>
+            </Link>
+          )}
           <Suspense fallback={<PageLoading />}>
             <Outlet />
           </Suspense>
@@ -162,6 +178,7 @@ function Sidebar({ groups, onClose }: { groups: Group[]; onClose?: () => void })
                   >
                     {it.icon}
                     <span className="flex-1 truncate">{it.label}</span>
+                    {it.tag && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{it.tag}</span>}
                     {!!it.badge && <CountBadge count={f.num(it.badge)} tone={it.badgeTone} />}
                   </NavLink>
                 </li>

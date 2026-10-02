@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BellRing, Bot, BookOpen, Check, FlaskConical, HelpCircle, Inbox, MessagesSquare, SlidersHorizontal, Sparkles, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellRing, Bot, BookOpen, Check, FlaskConical, HelpCircle, Inbox, MessagesSquare, SlidersHorizontal, Sparkles, UserRound, Wallet } from "lucide-react";
 import { api } from "../api/client";
 import { keys, useDashboard, useMe } from "../api/queries";
 import type { Shop } from "../api/types";
@@ -34,16 +34,22 @@ export default function Dashboard() {
   if (error) return <Alert kind="error" action={<button onClick={() => refetch()} className="font-semibold underline">{t.common.retry}</button>}>{errorMessage(error, t)}</Alert>;
 
   const s = data.setup;
+  const L = t.launch.dashboard;
   const igOk = s.instagram_connected && s.instagram_active;
+  const channelOk = igOk || s.telegram_available;
   const tried = me ? getFlag(playgroundKey(me.shop.id)) : false;
 
   const steps: Step[] = [
-    { done: igOk, title: t.dashboard.stepInstagram, hint: t.dashboard.stepInstagramHint, to: "/instagram" },
+    { done: s.telegram_owner_linked, title: L.stepTelegramLink, hint: L.stepTelegramLinkHint, to: "/telegram" },
     { done: s.knowledge_entries > 0, title: t.dashboard.stepKnowledge, hint: t.dashboard.stepKnowledgeHint, to: "/knowledge" },
-    { done: s.products_connected, title: t.dashboard.stepProducts, hint: t.dashboard.stepProductsHint, to: "/products", optional: true },
+    { done: s.product_count > 0, title: L.stepTeach, hint: L.stepTeachHint, to: "/products" },
     { done: tried, title: t.dashboard.stepPlayground, hint: t.dashboard.stepPlaygroundHint, to: "/playground" },
     { done: s.bot_enabled, title: t.dashboard.stepBot, hint: t.dashboard.stepBotHint },
+    { done: data.last_7_days.conversations > 0, title: L.stepTelegramShare, hint: L.stepTelegramShareHint, to: "/telegram" },
   ];
+  if (s.instagram_available) {
+    steps.splice(1, 0, { done: igOk, title: t.dashboard.stepInstagram, hint: t.dashboard.stepInstagramHint, to: "/instagram", optional: true });
+  }
   // the optional products step doesn't keep the checklist on screen
   const allDone = steps.every((x) => x.done || x.optional);
 
@@ -51,7 +57,7 @@ export default function Dashboard() {
   const hasActivity = stats.conversations + stats.customer_messages + stats.bot_replies > 0;
 
   function setBot(on: boolean) {
-    if (on && (!igOk || s.knowledge_entries === 0)) setConfirmOn(true);
+    if (on && (!channelOk || s.knowledge_entries === 0)) setConfirmOn(true);
     else toggleBot.mutate(on);
   }
 
@@ -60,7 +66,7 @@ export default function Dashboard() {
       <StatusHero
         name={me?.full_name || me?.shop.name || t.appName}
         on={s.bot_enabled}
-        username={s.instagram_username}
+        username={s.instagram_available ? s.instagram_username : null}
         toggle={<Toggle checked={s.bot_enabled} onChange={setBot} disabled={toggleBot.isPending} label={t.dashboard.botStatus} />}
       />
 
@@ -84,7 +90,13 @@ export default function Dashboard() {
         </Link>
       )}
 
-      {s.instagram_connected && !s.instagram_active && (
+      {data.pending_proposals > 0 && (
+        <Alert kind="info" action={<LinkButton to="/products" size="sm" variant="secondary">{L.pendingAction}</LinkButton>}>
+          {L.pending(f.num(data.pending_proposals))}
+        </Alert>
+      )}
+      {!s.telegram_available && <Alert kind="warning">{L.telegramNotReady}</Alert>}
+      {s.instagram_available && s.instagram_connected && !s.instagram_active && (
         <Alert kind="warning" action={<LinkButton to="/instagram" size="sm" variant="secondary">{t.dashboard.alertIgInactiveAction}</LinkButton>}>
           {t.dashboard.alertIgInactive}
         </Alert>
@@ -118,6 +130,18 @@ export default function Dashboard() {
 
         <aside className="min-w-0 space-y-6">
           <Shortcuts />
+          <Link to="/billing" className={cx("flex items-center gap-4 rounded-2xl bg-surface p-5 shadow-soft ring-1 transition-shadow hover:shadow-lift", data.wallet.low_balance ? "ring-amber-300" : "ring-line")}>
+            <IconChip tone={data.wallet.low_balance ? "amber" : "brand"}>
+              <Wallet />
+            </IconChip>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm text-slate-500">{L.walletTitle}</div>
+              <div className="mt-0.5 font-bold text-ink-950">
+                <span className="num text-xl">{f.num(data.wallet.balance_toman)}</span> <span className="text-sm font-medium text-slate-500">{t.launch.billing.toman}</span>
+              </div>
+            </div>
+            <span className="text-xs font-semibold text-brand-700">{L.walletAction}</span>
+          </Link>
           <Card className="flex items-center gap-4 p-5">
             <IconChip>
               <Sparkles />
@@ -140,7 +164,7 @@ export default function Dashboard() {
         title={t.dashboard.botTurnOnConfirmTitle}
         body={
           <ul className="list-disc space-y-1 ps-5">
-            {!igOk && <li>{t.dashboard.botTurnOnConfirmIg}</li>}
+            {!channelOk && <li>{L.telegramNotReady}</li>}
             {s.knowledge_entries === 0 && <li>{t.dashboard.botTurnOnConfirmKnowledge}</li>}
           </ul>
         }

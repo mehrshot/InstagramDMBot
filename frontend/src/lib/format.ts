@@ -71,8 +71,9 @@ export function makeFormat(lang: "fa" | "en", t: Dict) {
   };
 }
 
-/** Display name for a customer: username, or "Customer 0001" from the Instagram ID. */
-export function customerName(username: string | null | undefined, igsid: string, t: Dict, f: Format): string {
+/** Display name for a customer: name, username, or "Customer 0001" from the channel's ID. */
+export function customerName(username: string | null | undefined, igsid: string, t: Dict, f: Format, name?: string | null): string {
+  if (name) return name;
   if (username) return username;
   return `${t.common.customer} ${toLocaleDigits(igsid.slice(-4), f)}`;
 }

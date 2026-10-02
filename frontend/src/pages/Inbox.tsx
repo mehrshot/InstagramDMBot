@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, BellRing, Camera, ExternalLink, Inbox as InboxIcon, MessageSquare, Pause, Play, Search } from "lucide-react";
+import { ArrowRight, BellRing, ExternalLink, Inbox as InboxIcon, MessageSquare, Pause, Play, Search, SendHorizontal } from "lucide-react";
 import { api } from "../api/client";
 import { keys } from "../api/queries";
 import type { Conversation, ConversationDetail, ConversationFilter, ConversationPage } from "../api/types";
+import { ChannelIcon, useChannelLabel } from "../components/channel";
 import { Avatar, MessageBubble, isIndefinitePause, useCustomerName, useMessagePreview } from "../components/conversation";
 import { useToast } from "../components/toast";
-import { Alert, Button, EmptyState, ExternalButton, Input, PageLoading, Spinner, Tabs, cx } from "../components/ui";
+import { Alert, Button, EmptyState, ExternalButton, Input, PageLoading, Spinner, Tabs, Textarea, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
 
@@ -135,7 +136,7 @@ function ConversationList({ selected }: { selected?: string }) {
 
 function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
   const { t, f } = useI18n();
-  const name = useCustomerName()(c.customer_username, c.customer_igsid);
+  const name = useCustomerName()(c.customer_username, c.customer_id, c.customer_name);
   const preview = useMessagePreview();
   const waiting = c.handoff?.status === "open";
   const time = c.last_message?.created_at ?? c.last_customer_message_at;
@@ -150,6 +151,9 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
         <span className="relative">
           <Avatar name={name} solid={active} />
           {waiting && <span className="absolute -end-0.5 -top-0.5 size-3 rounded-full bg-red-500 ring-2 ring-surface" />}
+          <span className="absolute -bottom-0.5 -start-0.5 flex size-4 items-center justify-center rounded-full bg-surface ring-1 ring-line">
+            <ChannelIcon channel={c.channel} className="size-2.5" />
+          </span>
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -184,6 +188,7 @@ function ConversationView({ id }: { id: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const name = useCustomerName();
+  const channelLabel = useChannelLabel();
   const bottom = useRef<HTMLDivElement>(null);
   const [pauseMenu, setPauseMenu] = useState(false);
 
@@ -240,7 +245,7 @@ function ConversationView({ id }: { id: string }) {
     );
 
   const c = detail.data;
-  const display = name(c.customer_username, c.customer_igsid);
+  const display = name(c.customer_username, c.customer_id, c.customer_name);
   const waiting = c.handoff?.status === "open";
 
   return (
@@ -259,11 +264,21 @@ function ConversationView({ id }: { id: string }) {
           <div className="truncate font-bold text-ink-950">
             <span dir="auto">{display}</span>
           </div>
-          {c.customer_username && (
-            <a href={`https://instagram.com/${c.customer_username}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-700 hover:underline">
-              {t.inbox.profile}
-            </a>
-          )}
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <ChannelIcon channel={c.channel} />
+            {channelLabel(c.channel, c.telegram_business)}
+            {c.customer_username && (
+              <a
+                href={c.channel === "telegram" ? `https://t.me/${c.customer_username}` : `https://instagram.com/${c.customer_username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                dir="ltr"
+                className="font-medium text-brand-700 hover:underline"
+              >
+                @{c.customer_username}
+              </a>
+            )}
+          </div>
         </div>
         {c.bot_paused ? (
           <Button size="sm" variant="secondary" icon={<Play className="size-4" />} loading={resume.isPending} onClick={() => resume.mutate()} title={t.inbox.resume}>
@@ -341,18 +356,65 @@ function ConversationView({ id }: { id: string }) {
         <div ref={bottom} />
       </div>
 
-      {/* where a composer would be: replies happen in Instagram itself */}
-      <footer className="flex flex-wrap items-center gap-3 border-t border-slate-100 bg-surface px-4 py-3 sm:px-5">
-        <p className="flex min-w-0 flex-1 items-center gap-2 text-xs leading-5 text-slate-500">
-          <Camera className="size-4 shrink-0 text-slate-400" aria-hidden />
-          {t.inbox.noSendNote}
-        </p>
-        {c.instagram_url && (
-          <ExternalButton href={c.instagram_url} size="sm" icon={<ExternalLink className="size-4" />}>
-            {t.common.replyInInstagram}
+      <Composer conversation={c} onSent={onUpdated} openLabel={t.launch.channel.openIn(channelLabel(c.channel, c.telegram_business))} />
+    </>
+  );
+}
+
+/** The owner's own reply, sent on the conversation's channel (the bot then steps back). */
+function Composer({ conversation, onSent, openLabel }: { conversation: Conversation; onSent: (c: Conversation) => void; openLabel: string }) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [text, setText] = useState("");
+  const send = useMutation({
+    mutationFn: () => api<Conversation>(`/conversations/${conversation.id}/reply`, { method: "POST", json: { text: text.trim() } }),
+    onSuccess: (c) => {
+      setText("");
+      onSent(c);
+      qc.invalidateQueries({ queryKey: keys.conversation(conversation.id) });
+      qc.invalidateQueries({ queryKey: keys.handoffs });
+      qc.invalidateQueries({ queryKey: keys.dashboard });
+      toast.success(t.launch.composer.sent);
+    },
+    onError: (err) => toast.error(errorMessage(err, t)),
+  });
+  return (
+    <footer className="border-t border-slate-100 bg-surface px-3 py-3 sm:px-5">
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (text.trim()) send.mutate();
+        }}
+      >
+        <Textarea
+          rows={1}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              if (text.trim()) send.mutate();
+            }
+          }}
+          placeholder={t.launch.composer.placeholder}
+          aria-label={t.launch.composer.placeholder}
+          className="max-h-40 min-h-11 flex-1 resize-none"
+          maxLength={4000}
+        />
+        <Button type="submit" loading={send.isPending} disabled={!text.trim()} icon={<SendHorizontal className="size-4 rtl:-scale-x-100" />} aria-label={t.launch.composer.send}>
+          <span className="max-sm:sr-only">{t.launch.composer.send}</span>
+        </Button>
+      </form>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <p className="min-w-0 flex-1 text-xs leading-5 text-slate-500">{t.launch.composer.hint}</p>
+        {conversation.chat_url && (
+          <ExternalButton href={conversation.chat_url} size="sm" variant="ghost" icon={<ExternalLink className="size-4" />}>
+            {openLabel}
           </ExternalButton>
         )}
-      </footer>
-    </>
+      </div>
+    </footer>
   );
 }

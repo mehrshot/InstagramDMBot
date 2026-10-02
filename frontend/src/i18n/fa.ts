@@ -2,6 +2,7 @@
 
 import landing from "./landing.fa";
 import panel from "./panel.fa";
+import launch from "./launch.fa";
 
 const fa = {
   appName: "جواب",
@@ -441,6 +442,7 @@ const fa = {
 
   landing,
   panel,
+  launch,
 };
 
 export default fa;

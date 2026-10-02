@@ -9,7 +9,7 @@ import { Alert, Button, Card, Field, Input, LinkButton, PageHeader, PageLoading,
 import { useI18n } from "../i18n";
 import { errorMessage, fieldError } from "../lib/errors";
 
-type Form = Omit<Shop, "id" | "tone"> & { tone: "friendly" | "formal" };
+type Form = Omit<Shop, "id" | "tone" | "slug"> & { tone: "friendly" | "formal" };
 
 function toForm(s: Shop): Form {
   return {

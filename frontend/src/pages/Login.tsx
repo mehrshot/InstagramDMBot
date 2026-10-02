@@ -72,6 +72,11 @@ export default function Login() {
             />
           )}
         </Field>
+        <div className="-mt-1 text-end">
+          <Link to="/forgot-password" className="text-sm font-medium text-brand-700 hover:underline">
+            {t.launch.password.forgotLink}
+          </Link>
+        </div>
         <Button type="submit" loading={busy} className="w-full" disabled={!email || !password}>
           {t.auth.login}
         </Button>

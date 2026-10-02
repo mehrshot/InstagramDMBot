@@ -1,55 +1,61 @@
 import { useEffect, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FileSpreadsheet, Package, RefreshCw, Search, Sheet, Upload } from "lucide-react";
+import { ExternalLink, FileSpreadsheet, Lock, Minus, Package, Pencil, Plus, RefreshCw, Search, Sheet, Trash2, Upload } from "lucide-react";
 import { api } from "../api/client";
 import { keys } from "../api/queries";
-import type { Product, ProductPage, Source } from "../api/types";
+import type { Product, ProductIn, ProductOrigin, ProductPage, ProductSummary, Source } from "../api/types";
 import ProductWizard, { type WizardStart } from "../components/ProductWizard";
+import { PendingProposals, TeachBox } from "../components/teach";
 import { useToast } from "../components/toast";
-import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, PageLoading, cx } from "../components/ui";
+import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoading, Select, Textarea, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
 
 export default function Products() {
   const { t } = useI18n();
+  const C = t.launch.catalogue;
   const source = useQuery({ queryKey: keys.source, queryFn: () => api<Source>("/products/source") });
   const [wizard, setWizard] = useState<WizardStart | null>(null);
-
-  const header = <PageHeader icon={<Package />} title={t.products.title} subtitle={t.products.subtitle} />;
-  if (source.isPending)
-    return (
-      <>
-        {header}
-        <PageLoading />
-      </>
-    );
-  if (source.error)
-    return (
-      <>
-        {header}
-        <Alert kind="error">{errorMessage(source.error, t)}</Alert>
-      </>
-    );
-
-  const s = source.data;
-  const showWizard = !s.connected || wizard !== null;
+  const [editing, setEditing] = useState<Product | "new" | null>(null);
 
   return (
-    <>
-      {header}
-      {showWizard ? (
-        <ProductWizard start={wizard ?? {}} onCancel={s.connected ? () => setWizard(null) : undefined} onDone={() => setWizard(null)} />
+    <div className="space-y-6">
+      <PageHeader
+        icon={<Package />}
+        title={C.title}
+        subtitle={C.subtitle}
+        action={
+          <>
+            <Button icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>
+              {C.add}
+            </Button>
+            {!source.data?.connected && wizard === null && (
+              <Button variant="secondary" icon={<Sheet className="size-4" />} onClick={() => setWizard({})}>
+                {C.connectSheet}
+              </Button>
+            )}
+          </>
+        }
+      />
+      {source.error && <Alert kind="error">{errorMessage(source.error, t)}</Alert>}
+      {wizard !== null ? (
+        <ProductWizard start={wizard} onCancel={() => setWizard(null)} onDone={() => setWizard(null)} />
       ) : (
-        <div className="space-y-6">
-          <SourceStatus
-            source={s}
-            onChangeColumns={() => setWizard({ kind: "google_sheet", url: s.url ?? "", mapping: s.column_mapping })}
-            onReupload={() => setWizard({ kind: "upload", mapping: s.column_mapping })}
-          />
-          <ProductTable />
-        </div>
+        <>
+          <TeachBox />
+          <PendingProposals />
+          {source.data?.connected && (
+            <SourceStatus
+              source={source.data}
+              onChangeColumns={() => setWizard({ kind: "google_sheet", url: source.data.url ?? "", mapping: source.data.column_mapping })}
+              onReupload={() => setWizard({ kind: "upload", mapping: source.data.column_mapping })}
+            />
+          )}
+          <Catalogue onEdit={setEditing} />
+        </>
       )}
-    </>
+      <ProductModal product={editing} onClose={() => setEditing(null)} />
+    </div>
   );
 }
 
@@ -166,13 +172,44 @@ function SourceStatus({ source, onChangeColumns, onReupload }: { source: Source;
   );
 }
 
-const PAGE = 50;
 
-function ProductTable() {
+const PAGE = 50;
+type StockFilter = "" | "in_stock" | "out_of_stock" | "unknown";
+
+function useProductMutations() {
+  const { t } = useI18n();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: keys.dashboard });
+  };
+  const patch = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Partial<ProductIn> }) => api<Product>(`/products/${id}`, { method: "PATCH", json: body }),
+    onSuccess: invalidate,
+    onError: (err) => toast.error(errorMessage(err, t)),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api(`/products/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success(t.launch.catalogue.deleted);
+      invalidate();
+    },
+    onError: (err) => toast.error(errorMessage(err, t)),
+  });
+  return { patch, remove };
+}
+
+function Catalogue({ onEdit }: { onEdit: (p: Product) => void }) {
   const { t, f } = useI18n();
+  const C = t.launch.catalogue;
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
+  const [stock, setStock] = useState<StockFilter>("");
+  const [origin, setOrigin] = useState<ProductOrigin | "">("");
+  const [deleting, setDeleting] = useState<Product | null>(null);
+  const { patch, remove } = useProductMutations();
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -182,32 +219,69 @@ function ProductTable() {
     return () => clearTimeout(id);
   }, [q]);
 
+  const summary = useQuery({ queryKey: keys.productSummary, queryFn: () => api<ProductSummary>("/products/summary") });
   const { data, isPending, error, isFetching } = useQuery({
-    queryKey: keys.products(search, offset),
-    queryFn: () => api<ProductPage>("/products", { query: { q: search, offset, limit: PAGE } }),
+    queryKey: keys.products(search, offset, origin, stock),
+    queryFn: () => api<ProductPage>("/products", { query: { q: search, offset, limit: PAGE, origin, stock } }),
     placeholderData: keepPreviousData,
   });
 
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE)) : 1;
   const page = Math.floor(offset / PAGE) + 1;
+  const origins = Object.entries(summary.data?.by_origin ?? {});
+  const filterBtn = (value: StockFilter, label: string) => (
+    <Button
+      size="sm"
+      variant={stock === value ? "primary" : "ghost"}
+      onClick={() => {
+        setStock(value);
+        setOffset(0);
+      }}
+    >
+      {label}
+    </Button>
+  );
 
   return (
     <Card>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
-        <h2 className="flex items-center gap-2 font-bold text-ink-950">
-          {t.products.title}
-          {data && <Badge tone="brand">{t.products.total(f.num(data.total))}</Badge>}
-        </h2>
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
-          <Input
-            className="ps-10"
-            placeholder={t.products.searchPlaceholder}
-            aria-label={t.products.searchPlaceholder}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            maxLength={100}
-          />
+      <div className="space-y-3 border-b border-slate-100 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-ink-950">{C.title}</h2>
+            {summary.data && (
+              <p className="num mt-0.5 text-sm text-slate-500">
+                {C.summary(f.num(summary.data.total), f.num(summary.data.in_stock), f.num(summary.data.out_of_stock))}
+              </p>
+            )}
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
+            <Input className="ps-10" placeholder={t.products.searchPlaceholder} aria-label={t.products.searchPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} maxLength={100} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          {filterBtn("", C.filterAll)}
+          {filterBtn("in_stock", C.filterInStock)}
+          {filterBtn("out_of_stock", C.filterOut)}
+          {filterBtn("unknown", C.filterUnknown)}
+          {origins.length > 1 && (
+            <Select
+              className="ms-auto h-9 w-auto min-w-40"
+              aria-label={C.allOrigins}
+              value={origin}
+              onChange={(e) => {
+                setOrigin(e.target.value as ProductOrigin | "");
+                setOffset(0);
+              }}
+            >
+              <option value="">{C.allOrigins}</option>
+              {origins.map(([key, n]) => (
+                <option key={key} value={key}>
+                  {`${C.origins[key] ?? key} (${f.num(n)})`}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
       </div>
 
@@ -218,15 +292,22 @@ function ProductTable() {
           <Alert kind="error">{errorMessage(error, t)}</Alert>
         </div>
       ) : data.items.length === 0 ? (
-        <EmptyState icon={<Package />} title={t.common.noResults} />
+        <EmptyState icon={<Package />} title={search || stock || origin ? t.common.noResults : C.empty} />
       ) : (
         <div className={cx("transition-opacity", isFetching && "opacity-60")}>
-          {/* phones: one card per product */}
-          <ul className="divide-y divide-slate-100 md:hidden">
+          <ul className="divide-y divide-slate-100">
             {data.items.map((p) => (
-              <li key={p.id} className="flex items-start justify-between gap-4 px-5 py-4">
-                <div className="min-w-0">
-                  <div className="font-bold text-ink-950">{p.name}</div>
+              <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-brand-50/30 sm:px-6">
+                <button type="button" onClick={() => onEdit(p)} className="min-w-48 flex-1 text-start">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-ink-950" dir="auto">
+                      {p.name}
+                    </span>
+                    <Badge tone={p.origin === "sheet" ? "green" : p.origin === "manual" ? "neutral" : "brand"}>
+                      {!p.editable && <Lock aria-hidden />}
+                      {C.origins[p.origin] ?? p.origin}
+                    </Badge>
+                  </div>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-slate-500">
                     {[p.category, p.color, p.size, p.sku].filter(Boolean).map((v) => (
                       <span key={String(v)} className="num rounded-md bg-slate-100 px-1.5 py-0.5">
@@ -234,49 +315,48 @@ function ProductTable() {
                       </span>
                     ))}
                   </div>
+                </button>
+                <div className="num w-32 text-end text-sm font-bold text-ink-950">{p.price != null ? `${f.num(p.price)} ${t.launch.billing.toman}` : "—"}</div>
+                <div className="flex w-36 items-center justify-end gap-1">
+                  {p.editable && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={C.stockMinus}
+                      title={C.stockMinus}
+                      disabled={!p.stock || patch.isPending}
+                      onClick={() => patch.mutate({ id: p.id, body: { stock: Math.max(0, (p.stock ?? 0) - 1) } })}
+                    >
+                      <Minus className="size-3.5" />
+                    </Button>
+                  )}
+                  <Stock p={p} />
+                  {p.editable && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={C.stockPlus}
+                      title={C.stockPlus}
+                      disabled={patch.isPending}
+                      onClick={() => patch.mutate({ id: p.id, body: { stock: (p.stock ?? 0) + 1 } })}
+                    >
+                      <Plus className="size-3.5" />
+                    </Button>
+                  )}
                 </div>
-                <div className="shrink-0 text-end">
-                  <div className="num text-sm font-bold text-ink-950">{p.price != null ? f.num(p.price) : "—"}</div>
-                  <div className="mt-1">
-                    <Stock p={p} />
-                  </div>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" aria-label={t.common.edit} title={p.editable ? t.common.edit : C.sheetLocked} onClick={() => onEdit(p)}>
+                    <Pencil className="size-4" />
+                  </Button>
+                  {p.editable && (
+                    <Button size="sm" variant="ghost" aria-label={t.common.delete} onClick={() => setDeleting(p)}>
+                      <Trash2 className="size-4 text-red-600" />
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
-
-          {/* wider screens: a table */}
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-slate-500">
-                <tr className="border-b border-slate-100">
-                  <th className="px-6 py-3 text-start font-semibold">{t.products.colName}</th>
-                  <th className="px-4 py-3 text-start font-semibold">{t.products.colSku}</th>
-                  <th className="px-4 py-3 text-start font-semibold">{t.products.colColor}</th>
-                  <th className="px-4 py-3 text-start font-semibold">{t.products.colSize}</th>
-                  <th className="px-4 py-3 text-end font-semibold">{t.products.colPrice}</th>
-                  <th className="px-6 py-3 text-end font-semibold">{t.products.colStock}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.items.map((p) => (
-                  <tr key={p.id} className="transition-colors hover:bg-brand-50/40">
-                    <td className="px-6 py-3.5">
-                      <div className="font-bold text-ink-950">{p.name}</div>
-                      {p.category && <div className="text-xs text-slate-400">{p.category}</div>}
-                    </td>
-                    <td className="num px-4 py-3.5 text-slate-500">{p.sku ?? "—"}</td>
-                    <td className="px-4 py-3.5 text-slate-600">{p.color ?? "—"}</td>
-                    <td className="num px-4 py-3.5 text-slate-600">{p.size ?? "—"}</td>
-                    <td className="num px-4 py-3.5 text-end font-semibold text-ink-950">{p.price != null ? f.num(p.price) : "—"}</td>
-                    <td className="px-6 py-3.5 text-end">
-                      <Stock p={p} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
           {pages > 1 && (
             <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-sm sm:px-6">
@@ -291,13 +371,176 @@ function ProductTable() {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) remove.mutate(deleting.id);
+          setDeleting(null);
+        }}
+        danger
+        title={t.common.delete}
+        body={deleting ? C.deleteConfirm(deleting.name) : ""}
+        confirmLabel={t.common.delete}
+        cancelLabel={t.common.cancel}
+      />
     </Card>
   );
 }
 
 function Stock({ p }: { p: Product }) {
   const { t, f } = useI18n();
-  if (p.stock == null) return <span className="text-xs text-slate-400">{t.products.stockUnknown}</span>;
+  if (p.stock == null) return <span className="px-1 text-xs text-slate-400">{t.products.stockUnknown}</span>;
   if (p.stock === 0) return <Badge tone="red">{t.products.outOfStock}</Badge>;
-  return <span className="num text-sm font-semibold text-emerald-700">{f.num(p.stock)}</span>;
+  return <span className="num min-w-6 text-center text-sm font-semibold text-emerald-700">{f.num(p.stock)}</span>;
+}
+
+type FormKey = "name" | "sku" | "category" | "color" | "size" | "price" | "stock" | "description" | "image_url" | "post_url";
+type FormState = Record<FormKey, string>;
+const EMPTY: FormState = { name: "", sku: "", category: "", color: "", size: "", price: "", stock: "", description: "", image_url: "", post_url: "" };
+
+function toForm(p: Product): FormState {
+  const v = (x: unknown) => (x === null || x === undefined ? "" : String(x));
+  return {
+    name: p.name,
+    sku: v(p.sku),
+    category: v(p.category),
+    color: v(p.color),
+    size: v(p.size),
+    price: v(p.price),
+    stock: v(p.stock),
+    description: v(p.description),
+    image_url: v(p.image_url),
+    post_url: v(p.post_url),
+  };
+}
+
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+
+/** "۱,۲۵۰,۰۰۰" → 1250000; empty → null. */
+function digits(s: string): number | null {
+  const d = Array.from(s)
+    .map((c) => (PERSIAN_DIGITS.includes(c) ? String(PERSIAN_DIGITS.indexOf(c)) : c))
+    .join("")
+    .replace(/[^\d]/g, "");
+  return d === "" ? null : Number(d);
+}
+
+function ProductModal({ product, onClose }: { product: Product | "new" | null; onClose: () => void }) {
+  const { t, f } = useI18n();
+  const C = t.launch.catalogue;
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const editing = product && product !== "new" ? product : null;
+  const locked = editing ? !editing.editable : false;
+
+  useEffect(() => {
+    setForm(product && product !== "new" ? toForm(product) : EMPTY);
+  }, [product]);
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = {
+        name: form.name.trim(),
+        sku: form.sku.trim() || null,
+        category: form.category.trim() || null,
+        color: form.color.trim() || null,
+        size: form.size.trim() || null,
+        price: digits(form.price),
+        stock: digits(form.stock),
+        description: form.description.trim() || null,
+        image_url: form.image_url.trim() || null,
+        post_url: form.post_url.trim() || null,
+      };
+      return editing ? api<Product>(`/products/${editing.id}`, { method: "PATCH", json: body }) : api<Product>("/products", { method: "POST", json: body });
+    },
+    onSuccess: () => {
+      toast.success(C.saved);
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: keys.dashboard });
+      onClose();
+    },
+    onError: (err) => toast.error(errorMessage(err, t)),
+  });
+
+  const field = (key: FormKey, label: string, opts: { ltr?: boolean; numeric?: boolean; hint?: string } = {}) => (
+    <Field label={label} hint={opts.hint}>
+      {(id) => (
+        <Input
+          id={id}
+          value={form[key]}
+          dir={opts.ltr ? "ltr" : "auto"}
+          inputMode={opts.numeric ? "numeric" : undefined}
+          disabled={locked}
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+          data-autofocus={key === "name" ? true : undefined}
+        />
+      )}
+    </Field>
+  );
+
+  const knows = editing ? Object.entries(editing.bot_view ?? {}) : [];
+
+  return (
+    <Modal
+      open={product !== null}
+      onClose={onClose}
+      size="lg"
+      title={editing ? C.editTitle : C.addTitle}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t.common.cancel}
+          </Button>
+          {!locked && (
+            <Button loading={save.isPending} disabled={!form.name.trim()} onClick={() => save.mutate()}>
+              {t.common.save}
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {locked && <Alert kind="info">{C.sheetLocked}</Alert>}
+        {field("name", C.name)}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {field("price", C.price, { numeric: true, ltr: true })}
+          {field("stock", C.stock, { numeric: true, ltr: true, hint: C.stockHint })}
+          {field("color", C.color)}
+          {field("size", C.size)}
+          {field("category", C.category)}
+          {field("sku", C.sku, { ltr: true })}
+        </div>
+        <Field label={C.description}>
+          {(id) => <Textarea id={id} rows={3} value={form.description} disabled={locked} onChange={(e) => setForm({ ...form, description: e.target.value })} />}
+        </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {field("image_url", C.imageUrl, { ltr: true })}
+          {field("post_url", C.postUrl, { ltr: true })}
+        </div>
+        {editing?.telegram_post_url && (
+          <a href={editing.telegram_post_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+            {C.viewPost}
+            <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+        )}
+        {knows.length > 0 && (
+          <div className="rounded-xl bg-brand-50/60 p-4 ring-1 ring-brand-100">
+            <div className="mb-2 text-xs font-bold text-brand-800">{C.botKnows}</div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              {knows.map(([k, v]) => (
+                <div key={k} className="contents">
+                  <dt className="text-slate-500">{C.botFields[k] ?? k}</dt>
+                  <dd className="num text-ink-900" dir="auto">
+                    {typeof v === "number" ? f.num(v) : typeof v === "boolean" ? (v ? t.common.yes : t.common.no) : typeof v === "object" ? JSON.stringify(v) : String(v)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
 }

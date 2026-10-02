@@ -6,17 +6,24 @@ import { cx } from "./ui";
 export const POST_MARKER = "[پست]";
 
 export function sharedPostUrl(text: string): string | null {
-  return text.startsWith(POST_MARKER) ? text.slice(POST_MARKER.length).trim() : null;
+  if (!text.startsWith(POST_MARKER)) return null;
+  const ref = text.slice(POST_MARKER.length).trim();
+  // "img:<url>" is a product photo; "tg:<chat>/<id>" a private channel post (no public link)
+  if (ref.startsWith("img:")) return ref.slice(4);
+  if (ref.startsWith("tg:")) return "";
+  return ref;
 }
 
 type Post = { permalink: string; caption?: string | null; preview_url?: string | null };
 
-/** An Instagram post the bot sent: in the DM the customer sees the real post card. */
+/** A product post the bot sent (an Instagram post card, a Telegram channel post or a photo). */
 export function PostCard({ post, className, fluid }: { post: Post; className?: string; fluid?: boolean }) {
   const { t } = useI18n();
+  const telegram = /^https?:\/\/t\.me\//.test(post.permalink) || post.permalink === "";
+  const image = /\.(jpe?g|png|webp|gif)(\?|$)/i.test(post.permalink);
   return (
     <a
-      href={post.permalink}
+      href={post.permalink || undefined}
       target="_blank"
       rel="noopener noreferrer"
       className={cx(
@@ -25,15 +32,15 @@ export function PostCard({ post, className, fluid }: { post: Post; className?: s
         className,
       )}
     >
-      {post.preview_url ? (
-        <img src={post.preview_url} alt="" className="size-14 shrink-0 rounded-lg object-cover" loading="lazy" />
+      {post.preview_url || image ? (
+        <img src={post.preview_url || post.permalink} alt="" className="size-14 shrink-0 rounded-lg object-cover" loading="lazy" />
       ) : (
         <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
           <Images className="size-6" />
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-xs font-semibold text-slate-800">{t.posts.cardTitle}</span>
+        <span className="block text-xs font-semibold text-slate-800">{telegram ? t.launch.catalogue.viewPost : t.posts.cardTitle}</span>
         {post.caption && <span className="user-text line-clamp-2 text-xs text-slate-500">{post.caption}</span>}
         <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-brand-700">
           {t.posts.view}

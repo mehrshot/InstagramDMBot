@@ -7,9 +7,10 @@ import { cx } from "../ui";
 export type ChannelKey = "instagram" | "whatsapp" | "telegram" | "bale";
 
 export const CHANNELS: { key: ChannelKey; live: boolean }[] = [
-  { key: "instagram", live: true },
-  { key: "whatsapp", live: false },
-  { key: "telegram", live: false },
+  { key: "telegram", live: true },
+  { key: "instagram", live: false },
+  // WhatsApp is off: its Business Platform rejects +98 numbers (docs/channels-plan.md).
+  // { key: "whatsapp", live: false },
   { key: "bale", live: false },
 ];
 

@@ -1,6 +1,7 @@
 import type { Dict } from "./fa";
 import landing from "./landing.en";
 import panel from "./panel.en";
+import launch from "./launch.en";
 
 const en: Dict = {
   appName: "Javab",
@@ -440,6 +441,7 @@ const en: Dict = {
 
   landing,
   panel,
+  launch,
 };
 
 export default en;

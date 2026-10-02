@@ -19,6 +19,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Playground = lazy(() => import("./pages/Playground"));
 const Products = lazy(() => import("./pages/Products"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Telegram = lazy(() => import("./pages/Telegram"));
+const Billing = lazy(() => import("./pages/Billing"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Unanswered = lazy(() => import("./pages/Unanswered"));
 const Privacy = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Terms })));
@@ -51,6 +55,9 @@ export default function App() {
 
         <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
         <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+        <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
+        {/* the emailed link; works logged in or out */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* "/" is the public site for visitors and the dashboard once logged in */}
         {!loggedIn && <Route index element={<Landing />} />}
@@ -65,6 +72,8 @@ export default function App() {
           <Route path="products" element={<Products />} />
           <Route path="playground" element={<Playground />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="telegram" element={<Telegram />} />
+          <Route path="billing" element={<Billing />} />
           <Route path="instagram" element={<Instagram />} />
           <Route path="instagram/callback" element={<InstagramCallback />} />
           <Route path="account" element={<Account />} />

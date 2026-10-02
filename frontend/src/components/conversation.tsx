@@ -13,7 +13,7 @@ export function isIndefinitePause(until: string | null): boolean {
 
 export function useCustomerName() {
   const { t, f } = useI18n();
-  return (username: string | null | undefined, igsid: string) => customerName(username, igsid, t, f);
+  return (username: string | null | undefined, igsid: string, name?: string | null) => customerName(username, igsid, t, f, name);
 }
 
 export function Avatar({ name, className, solid }: { name: string; className?: string; solid?: boolean }) {
@@ -39,6 +39,9 @@ export function MessageText({ text }: { text: string }) {
   const { t } = useI18n();
   const labels: Record<string, [string, ReactNode]> = {
     image: [t.inbox.image, <Image key="i" className="size-3.5" />],
+    photo: [t.inbox.image, <Image key="ph" className="size-3.5" />],
+    voice: [t.inbox.audio, <Mic key="vo" className="size-3.5" />],
+    gif: [t.inbox.sticker, <Smile key="g" className="size-3.5" />],
     audio: [t.inbox.audio, <Mic key="a" className="size-3.5" />],
     video: [t.inbox.video, <Video key="v" className="size-3.5" />],
     ig_reel: [t.inbox.video, <Video key="r" className="size-3.5" />],
@@ -69,7 +72,15 @@ export function MessageText({ text }: { text: string }) {
 /** One-line preview for lists (markers become labels). */
 export function useMessagePreview() {
   const { t } = useI18n();
-  const labels: Record<string, string> = { image: t.inbox.image, audio: t.inbox.audio, video: t.inbox.video, sticker: t.inbox.sticker, file: t.inbox.attachment };
+  const labels: Record<string, string> = {
+    image: t.inbox.image,
+    photo: t.inbox.image,
+    audio: t.inbox.audio,
+    voice: t.inbox.audio,
+    video: t.inbox.video,
+    sticker: t.inbox.sticker,
+    file: t.inbox.attachment,
+  };
   return (text: string) => text.replace(MARKER, (_, k: string) => `(${labels[k] ?? k})`).replace(/\s+/g, " ").trim();
 }
 
@@ -96,7 +107,7 @@ export function MessageBubble({ message, animate }: { message: Message; animate?
             <UserRound className="size-3.5" />
           </span>
         )}
-        {post ? (
+        {post !== null ? (
           <PostCard post={{ permalink: post }} />
         ) : (
           <div

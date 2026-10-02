@@ -4,6 +4,7 @@ import { Bell, BellOff, BellRing, Bot, BookPlus, CheckCheck, Clock, ExternalLink
 import { api } from "../api/client";
 import { keys } from "../api/queries";
 import type { HandoffItem, HandoffPage } from "../api/types";
+import { ChannelIcon, useChannelLabel } from "../components/channel";
 import { Avatar, MessageText, useCustomerName } from "../components/conversation";
 import FaqDialog from "../components/FaqDialog";
 import { useToast } from "../components/toast";
@@ -99,7 +100,8 @@ function HandoffCard({ item, now, index, onAddFaq }: { item: HandoffItem; now: n
   const { t, f } = useI18n();
   const toast = useToast();
   const qc = useQueryClient();
-  const name = useCustomerName()(item.customer_username, item.customer_igsid);
+  const name = useCustomerName()(item.customer_username, item.customer_igsid, item.customer_name);
+  const channelLabel = useChannelLabel()(item.channel, item.telegram_business);
   const h = item.handoff;
   const open = h.status === "open";
   const late = open && now - new Date(h.handed_off_at).getTime() > HOUR;
@@ -126,21 +128,13 @@ function HandoffCard({ item, now, index, onAddFaq }: { item: HandoffItem; now: n
       <div className="flex flex-wrap items-center gap-3 px-5 pt-5 sm:px-6">
         <Avatar name={name} />
         <div className="min-w-0 flex-1">
-          {item.customer_username ? (
-            <a
-              href={`https://instagram.com/${item.customer_username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              dir="auto"
-              className="font-bold text-ink-950 hover:text-brand-700 hover:underline"
-            >
-              {name}
-            </a>
-          ) : (
-            <span dir="auto" className="font-bold text-ink-950">
-              {name}
-            </span>
-          )}
+          <span dir="auto" className="font-bold text-ink-950">
+            {name}
+          </span>
+          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+            <ChannelIcon channel={item.channel} />
+            {channelLabel}
+          </div>
           {!open && h.resolved_at && <div className="text-xs text-slate-400">{f.smart(h.resolved_at)}</div>}
         </div>
         {open ? (
@@ -173,14 +167,14 @@ function HandoffCard({ item, now, index, onAddFaq }: { item: HandoffItem; now: n
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
-        {open && item.instagram_url && (
-          <ExternalButton href={item.instagram_url} size="sm" icon={<ExternalLink className="size-4" />}>
-            {t.common.replyInInstagram}
+        <LinkButton to={`/inbox/${item.conversation_id}`} size="sm" variant={open ? "primary" : "secondary"} icon={<MessageSquare className="size-4" />}>
+          {open ? t.launch.composer.send : t.common.viewConversation}
+        </LinkButton>
+        {open && item.chat_url && (
+          <ExternalButton href={item.chat_url} size="sm" variant="secondary" icon={<ExternalLink className="size-4" />}>
+            {t.launch.channel.openIn(channelLabel)}
           </ExternalButton>
         )}
-        <LinkButton to={`/inbox/${item.conversation_id}`} size="sm" variant="secondary" icon={<MessageSquare className="size-4" />}>
-          {t.common.viewConversation}
-        </LinkButton>
         {open && (
           <Button size="sm" variant="secondary" loading={resolve.isPending} onClick={() => resolve.mutate()} title={t.handoffs.resolveHint}>
             {t.handoffs.resolve}

@@ -89,6 +89,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password/forgot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forgot Password
+         * @description Email a password reset link. Same answer whether or not the email is registered,
+         *     so the endpoint doesn't reveal who has an account.
+         */
+        post: operations["forgot_password_api_v1_auth_password_forgot_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password_api_v1_auth_password_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -218,6 +256,120 @@ export interface paths {
          */
         post: operations["sync_posts_now_api_v1_instagram_posts_sync_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Status */
+        get: operations["get_status_api_v1_telegram_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update */
+        patch: operations["update_api_v1_telegram_patch"];
+        trace?: never;
+    };
+    "/api/v1/telegram/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Link
+         * @description A one-time link that connects the owner's Telegram account to this shop.
+         */
+        post: operations["create_link_api_v1_telegram_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telegram/admins/{admin_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Admin */
+        delete: operations["remove_admin_api_v1_telegram_admins__admin_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telegram/custom-bot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Custom Bot
+         * @description Connect the shop's own bot by the token @BotFather gave (pro and business plans).
+         */
+        put: operations["set_custom_bot_api_v1_telegram_custom_bot_put"];
+        post?: never;
+        /** Remove Custom Bot */
+        delete: operations["remove_custom_bot_api_v1_telegram_custom_bot_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telegram/business": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disable Business
+         * @description Stop answering in the owner's account. (To remove it fully, the owner also removes the
+         *     bot in Telegram > Settings > Telegram Business > Chatbots.)
+         */
+        delete: operations["disable_business_api_v1_telegram_business_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telegram/channels/{channel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Channel */
+        delete: operations["remove_channel_api_v1_telegram_channels__channel_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -463,7 +615,9 @@ export interface paths {
         post?: never;
         /**
          * Remove Source
-         * @description Disconnect the product table and delete the imported products.
+         * @description Disconnect the product table and delete the products imported from it.
+         *
+         *     Products added any other way (by hand, taught to the AI, channel posts) stay.
          */
         delete: operations["remove_source_api_v1_products_source_delete"];
         options?: never;
@@ -478,10 +632,205 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Products */
+        /**
+         * List Products
+         * @description The shop's catalogue: everything Javab knows, however it was taught. Searchable.
+         */
         get: operations["list_products_api_v1_products_get"];
         put?: never;
+        /**
+         * Create Product
+         * @description Add one product by hand.
+         */
+        post: operations["create_product_api_v1_products_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_v1_products_summary_get"];
+        put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Product */
+        get: operations["get_product_api_v1_products__product_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Product */
+        delete: operations["delete_product_api_v1_products__product_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Product
+         * @description Change a product (price, stock, ...). Rows from a live Google Sheet can't be edited.
+         */
+        patch: operations["update_product_api_v1_products__product_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/teach/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Teach Text
+         * @description Anything in words: a price list, "X is sold out", shipping rules, a pasted document.
+         */
+        post: operations["teach_text_api_v1_teach_text_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Teach Url
+         * @description A Google Doc, Google Sheet or Google Drive file link. A sheet with recognisable
+         *     columns becomes a live product source; anything else is read by the AI.
+         */
+        post: operations["teach_url_api_v1_teach_url_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Teach File
+         * @description PDF, Word, Excel/CSV, text or a photo of a price list.
+         */
+        post: operations["teach_file_api_v1_teach_file_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Proposals */
+        get: operations["list_proposals_api_v1_teach_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/proposals/{proposal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Proposal */
+        get: operations["get_proposal_api_v1_teach_proposals__proposal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/proposals/{proposal_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Proposal */
+        post: operations["apply_proposal_api_v1_teach_proposals__proposal_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/proposals/{proposal_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard Proposal */
+        post: operations["discard_proposal_api_v1_teach_proposals__proposal_id__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teach/proposals/{proposal_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Proposal
+         * @description Remove the products an applied proposal added (e.g. a channel post read by mistake).
+         */
+        post: operations["undo_proposal_api_v1_teach_proposals__proposal_id__undo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -516,6 +865,28 @@ export interface paths {
         get: operations["get_conversation_api_v1_conversations__conversation_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply
+         * @description The owner answers the customer from the panel, on the conversation's channel.
+         *
+         *     Counts as the owner's own reply: the bot steps back and an open handoff is closed.
+         */
+        post: operations["reply_api_v1_conversations__conversation_id__reply_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -571,7 +942,7 @@ export interface paths {
          * @description DMs the bot passed to the owner because it didn't know the answer.
          *
          *     Open ones come oldest first (the customer who has waited longest is on top); resolved
-         *     ones newest first. A handoff resolves itself when the owner replies on Instagram.
+         *     ones newest first. A handoff resolves itself when the owner replies to the customer.
          */
         get: operations["list_handoffs_api_v1_handoffs_get"];
         put?: never;
@@ -669,11 +1040,86 @@ export interface paths {
         put?: never;
         /**
          * Playground Chat
-         * @description Test the bot with the shop's current data, without Instagram. Nothing is saved.
+         * @description Test the bot with the shop's current data, without any channel. Nothing is saved.
          *
          *     Works while the bot is switched off, so owners can try it before going live.
          */
         post: operations["playground_chat_api_v1_playground_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Billing */
+        get: operations["get_billing_api_v1_billing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Entries
+         * @description The wallet history, newest first.
+         */
+        get: operations["list_entries_api_v1_billing_entries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Plan
+         * @description Upgrade (starts now, the month's fee is paid from the wallet) or downgrade (applies
+         *     when the paid month ends).
+         */
+        post: operations["change_plan_api_v1_billing_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/topup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Topup */
+        post: operations["topup_api_v1_billing_topup_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -688,6 +1134,57 @@ export interface components {
         AccountDelete: {
             /** Password */
             password: string;
+        };
+        /** AdminOut */
+        AdminOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Telegram User Id */
+            telegram_user_id: number;
+            /** Username */
+            username: string | null;
+            /** First Name */
+            first_name: string;
+            /** Notify */
+            notify: boolean;
+        };
+        /** ApplyIn */
+        ApplyIn: {
+            /**
+             * Skip Products
+             * @default []
+             */
+            skip_products: number[];
+            /**
+             * Skip Knowledge
+             * @default []
+             */
+            skip_knowledge: number[];
+        };
+        /** BillingOut */
+        BillingOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Balance Toman */
+            balance_toman: number;
+            /** Low Balance */
+            low_balance: boolean;
+            plan: components["schemas"]["Plan"];
+            /** Plan Renews At */
+            plan_renews_at: string | null;
+            plan_next: components["schemas"]["Plan"] | null;
+            /** Plans */
+            plans: components["schemas"]["PlanOut"][];
+            pricing: components["schemas"]["PricingOut"];
+            /** Topup Available */
+            topup_available: boolean;
+            /** Topup Min Toman */
+            topup_min_toman: number;
+            /** Topup Max Toman */
+            topup_max_toman: number;
         };
         /** Body_import_file_api_v1_products_file_post */
         Body_import_file_api_v1_products_file_post: {
@@ -704,10 +1201,46 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Body_teach_file_api_v1_teach_file_post */
+        Body_teach_file_api_v1_teach_file_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_file_api_v1_knowledge_upload_post */
         Body_upload_file_api_v1_knowledge_upload_post: {
             /** File */
             file: string;
+        };
+        /** BusinessOut */
+        BusinessOut: {
+            /** Connected */
+            connected: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Can Reply */
+            can_reply: boolean;
+            /** Telegram User Id */
+            telegram_user_id: number | null;
+        };
+        /**
+         * Channel
+         * @description Where a conversation happens. The bot itself is the same on every channel.
+         * @enum {string}
+         */
+        Channel: "instagram" | "telegram";
+        /** ChannelOut */
+        ChannelOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Username */
+            username: string | null;
+            /** Active */
+            active: boolean;
         };
         /** ConnectUrlOut */
         ConnectUrlOut: {
@@ -721,10 +1254,22 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            channel: components["schemas"]["Channel"];
+            /**
+             * Telegram Business
+             * @default false
+             */
+            telegram_business: boolean;
+            /** Customer Id */
+            customer_id: string;
             /** Customer Igsid */
             customer_igsid: string;
             /** Customer Username */
             customer_username: string | null;
+            /** Customer Name */
+            customer_name: string | null;
+            /** Chat Url */
+            chat_url: string | null;
             /** Instagram Url */
             instagram_url: string | null;
             /** Last Customer Message At */
@@ -747,10 +1292,22 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            channel: components["schemas"]["Channel"];
+            /**
+             * Telegram Business
+             * @default false
+             */
+            telegram_business: boolean;
+            /** Customer Id */
+            customer_id: string;
             /** Customer Igsid */
             customer_igsid: string;
             /** Customer Username */
             customer_username: string | null;
+            /** Customer Name */
+            customer_name: string | null;
+            /** Chat Url */
+            chat_url: string | null;
             /** Instagram Url */
             instagram_url: string | null;
             /** Last Customer Message At */
@@ -771,9 +1328,28 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** CustomBotIn */
+        CustomBotIn: {
+            /** Token */
+            token: string;
+        };
+        /** CustomBotOut */
+        CustomBotOut: {
+            /** Username */
+            username: string;
+            /** Active */
+            active: boolean;
+            /** Last Error */
+            last_error: string | null;
+            /** Link */
+            link: string;
+        };
         /** DashboardOut */
         DashboardOut: {
             setup: components["schemas"]["SetupStatus"];
+            wallet: components["schemas"]["WalletStatus"];
+            /** Pending Proposals */
+            pending_proposals: number;
             /** Open Handoffs */
             open_handoffs: number;
             last_7_days: components["schemas"]["Stats"];
@@ -832,6 +1408,19 @@ export interface components {
             /** Required */
             required: boolean;
         };
+        /** ForgotPasswordOut */
+        ForgotPasswordOut: {
+            /** Message */
+            message: string;
+        };
+        /** ForgotPasswordRequest */
+        ForgotPasswordRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -844,10 +1433,20 @@ export interface components {
              * Format: uuid
              */
             conversation_id: string;
+            channel: components["schemas"]["Channel"];
+            /**
+             * Telegram Business
+             * @default false
+             */
+            telegram_business: boolean;
             /** Customer Igsid */
             customer_igsid: string;
             /** Customer Username */
             customer_username: string | null;
+            /** Customer Name */
+            customer_name: string | null;
+            /** Chat Url */
+            chat_url: string | null;
             /** Instagram Url */
             instagram_url: string | null;
             /** Last Customer Message At */
@@ -891,6 +1490,11 @@ export interface components {
         HandoffResolution: "owner_reply" | "manual";
         /** InstagramStatusOut */
         InstagramStatusOut: {
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
             /** Connected */
             connected: boolean;
             /**
@@ -919,6 +1523,16 @@ export interface components {
          * @enum {string}
          */
         KnowledgeSection: "about" | "shipping" | "payment" | "returns" | "contact" | "faq" | "free_text" | "file";
+        /** LinkOut */
+        LinkOut: {
+            /** Url */
+            url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -963,6 +1577,26 @@ export interface components {
         PauseIn: {
             /** Minutes */
             minutes?: number | null;
+        };
+        /**
+         * Plan
+         * @description What a shop pays for on top of usage. Usage (AI answers) costs the same on every plan.
+         * @enum {string}
+         */
+        Plan: "basic" | "pro" | "business";
+        /** PlanChange */
+        PlanChange: {
+            plan: components["schemas"]["Plan"];
+        };
+        /** PlanOut */
+        PlanOut: {
+            key: components["schemas"]["Plan"];
+            /** Label */
+            label: string;
+            /** Monthly Fee Toman */
+            monthly_fee_toman: number;
+            /** Features */
+            features: string[];
         };
         /** PlaygroundIn */
         PlaygroundIn: {
@@ -1049,6 +1683,54 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * PricingOut
+         * @description What usage costs (toman). An answer costs by the AI tokens it used, with a minimum.
+         */
+        PricingOut: {
+            /** Per 1K Prompt Tokens Toman */
+            per_1k_prompt_tokens_toman: number;
+            /** Per 1K Completion Tokens Toman */
+            per_1k_completion_tokens_toman: number;
+            /** Min Per Answer Toman */
+            min_per_answer_toman: number;
+            /** Per Voice Minute Toman */
+            per_voice_minute_toman: number;
+            /** Typical Answer Toman */
+            typical_answer_toman: number;
+        };
+        /** ProductIn */
+        ProductIn: {
+            /** Name */
+            name: string;
+            /** Sku */
+            sku?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Size */
+            size?: string | null;
+            /**
+             * Price
+             * @description Toman
+             */
+            price?: number | null;
+            /** Stock */
+            stock?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Post Url */
+            post_url?: string | null;
+        };
+        /**
+         * ProductOrigin
+         * @description How Javab learned about a product. Every product lives in Javab's own catalogue.
+         * @enum {string}
+         */
+        ProductOrigin: "manual" | "sheet" | "file" | "teach" | "telegram_post";
         /** ProductOut */
         ProductOut: {
             /**
@@ -1076,6 +1758,35 @@ export interface components {
             extra: {
                 [key: string]: unknown;
             };
+            origin: components["schemas"]["ProductOrigin"];
+            /**
+             * Editable
+             * @default true
+             */
+            editable: boolean;
+            /** Image Url */
+            image_url: string | null;
+            /** Post Url */
+            post_url: string | null;
+            /** Telegram Post Url */
+            telegram_post_url?: string | null;
+            /**
+             * Bot View
+             * @default {}
+             */
+            bot_view: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ProductPage */
         ProductPage: {
@@ -1084,6 +1795,94 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * ProductPatch
+         * @description Only the fields sent are changed; send null to clear one (except name).
+         */
+        ProductPatch: {
+            /** Name */
+            name?: string | null;
+            /** Sku */
+            sku?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Size */
+            size?: string | null;
+            /**
+             * Price
+             * @description Toman
+             */
+            price?: number | null;
+            /** Stock */
+            stock?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Post Url */
+            post_url?: string | null;
+        };
+        /** ProductSummary */
+        ProductSummary: {
+            /** Total */
+            total: number;
+            /** In Stock */
+            in_stock: number;
+            /** Out Of Stock */
+            out_of_stock: number;
+            /** Stock Unknown */
+            stock_unknown: number;
+            /** By Origin */
+            by_origin: {
+                [key: string]: number;
+            };
+            /** Limit */
+            limit: number;
+        };
+        /** ProposalOut */
+        ProposalOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Source */
+            source: string;
+            /** Source Label */
+            source_label: string;
+            status: components["schemas"]["ProposalStatus"];
+            /** Summary */
+            summary: string;
+            /** Preview */
+            preview: string;
+            /** Changes */
+            changes: {
+                [key: string]: unknown;
+            };
+            /** Result */
+            result: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Applied At */
+            applied_at: string | null;
+        };
+        /** ProposalPage */
+        ProposalPage: {
+            /** Items */
+            items: components["schemas"]["ProposalOut"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * ProposalStatus
+         * @enum {string}
+         */
+        ProposalStatus: "pending" | "applied" | "discarded";
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
@@ -1105,6 +1904,18 @@ export interface components {
             full_name: string;
             /** Shop Name */
             shop_name: string;
+        };
+        /** ReplyIn */
+        ReplyIn: {
+            /** Text */
+            text: string;
+        };
+        /** ResetPasswordRequest */
+        ResetPasswordRequest: {
+            /** Token */
+            token: string;
+            /** New Password */
+            new_password: string;
         };
         /** SectionOut */
         SectionOut: {
@@ -1131,12 +1942,24 @@ export interface components {
         };
         /** SetupStatus */
         SetupStatus: {
+            /** Instagram Available */
+            instagram_available: boolean;
             /** Instagram Connected */
             instagram_connected: boolean;
             /** Instagram Active */
             instagram_active: boolean;
             /** Instagram Username */
             instagram_username: string | null;
+            /** Telegram Available */
+            telegram_available: boolean;
+            /** Telegram Owner Linked */
+            telegram_owner_linked: boolean;
+            /** Telegram Custom Bot */
+            telegram_custom_bot: boolean;
+            /** Telegram Business */
+            telegram_business: boolean;
+            /** Telegram Channels */
+            telegram_channels: number;
             /** Knowledge Entries */
             knowledge_entries: number;
             /** Products Connected */
@@ -1173,6 +1996,8 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug: string;
             /** Bot Enabled */
             bot_enabled: boolean;
             /** Tone */
@@ -1244,6 +2069,40 @@ export interface components {
             /** Open Unanswered */
             open_unanswered: number;
         };
+        /** TelegramStatus */
+        TelegramStatus: {
+            /** Available */
+            available: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Shared Bot Username */
+            shared_bot_username: string | null;
+            /** Shop Link */
+            shop_link: string | null;
+            /** Admins */
+            admins: components["schemas"]["AdminOut"][];
+            custom_bot: components["schemas"]["CustomBotOut"] | null;
+            /** Custom Bot Allowed */
+            custom_bot_allowed: boolean;
+            business: components["schemas"]["BusinessOut"];
+            /** Business Allowed */
+            business_allowed: boolean;
+            /** Business Bot Username */
+            business_bot_username: string | null;
+            /** Channels */
+            channels: components["schemas"]["ChannelOut"][];
+            plan: components["schemas"]["Plan"];
+        };
+        /** TelegramUpdate */
+        TelegramUpdate: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** TextIn */
+        TextIn: {
+            /** Text */
+            text: string;
+        };
         /** TokenPair */
         TokenPair: {
             /** Access Token */
@@ -1255,6 +2114,16 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /** TopupIn */
+        TopupIn: {
+            /** Amount Toman */
+            amount_toman: number;
+        };
+        /** TopupOut */
+        TopupOut: {
+            /** Payment Url */
+            payment_url: string;
         };
         /** UnansweredOut */
         UnansweredOut: {
@@ -1277,6 +2146,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** UrlIn */
+        UrlIn: {
+            /** Url */
+            url: string;
         };
         /** UserOut */
         UserOut: {
@@ -1303,6 +2177,53 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WalletEntryKind
+         * @enum {string}
+         */
+        WalletEntryKind: "topup" | "usage" | "plan_fee" | "bonus" | "adjustment";
+        /** WalletEntryOut */
+        WalletEntryOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["WalletEntryKind"];
+            /** Amount Toman */
+            amount_toman: number;
+            /** Balance After Toman */
+            balance_after_toman: number;
+            /** Description */
+            description: string;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** WalletEntryPage */
+        WalletEntryPage: {
+            /** Items */
+            items: components["schemas"]["WalletEntryOut"][];
+            /** Total */
+            total: number;
+        };
+        /** WalletStatus */
+        WalletStatus: {
+            /** Enabled */
+            enabled: boolean;
+            /** Balance Toman */
+            balance_toman: number;
+            /** Low Balance */
+            low_balance: boolean;
+            /** Plan */
+            plan: string;
         };
     };
     responses: never;
@@ -1444,6 +2365,70 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TokenPair"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forgot_password_api_v1_auth_password_forgot_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_api_v1_auth_password_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1685,6 +2670,206 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostsOut"];
+                };
+            };
+        };
+    };
+    get_status_api_v1_telegram_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+        };
+    };
+    update_api_v1_telegram_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelegramUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_link_api_v1_telegram_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkOut"];
+                };
+            };
+        };
+    };
+    remove_admin_api_v1_telegram_admins__admin_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admin_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_custom_bot_api_v1_telegram_custom_bot_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomBotIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_custom_bot_api_v1_telegram_custom_bot_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    disable_business_api_v1_telegram_business_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_channel_api_v1_telegram_channels__channel_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2125,8 +3310,10 @@ export interface operations {
     list_products_api_v1_products_get: {
         parameters: {
             query?: {
-                /** @description search name/code */
+                /** @description search name/code/text */
                 q?: string | null;
+                origin?: components["schemas"]["ProductOrigin"] | null;
+                stock?: ("in_stock" | "out_of_stock" | "unknown") | null;
                 offset?: number;
                 limit?: number;
             };
@@ -2156,11 +3343,420 @@ export interface operations {
             };
         };
     };
+    create_product_api_v1_products_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summary_api_v1_products_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductSummary"];
+                };
+            };
+        };
+    };
+    get_product_api_v1_products__product_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_product_api_v1_products__product_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_product_api_v1_products__product_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    teach_text_api_v1_teach_text_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    teach_url_api_v1_teach_url_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UrlIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    teach_file_api_v1_teach_file_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_teach_file_api_v1_teach_file_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_proposals_api_v1_teach_proposals_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "applied" | "discarded") | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_proposal_api_v1_teach_proposals__proposal_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_proposal_api_v1_teach_proposals__proposal_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_proposal_api_v1_teach_proposals__proposal_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_proposal_api_v1_teach_proposals__proposal_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_conversations_api_v1_conversations_get: {
         parameters: {
             query?: {
                 filter?: "all" | "needs_owner" | "unanswered" | "paused";
-                /** @description customer username */
+                channel?: components["schemas"]["Channel"] | null;
+                /** @description customer username or name */
                 q?: string | null;
                 offset?: number;
                 limit?: number;
@@ -2209,6 +3805,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConversationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_api_v1_conversations__conversation_id__reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
                 };
             };
             /** @description Validation Error */
@@ -2450,6 +4081,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaygroundOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_billing_api_v1_billing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingOut"];
+                };
+            };
+        };
+    };
+    list_entries_api_v1_billing_entries_get: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["WalletEntryKind"] | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletEntryPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_plan_api_v1_billing_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    topup_api_v1_billing_topup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupOut"];
                 };
             };
             /** @description Validation Error */
