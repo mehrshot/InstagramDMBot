@@ -18,7 +18,7 @@ const SCRIPT = [
 const TYPING = 1100;
 
 /**
- * The hero's example DM thread, as the shop owner sees it in the panel. Every message is
+ * The hero's example sales conversation, as the business owner sees it in the panel. Every message is
  * rendered from the start (so the card never changes height) and revealed in sequence.
  */
 export default function HeroChat() {

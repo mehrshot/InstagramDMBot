@@ -16,7 +16,7 @@ const panel: Dict["panel"] = {
 
   dashboard: {
     greeting: (name) => `Hi, ${name}`,
-    offHint: "Turn it on so it can answer your customers' DMs.",
+    offHint: "Turn it on so it can talk to your customers.",
     quickTitle: "Shortcuts",
     quick: {
       playground: { title: "Test the bot", body: "Ask as a customer and see the reply." },
@@ -47,7 +47,7 @@ const panel: Dict["panel"] = {
 
   settings: {
     sections: {
-      status: { title: "Status", desc: "Turn the bot on or off for all DMs." },
+      status: { title: "Status", desc: "Turn Javab on or off for all conversations." },
       identity: { title: "Introduction", desc: "The name the bot introduces itself with." },
       tone: { title: "Tone", desc: "How the bot talks to customers. See a sample of each." },
       fallback: { title: "When it doesn't know", desc: "The message sent while the conversation is handed to you." },

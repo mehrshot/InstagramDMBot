@@ -13,7 +13,7 @@ export default function SiteFooter({ onLanding = false }: { onLanding?: boolean 
   const { loggedIn } = useAuth();
   const L = t.landing;
   const year = new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { year: "numeric" }).format(new Date());
-  const sectionLabels = { features: L.nav.features, how: L.nav.how, trust: L.nav.trust, faq: L.nav.faq };
+  const sectionLabels = { roles: L.nav.roles, channels: L.nav.channels, how: L.nav.how, faq: L.nav.faq };
 
   return (
     <footer className="bg-night-950 text-white/70">

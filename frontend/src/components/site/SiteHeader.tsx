@@ -7,7 +7,7 @@ import { Logo } from "../Logo";
 import ThemeToggle from "../ThemeToggle";
 import { buttonClass, cx } from "../ui";
 
-export const SECTIONS = ["features", "how", "trust", "faq"] as const;
+export const SECTIONS = ["roles", "channels", "how", "faq"] as const;
 
 /**
  * Public site header. Over the violet hero it starts transparent with white text and turns
@@ -36,7 +36,7 @@ export default function SiteHeader({ overHero = false }: { overHero?: boolean })
   }, [overHero]);
 
   const light = overHero && !scrolled; // white text on violet
-  const labels: Record<(typeof SECTIONS)[number], string> = { features: L.features, how: L.how, trust: L.trust, faq: L.faq };
+  const labels: Record<(typeof SECTIONS)[number], string> = { roles: L.roles, channels: L.channels, how: L.how, faq: L.faq };
   // the landing sections only exist for visitors; for a logged-in user "/" is the dashboard
   const sections = loggedIn ? [] : SECTIONS;
   const otherLang = lang === "fa" ? "en" : "fa";

@@ -10,9 +10,26 @@ const tones: Record<Tone, string> = {
   ink: "bg-night-950 text-white",
 };
 
-export function Section({ id, tone = "white", className, children }: { id?: string; tone?: Tone; className?: string; children: ReactNode }) {
+export function Section({
+  id,
+  tone = "white",
+  compact,
+  className,
+  children,
+}: {
+  id?: string;
+  tone?: Tone;
+  /** less vertical space, for supporting bands that shouldn't compete with the main sections */
+  compact?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <section id={id} aria-labelledby={id ? `${id}-title` : undefined} className={cx("py-[clamp(4.5rem,10vw,8rem)]", tones[tone], className)}>
+    <section
+      id={id}
+      aria-labelledby={id ? `${id}-title` : undefined}
+      className={cx(compact ? "py-[clamp(3.5rem,7vw,5.5rem)]" : "py-[clamp(4.5rem,10vw,8rem)]", tones[tone], className)}
+    >
       <div className="container-site">{children}</div>
     </section>
   );

@@ -17,7 +17,13 @@ import {
   UserRound,
   BellRing,
   BookOpenCheck,
+  ShoppingBag,
+  Headset,
+  Compass,
+  ClipboardList,
+  ListChecks,
 } from "lucide-react";
+import { CHANNELS, ChannelMark } from "../components/site/channels";
 import HeroChat from "../components/site/HeroChat";
 import SiteFooter from "../components/site/SiteFooter";
 import SiteHeader from "../components/site/SiteHeader";
@@ -54,6 +60,8 @@ export default function Landing() {
       <SiteHeader overHero />
       <main id="main">
         <Hero />
+        <Roles />
+        <Channels />
         <Problem />
         <Features />
         <How />
@@ -103,26 +111,120 @@ function Hero() {
               {h.primary}
               <Arrow />
             </Link>
-            <a href="#how" className={buttonClass("outlineInverse", "lg")}>
+            <a href="#roles" className={buttonClass("outlineInverse", "lg")}>
               {h.secondary}
             </a>
           </div>
-          <ul className="animate-pop-in mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-sm text-white/80 [animation-delay:320ms]">
-            {h.points.map((p) => (
-              <li key={p} className="flex items-center gap-2">
-                <span aria-hidden className="flex size-5 items-center justify-center rounded-full bg-white/15">
-                  <Check className="size-3 text-accent-300" strokeWidth={3} />
-                </span>
-                {p}
-              </li>
-            ))}
-          </ul>
+          {/* what it does, then where it works: the first screen answers both */}
+          <div className="animate-pop-in mt-9 space-y-4 [animation-delay:320ms]">
+            <ul aria-label={h.rolesLabel} className="flex flex-wrap gap-2">
+              {h.roles.map((role) => (
+                <li key={role} className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white ring-1 ring-white/20">
+                  {role}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
+              <span>{h.channelsLabel}</span>
+              <ul className="flex gap-2">
+                {CHANNELS.map(({ key }) => (
+                  <li
+                    key={key}
+                    title={t.landing.channels.names[key]}
+                    className="flex size-9 items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/15"
+                  >
+                    <ChannelMark channel={key} className="size-[18px]" />
+                    <span className="sr-only">{t.landing.channels.names[key]}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
         <div className="animate-pop-in [animation-delay:200ms]">
           <HeroChat />
         </div>
       </div>
     </section>
+  );
+}
+
+/** The jobs Javab does for a business: five equal roles, one card each. */
+function Roles() {
+  const { t } = useI18n();
+  const R = t.landing.roles;
+  const icons = [<ShoppingBag key="s" />, <Headset key="h" />, <Compass key="c" />, <ClipboardList key="a" />, <ListChecks key="f" />];
+  return (
+    <Section id="roles">
+      <SectionHeader id="roles" eyebrow={R.eyebrow} title={R.title} lead={R.lead} />
+      <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mt-14 lg:grid-cols-5">
+        {R.items.map((item, i) => (
+          <li key={item.title} className="sm:last:col-span-2 lg:last:col-span-1">
+            <Reveal
+              delay={i * 70}
+              className="h-full rounded-2xl bg-surface p-6 shadow-soft ring-1 ring-line transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              <span aria-hidden className="flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 [&>svg]:size-5">
+                {icons[i]}
+              </span>
+              <h3 className="mt-5 text-lg font-bold text-ink-950">{item.title}</h3>
+              <p className="mt-2 text-[15px] leading-7 text-slate-600">{item.body}</p>
+            </Reveal>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/**
+ * The messaging channels Javab works on, as four identical tiles. Only Instagram is connected
+ * in the product today, so the others say "coming soon" instead of offering a dead button.
+ */
+function Channels() {
+  const { t } = useI18n();
+  const C = t.landing.channels;
+  return (
+    <Section id="channels" tone="tint" compact>
+      <SectionHeader id="channels" eyebrow={C.eyebrow} title={C.title} lead={C.lead} />
+      <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {CHANNELS.map(({ key, live }, i) => {
+          const name = C.names[key];
+          return (
+            <li key={key}>
+              <Reveal delay={i * 70} className="flex h-full flex-col rounded-2xl bg-surface p-4 ring-1 ring-line sm:p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <span aria-hidden className="flex size-11 items-center justify-center rounded-xl bg-fill text-ink-900">
+                    <ChannelMark channel={key} className="size-[22px]" />
+                  </span>
+                  <span
+                    className={cx(
+                      "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold",
+                      live ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500",
+                    )}
+                  >
+                    {live && <span aria-hidden className="size-1.5 rounded-full bg-emerald-500" />}
+                    {live ? C.live : C.soon}
+                  </span>
+                </div>
+                <h3 className="mt-4 font-bold text-ink-950">{name}</h3>
+                <div className="mt-auto pt-4">
+                  {live ? (
+                    <Link to="/register" className={buttonClass("secondary", "sm", "w-full")}>
+                      {C.connect(name)}
+                    </Link>
+                  ) : (
+                    <span aria-disabled className={buttonClass("secondary", "sm", "w-full cursor-default opacity-55")}>
+                      {C.connect(name)}
+                    </span>
+                  )}
+                </div>
+              </Reveal>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
   );
 }
 
@@ -157,7 +259,7 @@ function Problem() {
   );
 }
 
-/** Last night's unread DMs flip to "answered" one by one as the card scrolls in. */
+/** Last night's unread messages flip to "answered" one by one as the card scrolls in. */
 function NightInbox() {
   const { t } = useI18n();
   const p = t.landing.problem;
