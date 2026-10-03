@@ -15,6 +15,7 @@ export const keys = {
   products: (q: string, offset: number, origin = "", stock = "") => ["products", "list", q, offset, origin, stock] as const,
   productSummary: ["products", "summary"] as const,
   telegram: ["telegram"] as const,
+  bale: ["bale"] as const,
   billing: ["billing"] as const,
   walletEntries: ["billing", "entries"] as const,
   proposals: ["teach", "proposals"] as const,

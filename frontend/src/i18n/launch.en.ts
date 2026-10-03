@@ -3,6 +3,7 @@ import type { Dict } from "./fa";
 const launch: Dict["launch"] = {
   nav: {
     telegram: "Telegram",
+    bale: "Bale",
     billing: "Wallet & plan",
     soon: "Soon",
   },
@@ -10,6 +11,7 @@ const launch: Dict["launch"] = {
   channel: {
     instagram: "Instagram",
     telegram: "Telegram",
+    bale: "Bale",
     business: "Your Telegram account",
     openIn: (channel) => `Open in ${channel}`,
   },
@@ -32,7 +34,7 @@ const launch: Dict["launch"] = {
   },
 
   dashboard: {
-    stepTelegramLink: "Link your Telegram",
+    stepTelegramLink: "Link your Telegram or Bale",
     stepTelegramLinkHint: "Get waiting customers right there, and teach the bot products by message or voice.",
     stepTelegramShare: "Share your shop link",
     stepTelegramShareHint: "Put your shop's Telegram link in your bio, channel and stories so customers can talk to the bot.",
@@ -48,18 +50,20 @@ const launch: Dict["launch"] = {
 
   telegram: {
     title: "Telegram",
-    subtitle: "Javab answers your customers on Telegram: through your shop link, your own bot, or your personal account.",
+    subtitle: "Javab answers your customers on Telegram: through your shop link, your own bot, or your personal account. Separate from Bale.",
+    shopCode: "Shop code",
+    shopCodeHint: "If the link doesn't open right for a customer, they can send this code to the bot.",
     notReady: "The Telegram bot isn't set up on the server yet (TELEGRAM_BOT_TOKEN). This page works once it is.",
     enabled: "Answering on Telegram",
-    enabledHint: "Turn off to stop the bot on every Telegram channel.",
-    shopLinkTitle: "Your shop link",
+    enabledHint: "Turn off to stop the bot on Telegram; Bale isn't affected.",
+    shopLinkTitle: "Your shop link on Telegram",
     shopLinkHint: "Put this link in your Instagram bio, Telegram channel, stories and anywhere your customers are. Whoever opens it talks straight to your shop's assistant.",
     copy: "Copy",
     copied: "Copied",
     open: "Open",
     linkTitle: "Link your own Telegram",
     linkHint: "Once your Telegram account is linked, we tell you right there when a customer is waiting for you, and you can reply from there. You also teach the bot your products and shop info by text, voice, files or photos.",
-    linkButton: "Create link",
+    linkButton: "Create Telegram link",
     linkReady: "Open this link (ideally on the phone with your Telegram) and press Start in the bot:",
     linkExpires: (time) => `Valid until ${time}, and works once.`,
     linkedAccounts: "Linked accounts",
@@ -72,8 +76,8 @@ const launch: Dict["launch"] = {
     noChannels: "No channel connected yet.",
     channelActive: "Active",
     channelInactive: "Inactive",
-    customTitle: "Your shop's own bot",
-    customHint: "Customers talk to a bot with your shop's name and picture instead of the Javab bot.",
+    customTitle: "Your shop's own Telegram bot",
+    customHint: "Customers on Telegram talk to a bot with your shop's name and picture instead of the Javab bot.",
     customSteps: ["Message @BotFather in Telegram and send /newbot.", "Pick the bot's name and username (the username must end in bot).", "Copy the token BotFather gives you and paste it here."],
     tokenLabel: "Bot token",
     connect: "Connect",
@@ -96,6 +100,23 @@ const launch: Dict["launch"] = {
     upgrade: "Upgrade",
     planPro: "Pro",
     planBusiness: "Business",
+  },
+
+  bale: {
+    title: "Bale",
+    subtitle: "Javab answers your customers on the Bale messenger, no VPN needed. It's separate from Telegram: keep on whichever you want.",
+    notReady: "The Bale bot isn't set up on the server yet (BALE_BOT_TOKEN). This page works once it is.",
+    enabled: "Answering on Bale",
+    enabledHint: "Turn off to stop the bot on Bale; Telegram isn't affected.",
+    shopLinkTitle: "Your shop link on Bale",
+    shopLinkHint: "Put this link in your bio, channel and anywhere your customers are. Whoever opens it talks to your shop's assistant on Bale.",
+    linkTitle: "Link your own Bale",
+    linkHint: "Once your Bale account is linked, we tell you right there when a customer is waiting for you, and you reply from there. You also teach the bot products by text, voice, files or photos.",
+    linkButton: "Create Bale link",
+    customTitle: "Your shop's own Bale bot",
+    customHint: "Customers on Bale talk to a bot with your shop's name and picture instead of the Javab bot.",
+    customSteps: ["Message @botfather in the Bale app and send /newbot.", "Pick the bot's name and username (the username must end in bot).", "Copy the token botfather gives you and paste it here."],
+    notAvailable: "Channel posts and answering from your personal account are Telegram-only; Bale doesn't offer them to bots.",
   },
 
   billing: {

@@ -20,6 +20,7 @@ const Playground = lazy(() => import("./pages/Playground"));
 const Products = lazy(() => import("./pages/Products"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Telegram = lazy(() => import("./pages/Telegram"));
+const Bale = lazy(() => import("./pages/Bale"));
 const Billing = lazy(() => import("./pages/Billing"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="playground" element={<Playground />} />
           <Route path="settings" element={<Settings />} />
           <Route path="telegram" element={<Telegram />} />
+          <Route path="bale" element={<Bale />} />
           <Route path="billing" element={<Billing />} />
           <Route path="instagram" element={<Instagram />} />
           <Route path="instagram/callback" element={<InstagramCallback />} />

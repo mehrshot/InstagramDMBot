@@ -7,7 +7,7 @@ import { Button, cx } from "./ui";
 
 /** The channel's logo in its own colour, for conversation lists and headers. */
 export function ChannelIcon({ channel, className }: { channel: Channel; className?: string }) {
-  const tone = channel === "telegram" ? "text-sky-500" : "text-pink-600";
+  const tone = channel === "telegram" ? "text-sky-500" : channel === "bale" ? "text-emerald-500" : "text-pink-600";
   return <ChannelMark channel={channel} className={cx("size-3.5", tone, className)} />;
 }
 
@@ -16,6 +16,7 @@ export function useChannelLabel() {
   const { t } = useI18n();
   return (channel: Channel, business?: boolean) => {
     if (channel === "telegram") return business ? t.launch.channel.business : t.launch.channel.telegram;
+    if (channel === "bale") return t.launch.channel.bale;
     return t.launch.channel.instagram;
   };
 }

@@ -64,3 +64,4 @@ export type ProposalChanges = {
   questions?: string[];
   sheet?: { url: string; mapping: Record<string, string>; rows: number };
 };
+export type BaleStatus = S["BaleStatus"];

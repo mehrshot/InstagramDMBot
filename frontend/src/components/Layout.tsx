@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageCircle,
   Package,
   Send,
   Settings,
@@ -74,7 +75,8 @@ export default function Layout() {
     {
       label: t.panel.nav.groupSetup,
       items: [
-        { to: "/telegram", label: t.launch.nav.telegram, icon: <Send /> },
+        { to: "/telegram", label: t.launch.nav.telegram, icon: <Send />, tag: dash && !dash.setup.telegram_available ? t.launch.nav.soon : undefined },
+        { to: "/bale", label: t.launch.nav.bale, icon: <MessageCircle />, tag: dash && !dash.setup.bale_available ? t.launch.nav.soon : undefined },
         { to: "/settings", label: t.nav.settings, icon: <Settings /> },
         { to: "/billing", label: t.launch.nav.billing, icon: <Wallet /> },
         { to: "/instagram", label: t.nav.instagram, icon: <Camera />, tag: dash && !dash.setup.instagram_available ? t.launch.nav.soon : undefined },

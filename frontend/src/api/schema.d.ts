@@ -326,7 +326,7 @@ export interface paths {
         get?: never;
         /**
          * Set Custom Bot
-         * @description Connect the shop's own bot by the token @BotFather gave (pro and business plans).
+         * @description Connect the shop's own Telegram bot by the token @BotFather gave (pro and business).
          */
         put: operations["set_custom_bot_api_v1_telegram_custom_bot_put"];
         post?: never;
@@ -1126,6 +1126,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Bale */
+        get: operations["get_bale_api_v1_bale_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Bale */
+        patch: operations["update_bale_api_v1_bale_patch"];
+        trace?: never;
+    };
+    "/api/v1/bale/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Bale Link
+         * @description A one-time link that connects the owner's Bale account to this shop.
+         */
+        post: operations["create_bale_link_api_v1_bale_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bale/admins/{admin_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Bale Admin */
+        delete: operations["remove_bale_admin_api_v1_bale_admins__admin_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bale/custom-bot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Bale Custom Bot
+         * @description Connect the shop's own Bale bot by the token Bale's @botfather gave (pro and business).
+         */
+        put: operations["set_bale_custom_bot_api_v1_bale_custom_bot_put"];
+        post?: never;
+        /** Remove Bale Custom Bot */
+        delete: operations["remove_bale_custom_bot_api_v1_bale_custom_bot_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1163,6 +1239,25 @@ export interface components {
              * @default []
              */
             skip_knowledge: number[];
+        };
+        /** BaleStatus */
+        BaleStatus: {
+            /** Available */
+            available: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Shared Bot Username */
+            shared_bot_username: string | null;
+            /** Shop Link */
+            shop_link: string | null;
+            /** Shop Code */
+            shop_code: string;
+            /** Admins */
+            admins: components["schemas"]["AdminOut"][];
+            custom_bot: components["schemas"]["CustomBotOut"] | null;
+            /** Custom Bot Allowed */
+            custom_bot_allowed: boolean;
+            plan: components["schemas"]["Plan"];
         };
         /** BillingOut */
         BillingOut: {
@@ -1227,7 +1322,7 @@ export interface components {
          * @description Where a conversation happens. The bot itself is the same on every channel.
          * @enum {string}
          */
-        Channel: "instagram" | "telegram";
+        Channel: "instagram" | "telegram" | "bale";
         /** ChannelOut */
         ChannelOut: {
             /**
@@ -1566,6 +1661,11 @@ export interface components {
          * @enum {string}
          */
         MessageSender: "customer" | "bot" | "owner";
+        /** MessengerUpdate */
+        MessengerUpdate: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** PasswordChange */
         PasswordChange: {
             /** Current Password */
@@ -1954,6 +2054,12 @@ export interface components {
             telegram_available: boolean;
             /** Telegram Owner Linked */
             telegram_owner_linked: boolean;
+            /** Bale Available */
+            bale_available: boolean;
+            /** Bale Owner Linked */
+            bale_owner_linked: boolean;
+            /** Bale Custom Bot */
+            bale_custom_bot: boolean;
             /** Telegram Custom Bot */
             telegram_custom_bot: boolean;
             /** Telegram Business */
@@ -2079,11 +2185,14 @@ export interface components {
             shared_bot_username: string | null;
             /** Shop Link */
             shop_link: string | null;
+            /** Shop Code */
+            shop_code: string;
             /** Admins */
             admins: components["schemas"]["AdminOut"][];
             custom_bot: components["schemas"]["CustomBotOut"] | null;
             /** Custom Bot Allowed */
             custom_bot_allowed: boolean;
+            plan: components["schemas"]["Plan"];
             business: components["schemas"]["BusinessOut"];
             /** Business Allowed */
             business_allowed: boolean;
@@ -2091,12 +2200,6 @@ export interface components {
             business_bot_username: string | null;
             /** Channels */
             channels: components["schemas"]["ChannelOut"][];
-            plan: components["schemas"]["Plan"];
-        };
-        /** TelegramUpdate */
-        TelegramUpdate: {
-            /** Enabled */
-            enabled: boolean;
         };
         /** TextIn */
         TextIn: {
@@ -2703,7 +2806,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TelegramUpdate"];
+                "application/json": components["schemas"]["MessengerUpdate"];
             };
         };
         responses: {
@@ -4210,6 +4313,159 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_bale_api_v1_bale_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaleStatus"];
+                };
+            };
+        };
+    };
+    update_bale_api_v1_bale_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessengerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaleStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_bale_link_api_v1_bale_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkOut"];
+                };
+            };
+        };
+    };
+    remove_bale_admin_api_v1_bale_admins__admin_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admin_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_bale_custom_bot_api_v1_bale_custom_bot_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomBotIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaleStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_bale_custom_bot_api_v1_bale_custom_bot_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
