@@ -39,6 +39,7 @@ from app.models import (
     HandoffResolution,
     Product,
     ProductOrigin,
+    ProposalStatus,
     Shop,
     TeachProposal,
     TelegramAdmin,
@@ -67,6 +68,10 @@ from app.services.telegram import MAX_TEXT_LENGTH, TelegramClient, TelegramError
 logger = logging.getLogger(__name__)
 
 LINK_CODE_LIFETIME = timedelta(minutes=30)
+# The owner's chat with the bot is a conversation: the last turns are given to the AI, and a
+# message sent while a proposal still waits for the OK refines that proposal.
+HISTORY_TURNS = 8
+FOLLOW_UP_WINDOW = timedelta(minutes=30)
 # Voice notes and files the owner sends; Telegram's own bot download limit is 20 MB.
 MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
 
@@ -388,7 +393,7 @@ async def _on_admin_message(
 
     await h.typing(chat_id)
     try:
-        proposal = await _proposal_from_admin_message(h, shop, message, chat_id, text)
+        proposal = await _proposal_from_admin_message(h, shop, session, message, chat_id, text)
     except teach.TeachError as exc:
         await h.send(chat_id, str(exc))
         return
@@ -398,11 +403,16 @@ async def _on_admin_message(
             "این پیام را متوجه نشدم. متن، صوت، فایل، عکس یا لینک بفرستید؛ /help را هم ببینید.",
         )
         return
-    await _show_proposal(h, chat_id, proposal)
+    await _show_proposal(h, session, chat_id, proposal)
 
 
 async def _proposal_from_admin_message(
-    h: _Bot, shop: Shop, message: dict[str, Any], chat_id: int, text: str
+    h: _Bot,
+    shop: Shop,
+    session: TelegramSession,
+    message: dict[str, Any],
+    chat_id: int,
+    text: str,
 ) -> TeachProposal | None:
     llm = h.ctx.llm
     if not llm.configured:
@@ -442,8 +452,8 @@ async def _proposal_from_admin_message(
         if not transcript:
             raise teach.TeachError("صدایی در این پیام تشخیص داده نشد.")
         await h.send(chat_id, f"🎙 شنیدم:\n«{transcript[:1500]}»")
-        return await teach.propose(
-            h.db, llm, shop, transcript, source="voice", label=f"پیام صوتی {duration} ثانیه‌ای"
+        return await _propose_said(
+            h, shop, session, chat_id, transcript, "voice", f"پیام صوتی {duration} ثانیه‌ای"
         )
 
     document = message.get("document")
@@ -489,7 +499,81 @@ async def _proposal_from_admin_message(
     url = teach.URL_PATTERN.search(text)
     if url and len(text) - len(url.group(0)) < 40:
         return await teach.propose_from_url(h.db, h.ctx.http, llm, shop, url.group(0))
-    return await teach.propose(h.db, llm, shop, text, source="text", label=text[:100])
+    return await _propose_said(h, shop, session, chat_id, text, "text", text[:100])
+
+
+async def _propose_said(
+    h: _Bot,
+    shop: Shop,
+    session: TelegramSession,
+    chat_id: int,
+    said: str,
+    source: str,
+    label: str,
+) -> TeachProposal:
+    """Something the owner said (typed or spoken), read in the light of the conversation.
+
+    If a proposal still waits for their OK, this message completes or corrects it ("make the
+    price 2.5 million"): it is read together with that proposal's input and replaces it.
+    """
+    _remember(session, "owner", said)
+    await h.db.commit()
+    text = said
+    pending = await _pending_proposal(h, session)
+    if pending is not None:
+        earlier = str((pending.changes or {}).get("input") or "")
+        text = (
+            f"{earlier}\n\n[پیام بعدی صاحب فروشگاه که پیام بالا را کامل یا اصلاح می‌کند؛ "
+            f"نتیجه‌ی نهایی هر دو را بده]\n{said}"
+        )
+        await _retire(h, session, chat_id, pending)
+    return await teach.propose(
+        h.db, h.ctx.llm, shop, text, source=source, label=label, context=_history_text(session)
+    )
+
+
+def _remember(session: TelegramSession, role: str, text: str) -> None:
+    history = list((session.state or {}).get("history") or [])[-(HISTORY_TURNS - 1) :]
+    history.append({"r": role, "t": text[:1500]})
+    session.state = {**(session.state or {}), "history": history}
+
+
+def _history_text(session: TelegramSession) -> str:
+    # The newest turn is the message being read; the AI gets it as the input itself.
+    turns = list((session.state or {}).get("history") or [])[:-1]
+    return "\n".join(f"{'Owner' if t['r'] == 'owner' else 'You'}: {t['t']}" for t in turns)
+
+
+async def _pending_proposal(h: _Bot, session: TelegramSession) -> TeachProposal | None:
+    raw = (session.state or {}).get("proposal_id")
+    if not raw:
+        return None
+    try:
+        proposal = await h.db.get(TeachProposal, uuid.UUID(raw))
+    except ValueError:
+        return None
+    if proposal is None or proposal.status != ProposalStatus.PENDING:
+        return None
+    if utcnow() - as_utc(proposal.created_at) > FOLLOW_UP_WINDOW:
+        return None
+    return proposal
+
+
+async def _retire(h: _Bot, session: TelegramSession, chat_id: int, proposal: TeachProposal) -> None:
+    """The owner refined this proposal: drop it and its buttons (a new one replaces it)."""
+    await teach.discard(h.db, proposal)
+    message_id = (session.state or {}).get("proposal_message_id")
+    if message_id:
+        try:
+            await h.client.edit_reply_markup(h.token, chat_id, int(message_id), None)
+        except TelegramError:
+            pass
+    session.state = {
+        k: v
+        for k, v in (session.state or {}).items()
+        if k not in ("proposal_id", "proposal_message_id")
+    }
+    await h.db.commit()
 
 
 async def _download(h: _Bot, file_id: str) -> bytes:
@@ -528,22 +612,32 @@ async def _store_forwarded_post(h: _Bot, shop: Shop, message: dict[str, Any]) ->
     return post
 
 
-async def _show_proposal(h: _Bot, chat_id: int, proposal: TeachProposal) -> None:
+async def _show_proposal(
+    h: _Bot, session: TelegramSession, chat_id: int, proposal: TeachProposal
+) -> None:
     text = teach.describe(proposal)
+    _remember(session, "bot", text)
     if teach.is_empty(proposal):
         await teach.discard(h.db, proposal)
+        await h.db.commit()
         await h.send(chat_id, text)
         return
     keyboard = inline_keyboard(
         [[("✅ ثبت کن", f"apply:{proposal.id}"), ("❌ بی‌خیال", f"discard:{proposal.id}")]]
     )
-    await h.send(chat_id, text, keyboard)
+    message_id = await h.send(chat_id, text, keyboard)
+    session.state = {
+        **session.state,
+        "proposal_id": str(proposal.id),
+        "proposal_message_id": message_id,
+    }
+    await h.db.commit()
 
 
 async def _relay_owner_reply(
     h: _Bot, session: TelegramSession, shop: Shop, chat_id: int, conversation_id: str, text: str
 ) -> None:
-    session.state = {}
+    session.state = {k: v for k, v in (session.state or {}).items() if k != "reply_to"}
     await h.db.commit()
     conversation = await _conversation(h, shop, conversation_id)
     if conversation is None:
@@ -653,15 +747,20 @@ async def _run_callback(
         proposal = await _proposal(h, shop, raw_id)
         if proposal is None:
             return "این مورد پیدا نشد."
+        session = await _session(h, admin.telegram_user_id)
         if action == "apply":
             try:
                 result = await teach.apply(h.db, shop, proposal, h.ctx.http)
             except teach.TeachError as exc:
                 return str(exc)
+            _close_proposal(session, f"ثبت شد: {result}")
+            await h.db.commit()
             await h.send(chat_id, f"✅ {result}")
             return "ثبت شد"
         if action == "discard":
             await teach.discard(h.db, proposal)
+            _close_proposal(session, "صاحب فروشگاه گفت ثبت نشود.")
+            await h.db.commit()
             await h.send(chat_id, "باشه، چیزی ثبت نشد.")
             return "ثبت نشد"
         removed = await teach.undo(h.db, shop, proposal)
@@ -674,7 +773,7 @@ async def _run_callback(
     if action == "reply":
         session = await _session(h, admin.telegram_user_id)
         session.mode = "admin"
-        session.state = {"reply_to": str(conversation.id)}
+        session.state = {**(session.state or {}), "reply_to": str(conversation.id)}
         await h.db.commit()
         await h.send(
             chat_id,
@@ -693,6 +792,13 @@ async def _run_callback(
         await h.db.commit()
         return "ربات در این گفتگو ساکت شد"
     return ""
+
+
+def _close_proposal(session: TelegramSession, outcome: str) -> None:
+    _remember(session, "bot", outcome)
+    session.state = {
+        k: v for k, v in session.state.items() if k not in ("proposal_id", "proposal_message_id")
+    }
 
 
 async def _proposal(h: _Bot, shop: Shop, raw_id: str) -> TeachProposal | None:

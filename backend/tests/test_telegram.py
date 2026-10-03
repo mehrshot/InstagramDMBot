@@ -541,3 +541,84 @@ async def test_plan_gating_of_endpoints(db: AsyncSession) -> None:
     assert not plan_allows(shop, "biz:x")
     shop.plan = Plan.PRO
     assert plan_allows(shop, "bot:x", custom) and not plan_allows(shop, "biz:x")
+
+
+async def test_owner_chat_is_a_conversation(
+    db: AsyncSession,
+    setup: tuple[Shop, TelegramBot],
+    fake_web: FakeWeb,
+    queue: RecordingQueue,
+    llm_on: None,
+) -> None:
+    """A follow-up refines the waiting proposal, and later messages know what came before."""
+    from app.models import ProposalStatus, TeachProposal
+
+    shop, bot = setup
+    await _link_owner(db, shop, bot, fake_web, queue)
+    first = "محصول جدیدمون کفش پاشنه بلنده که فقط ۳ تا ازش داریم تو سایز ۴۲ و رنگ مشکی"
+    fake_web.llm_replies.append(
+        FakeWeb.tool_call(
+            "propose_changes",
+            {
+                "summary": "یک کفش؛ قیمت اعلام نشده",
+                "products": [{"name": "کفش پاشنه‌بلند", "color": "مشکی", "size": "42", "stock": 3}],
+            },
+        )
+    )
+    await _update(db, bot, fake_web, queue, _private(OWNER, first))
+    first_preview = fake_web.telegram.sent()[-1]
+    assert "reply_markup" in first_preview
+
+    # "Its price is 2.5 million": read together with the waiting proposal, which it replaces.
+    fake_web.llm_replies.append(
+        FakeWeb.tool_call(
+            "propose_changes",
+            {
+                "summary": "کفش با قیمت ۲٬۵۰۰٬۰۰۰ تومان",
+                "products": [
+                    {
+                        "name": "کفش پاشنه‌بلند",
+                        "color": "مشکی",
+                        "size": "42",
+                        "stock": 3,
+                        "price_toman": 2500000,
+                    }
+                ],
+            },
+        )
+    )
+    await _update(db, bot, fake_web, queue, _private(OWNER, "قیمتش رو بذار دو و پونصد"))
+    request = fake_web.llm_requests[-1]["messages"]
+    assert first in request[1]["content"] and "دو و پونصد" in request[1]["content"]
+    assert "Owner: " + first in request[0]["content"]  # the conversation so far
+    proposals = (await db.scalars(select(TeachProposal).order_by(TeachProposal.created_at))).all()
+    assert [p.status for p in proposals] == [ProposalStatus.DISCARDED, ProposalStatus.PENDING]
+    assert proposals[1].changes["products"][0]["fields"]["price"] == 2500000
+    # The old preview lost its buttons, so only the new one can be saved.
+    assert any(m == "editMessageReplyMarkup" for _, m, _ in fake_web.telegram.calls)
+
+    apply = fake_web.telegram.sent()[-1]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
+    await _update(
+        db,
+        bot,
+        fake_web,
+        queue,
+        {
+            "update_id": next(_ids),
+            "callback_query": {
+                "id": "cb9",
+                "from": {"id": OWNER},
+                "data": apply,
+                "message": {"message_id": 9, "chat": {"id": OWNER}},
+            },
+        },
+    )
+    product = await db.scalar(select(Product))
+    assert product is not None and product.price == 2500000
+
+    # Later: "make it 3 million" is understood from the conversation (no proposal waiting).
+    fake_web.llm_replies.append(FakeWeb.tool_call("propose_changes", {"summary": "ok"}))
+    await _update(db, bot, fake_web, queue, _private(OWNER, "قیمتش رو کن سه میلیون"))
+    system = fake_web.llm_requests[-1]["messages"][0]["content"]
+    assert "You: ✅ ثبت شد" in system or "You: ثبت شد" in system
+    assert fake_web.llm_requests[-1]["messages"][1]["content"] == "قیمتش رو کن سه میلیون"

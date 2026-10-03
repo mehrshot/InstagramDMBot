@@ -180,9 +180,13 @@ CURRENT SHOP INFORMATION
 
 
 async def extract(
-    db: AsyncSession, llm: LLMClient, shop: Shop, text: str, source: str
+    db: AsyncSession, llm: LLMClient, shop: Shop, text: str, source: str, context: str = ""
 ) -> Extraction:
-    """Ask the AI what to learn from `text`. Raises TeachError / LLMError."""
+    """Ask the AI what to learn from `text`. Raises TeachError / LLMError.
+
+    `context` is the recent conversation with the owner (in the Telegram/Bale bot), so a
+    follow-up like "make its price 2.5 million" is understood.
+    """
     text = text.strip()
     if not text:
         raise TeachError("متنی برای خواندن پیدا نشد.")
@@ -192,9 +196,15 @@ async def extract(
     if not llm.configured:
         raise TeachError("هوش مصنوعی روی سرور فعال نیست.")
 
-    refs, products_block = await _products_context(db, shop, text)
+    refs, products_block = await _products_context(db, shop, f"{context}\n{text}")
     sections_block = await _sections_context(db, shop)
     system = _system_prompt(shop, source, products_block, sections_block)
+    if context:
+        system += (
+            '\n\nRECENT CONVERSATION WITH THE OWNER (oldest first; "You" is you). Use it to '
+            'understand what the new input refers to ("it", "its price", "that one" = the '
+            "product just discussed). Learn only what the new input says.\n" + context
+        )
     usage = Usage()
     summaries: list[str] = []
     merged: dict[str, Any] = {"products": [], "knowledge": [], "questions": []}
@@ -426,17 +436,19 @@ async def propose(
     label: str,
     telegram_post_id: uuid.UUID | None = None,
     image_url: str | None = None,
+    context: str = "",
 ) -> TeachProposal:
     """Extract and store a proposal; the AI usage is paid from the wallet."""
     if not billing.can_spend(shop):
         raise TeachError("موجودی کیف پول تمام شده است. برای استفاده، کیف پول را شارژ کنید.")
-    result = await extract(db, llm, shop, text, source)
+    result = await extract(db, llm, shop, text, source, context)
     proposal = TeachProposal(
         shop_id=shop.id,
         source=source,
         source_label=label[:500],
         summary=result.summary,
-        changes=result.changes,
+        # The input is kept so a follow-up message can refine this proposal.
+        changes={**result.changes, "input": text[:20_000]},
         telegram_post_id=telegram_post_id,
         image_url=image_url,
     )
