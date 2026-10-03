@@ -1,6 +1,7 @@
-"""What our Telegram bots do with each update.
+"""What our Telegram and Bale bots do with each update.
 
-One handler serves every bot (the shared Javab bot and shops' custom bots):
+One handler serves every bot (the shared Javab bots and shops' custom bots), on both apps:
+Bale's Bot API is a copy of Telegram's, minus Business connections and channel updates.
 
 Customers
 - shared bot: the shop's start link (?start=s_<slug>) remembers which shop they came for;
@@ -89,8 +90,7 @@ ADMIN_HELP = """من «جواب» هستم، دستیار هوشمند فروش�
 
 هر بار قبل از ثبت، خلاصه‌ی چیزی که فهمیدم را نشانتان می‌دهم تا تأیید کنید.
 
-📢 کانال تلگرام دارید؟ من را ادمین کانال کنید تا هر پست محصول جدید خودکار ثبت شود.
-🔔 وقتی مشتری‌ای منتظر جواب شما باشد، همین‌جا خبرتان می‌کنم و می‌توانید از همین‌جا جوابش را بدهید."""
+{channel}🔔 وقتی مشتری‌ای منتظر جواب شما باشد، همین‌جا خبرتان می‌کنم و می‌توانید از همین‌جا جوابش را بدهید."""
 
 
 @dataclass
@@ -110,6 +110,8 @@ class _Bot:
         self.db = db
         self.bot = bot
         self.ctx = ctx
+        self.client = ctx.client.for_platform(bot.platform)
+        self.channel = Channel.BALE if bot.platform == "bale" else Channel.TELEGRAM
         self.token = decrypt_secret(bot.token_encrypted)
 
     async def send(
@@ -119,7 +121,7 @@ class _Bot:
         chunks = split_text(text, MAX_TEXT_LENGTH) or [text]
         for index, chunk in enumerate(chunks):
             try:
-                message_id = await self.ctx.client.send_message(
+                message_id = await self.client.send_message(
                     self.token,
                     chat_id,
                     chunk,
@@ -133,7 +135,7 @@ class _Bot:
 
     async def typing(self, chat_id: int) -> None:
         try:
-            await self.ctx.client.send_chat_action(self.token, chat_id)
+            await self.client.send_chat_action(self.token, chat_id)
         except TelegramError:
             pass
 
@@ -278,10 +280,12 @@ async def _link_owner(
         return
     user_id = int(user["id"])
     admin = await h.db.scalar(
-        select(TelegramAdmin).where(TelegramAdmin.telegram_user_id == user_id)
+        select(TelegramAdmin).where(
+            TelegramAdmin.platform == h.bot.platform, TelegramAdmin.telegram_user_id == user_id
+        )
     )
     if admin is None:
-        admin = TelegramAdmin(telegram_user_id=user_id, shop_id=shop.id)
+        admin = TelegramAdmin(platform=h.bot.platform, telegram_user_id=user_id, shop_id=shop.id)
         h.db.add(admin)
     admin.shop_id = shop.id
     admin.username = (user.get("username") or "")[:64] or None
@@ -292,7 +296,8 @@ async def _link_owner(
     session.mode = "admin"
     session.state = {}
     await h.db.commit()
-    await h.send(chat_id, f"✅ حساب تلگرام شما به فروشگاه «{shop.name}» وصل شد.")
+    app = "بله" if h.bot.platform == "bale" else "تلگرام"
+    await h.send(chat_id, f"✅ حساب {app} شما به فروشگاه «{shop.name}» وصل شد.")
     await _send_admin_menu(h, chat_id, admin)
 
 
@@ -315,8 +320,17 @@ async def _send_admin_menu(h: _Bot, chat_id: int, admin: TelegramAdmin) -> None:
         return
     state = "روشن ✅" if shop.bot_enabled else "خاموش ⏸"
     await h.send(
-        chat_id, f"مدیریت «{shop.name}» — ربات: {state}\n\n{ADMIN_HELP}", _admin_keyboard(shop)
+        chat_id, f"مدیریت «{shop.name}» — ربات: {state}\n\n{_help(h)}", _admin_keyboard(shop)
     )
+
+
+def _help(h: _Bot) -> str:
+    channel = (
+        ""
+        if h.bot.platform == "bale"
+        else "📢 کانال تلگرام دارید؟ من را ادمین کانال کنید تا هر پست محصول جدید خودکار ثبت شود.\n"
+    )
+    return ADMIN_HELP.format(channel=channel)
 
 
 def _command(text: str) -> str:
@@ -350,7 +364,7 @@ async def _on_admin_message(
         await _relay_owner_reply(h, session, shop, chat_id, reply_to, text)
         return
     if text in (BUTTON_HELP, "/help"):
-        await h.send(chat_id, ADMIN_HELP, _admin_keyboard(shop))
+        await h.send(chat_id, _help(h), _admin_keyboard(shop))
         return
     if text in (BUTTON_PRODUCTS, "/products"):
         await h.send(chat_id, await _products_summary(h, shop), _admin_keyboard(shop))
@@ -480,7 +494,7 @@ async def _proposal_from_admin_message(
 
 async def _download(h: _Bot, file_id: str) -> bytes:
     try:
-        return await h.ctx.client.download_file(h.token, file_id, MAX_DOWNLOAD_BYTES)
+        return await h.client.download_file(h.token, file_id, MAX_DOWNLOAD_BYTES)
     except TelegramError as exc:
         if exc.status == 413:
             raise teach.TeachError("فایل بزرگ‌تر از ۲۰ مگابایت است.") from None
@@ -535,7 +549,7 @@ async def _relay_owner_reply(
     if conversation is None:
         await h.send(chat_id, "این گفتگو پیدا نشد.", _admin_keyboard(shop))
         return
-    error = await send_owner_reply(h.db, shop, conversation, text, h.ctx.client, h.ctx.http)
+    error = await send_owner_reply(h.db, shop, conversation, text, h.client, h.ctx.http)
     if error:
         await h.send(chat_id, error, _admin_keyboard(shop))
         return
@@ -621,13 +635,13 @@ async def _on_callback(h: _Bot, query: dict[str, Any]) -> None:
             notice = await _run_callback(h, admin, shop, action, raw_id, chat_id)
             if message.get("message_id") and action in ("apply", "discard", "undo"):
                 try:
-                    await h.ctx.client.edit_reply_markup(
+                    await h.client.edit_reply_markup(
                         h.token, chat_id, int(message["message_id"]), None
                     )
                 except TelegramError:
                     pass
     try:
-        await h.ctx.client.answer_callback(h.token, str(query.get("id") or ""), notice)
+        await h.client.answer_callback(h.token, str(query.get("id") or ""), notice)
     except TelegramError:
         pass
 
@@ -710,16 +724,26 @@ async def _on_customer_message(
     shop_id = h.bot.shop_id or session.shop_id
     shop = await h.db.get(Shop, shop_id) if shop_id else None
     if shop is None:
+        # Some apps drop the start link's parameter: the customer can send the shop code.
+        code = (message.get("text") or "").strip().lower().removeprefix("s_")
+        shop = await h.db.scalar(select(Shop).where(Shop.slug == code)) if code else None
+        if shop is not None:
+            session.shop_id = shop.id
+            session.mode = "customer"
+            await h.db.commit()
+            await h.send(chat_id, _welcome(shop))
+            return
         await h.send(
             chat_id,
-            "برای گفتگو با یک فروشگاه، از لینکی که خود فروشگاه گذاشته وارد شوید. "
-            "اگر صاحب فروشگاه هستید، حسابتان را از پنل «جواب» وصل کنید.",
+            "برای گفتگو با یک فروشگاه، از لینکی که خود فروشگاه گذاشته وارد شوید یا کد "
+            "فروشگاه را همین‌جا بفرستید. اگر صاحب فروشگاه هستید، حسابتان را از پنل «جواب» "
+            "وصل کنید.",
         )
         return
-    if not shop.telegram_enabled:
+    if not shop.channel_enabled(h.bot.platform):
         return
     conversation = await messaging.get_or_create_conversation(
-        h.db, shop.id, Channel.TELEGRAM, bot_ref(h.bot), str(chat_id)
+        h.db, shop.id, h.channel, bot_ref(h.bot), str(chat_id)
     )
     _remember_customer(conversation, user)
     await messaging.record_customer_message(
@@ -1018,7 +1042,9 @@ async def _admin_for(h: _Bot, user_id: int) -> TelegramAdmin | None:
     if not user_id:
         return None
     admin = await h.db.scalar(
-        select(TelegramAdmin).where(TelegramAdmin.telegram_user_id == user_id)
+        select(TelegramAdmin).where(
+            TelegramAdmin.platform == h.bot.platform, TelegramAdmin.telegram_user_id == user_id
+        )
     )
     if admin is None:
         return None

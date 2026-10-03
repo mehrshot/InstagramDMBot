@@ -48,9 +48,12 @@ async def receive(request: Request, queue: JobQueue) -> dict[str, str]:
 async def receive_telegram(
     bot_id: uuid.UUID, request: Request, db: DbSession, queue: JobQueue
 ) -> dict[str, str]:
-    """Telegram calls this for every update of one of our bots (shared or a shop's own)."""
+    """Telegram (or Bale) calls this for every update of one of our bots (shared or a shop's
+    own). Telegram sends our secret in a header; Bale can't, so its webhook URL carries it."""
     bot = await db.get(TelegramBot, bot_id)
-    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token") or (
+        request.query_params.get("secret", "") if bot is not None and bot.platform == "bale" else ""
+    )
     if bot is None or not hmac.compare_digest(secret, bot.webhook_secret):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid secret")
     update = _json_object(await request.body())

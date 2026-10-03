@@ -19,6 +19,7 @@ os.environ["INSTAGRAM_ENABLED"] = "true"
 # Wallet charging is covered by its own tests (which switch it on).
 os.environ["BILLING_ENABLED"] = "false"
 os.environ["TELEGRAM_API_BASE"] = "https://tg.test"
+os.environ["BALE_API_BASE"] = "https://bale.test"
 os.environ["ZARINPAL_SANDBOX"] = "true"
 
 import json
@@ -135,6 +136,8 @@ class FakeTelegram:
     # token -> getMe result
     bots: dict[str, dict[str, Any]] = field(default_factory=dict)
     calls: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
+    # Which server each call went to ("tg.test" or "bale.test"), in the order of `calls`.
+    hosts: list[str] = field(default_factory=list)
     # method -> (error_code, description)
     errors: dict[str, tuple[int, str]] = field(default_factory=dict)
     files: dict[str, bytes] = field(default_factory=dict)
@@ -148,6 +151,7 @@ class FakeTelegram:
         token, _, method = path.removeprefix("/bot").partition("/")
         payload = json.loads(request.content or b"{}")
         self.calls.append((token, method, payload))
+        self.hosts.append(request.url.host)
         if method in self.errors:
             code, description = self.errors[method]
             return httpx.Response(
@@ -220,7 +224,7 @@ class FakeWeb:
         self.llm_rejects: set[str] = set()
 
     def handler(self, request: httpx.Request) -> httpx.Response:
-        if request.url.host == "tg.test":
+        if request.url.host in ("tg.test", "bale.test"):
             return self.telegram.handler(request)
         if request.url.host == "sandbox.zarinpal.com":
             return self.zarinpal.handler(request)

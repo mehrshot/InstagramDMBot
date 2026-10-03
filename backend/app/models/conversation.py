@@ -13,6 +13,7 @@ class Channel(enum.StrEnum):
 
     INSTAGRAM = "instagram"
     TELEGRAM = "telegram"
+    BALE = "bale"
     # WHATSAPP = "whatsapp"  # disabled: Meta's WhatsApp Business Platform rejects +98 numbers
 
 

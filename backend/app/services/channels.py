@@ -5,7 +5,7 @@ records its channel and endpoint (`Conversation.channel` / `channel_ref`); `send
 that into a `ChannelSender` that can send text and product posts there.
 
     Instagram account ─┐                     ┌─► InstagramSender (Graph API)
-    shared/custom bot ─┼─► Conversation ─────┼─► TelegramSender (Bot API)
+    shared/custom bot ─┼─► Conversation ─────┼─► TelegramSender (Telegram or Bale Bot API)
     Telegram Business ─┘                     └─► TelegramSender (business_connection_id)
 """
 
@@ -143,7 +143,8 @@ class TelegramSender:
     ) -> None:
         self._db = db
         self._bot = bot
-        self._client = client
+        self._client = client.for_platform(bot.platform)
+        self.channel = Channel.BALE if bot.platform == "bale" else Channel.TELEGRAM
         self._chat_id = chat_id
         self._business = business
         self._token = decrypt_secret(bot.token_encrypted)
@@ -259,8 +260,8 @@ async def sender_for(
             return None
         return InstagramSender(db, account, gateways.instagram, conversation.customer_id)
 
-    if conversation.channel == Channel.TELEGRAM:
-        if gateways.telegram is None or not shop.telegram_enabled:
+    if conversation.channel in (Channel.TELEGRAM, Channel.BALE):
+        if gateways.telegram is None:
             return None
         kind, _, raw_id = conversation.channel_ref.partition(":")
         try:
@@ -277,7 +278,7 @@ async def sender_for(
             bot = await db.get(TelegramBot, ref_id)
         else:
             return None
-        if bot is None or not bot.is_active:
+        if bot is None or not bot.is_active or not shop.channel_enabled(bot.platform):
             return None
         if not plan_allows(shop, conversation.channel_ref, bot):
             logger.info("shop %s plan doesn't include %s", shop.id, conversation.channel_ref)

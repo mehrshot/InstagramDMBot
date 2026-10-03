@@ -1,6 +1,6 @@
-"""Alerts to the shop owner in Telegram, through the shared Javab bot.
+"""Alerts to the shop owner in Telegram or Bale, through the shared Javab bot of that app.
 
-The owner links their Telegram account once (panel > Telegram > link). From then on the bot
+The owner links their Telegram/Bale account once (panel > Telegram > link). From then on the bot
 tells them when a customer is waiting for a person, when the wallet runs low, and when a new
 product was read from their channel, with buttons to act right there.
 """
@@ -19,7 +19,7 @@ from app.services.telegram import MAX_TEXT_LENGTH, TelegramClient, TelegramError
 
 logger = logging.getLogger(__name__)
 
-CHANNEL_LABELS = {Channel.INSTAGRAM: "اینستاگرام", Channel.TELEGRAM: "تلگرام"}
+CHANNEL_LABELS = {Channel.INSTAGRAM: "اینستاگرام", Channel.TELEGRAM: "تلگرام", Channel.BALE: "بله"}
 
 
 def channel_label(conversation: Conversation) -> str:
@@ -114,9 +114,6 @@ class TelegramNotifier:
         )
 
     async def message(self, shop: Shop, text: str, keyboard: dict[str, Any] | None = None) -> None:
-        bot = await shared_bot(self._db)
-        if bot is None:
-            return
         admins = (
             await self._db.scalars(
                 select(TelegramAdmin).where(
@@ -124,12 +121,16 @@ class TelegramNotifier:
                 )
             )
         ).all()
-        if not admins:
-            return
-        token = decrypt_secret(bot.token_encrypted)
+        bots: dict[str, TelegramBot | None] = {}
         for admin in admins:
+            if admin.platform not in bots:
+                bots[admin.platform] = await shared_bot(self._db, admin.platform)
+            bot = bots[admin.platform]
+            if bot is None:
+                continue
+            token = decrypt_secret(bot.token_encrypted)
             try:
-                await self._client.send_message(
+                await self._client.for_platform(bot.platform).send_message(
                     token,
                     admin.telegram_user_id,
                     text[:MAX_TEXT_LENGTH],
@@ -144,7 +145,12 @@ class TelegramNotifier:
                 logger.info("could not notify shop %s admin: %s", shop.id, exc)
 
 
-async def shared_bot(db: AsyncSession) -> TelegramBot | None:
+async def shared_bot(db: AsyncSession, platform: str = "telegram") -> TelegramBot | None:
+    """The shared Javab bot of `platform` ("telegram" or "bale"), if the server runs one."""
     return await db.scalar(
-        select(TelegramBot).where(TelegramBot.shop_id.is_(None), TelegramBot.is_active.is_(True))
+        select(TelegramBot).where(
+            TelegramBot.shop_id.is_(None),
+            TelegramBot.platform == platform,
+            TelegramBot.is_active.is_(True),
+        )
     )

@@ -87,6 +87,11 @@ class Settings(BaseSettings):
     # Log outgoing Telegram calls instead of sending them (local development).
     telegram_dry_run: bool = False
 
+    # Bale (بله): a Telegram-compatible Bot API, so the same bot code serves it. The shared
+    # "Javab" bot on Bale; shops' own Bale bots are stored like Telegram ones.
+    bale_bot_token: str = ""
+    bale_api_base: str = "https://tapi.bale.ai"
+
     # A safety net against one chatty customer (or a spammer) draining a shop's wallet.
     max_bot_replies_per_customer_hour: int = 30
 

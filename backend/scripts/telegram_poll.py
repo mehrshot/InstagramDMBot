@@ -1,9 +1,10 @@
-"""Run the Telegram bots on your own computer, without a public server (long polling).
+"""Run the Telegram and Bale bots on your own computer, without a public server (polling).
 
     uv run python -m scripts.telegram_poll
 
-Needs TELEGRAM_BOT_TOKEN in backend/.env (from @BotFather), and a VPN/proxy if Telegram is
-blocked where you are. It takes the bots' updates directly instead of through the webhook, and
+Needs TELEGRAM_BOT_TOKEN and/or BALE_BOT_TOKEN in backend/.env (from Telegram's @BotFather
+and Bale's @botfather), and a VPN/proxy if Telegram is blocked where you are. Bale works
+without a VPN. It takes the bots' updates directly instead of through the webhook, and
 answers through the same code the server uses; replies run in this process (inline queue).
 
 Stop the server's webhook use while this runs: polling removes the bots' webhooks. On the
@@ -22,17 +23,20 @@ from app.core.queue import InlineQueue
 from app.core.security import decrypt_secret
 from app.models import TelegramBot
 from app.services.telegram import TelegramClient, TelegramError
-from app.services.telegram_setup import ensure_shared_bot
+from app.services.telegram_setup import PLATFORMS, ensure_shared_bot, shared_token
 from app.worker import FUNCTIONS, process_telegram_update
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("telegram_poll")
 
 
-async def poll(bot_id: str, token: str, username: str, ctx: dict) -> None:
-    client = TelegramClient(ctx["http"])
-    await client.delete_webhook(token)
-    logger.info("polling @%s", username)
+async def poll(bot_id: str, token: str, username: str, platform: str, ctx: dict) -> None:
+    client = TelegramClient(ctx["http"]).for_platform(platform)
+    try:
+        await client.delete_webhook(token)
+    except TelegramError as exc:
+        logger.info("@%s: could not remove the webhook (%s)", username, exc)
+    logger.info("polling @%s on %s", username, platform)
     offset = 0
     while True:
         try:
@@ -51,17 +55,26 @@ async def poll(bot_id: str, token: str, username: str, ctx: dict) -> None:
 
 async def main() -> None:
     settings = get_settings()
-    if not settings.telegram_bot_token:
-        raise SystemExit("TELEGRAM_BOT_TOKEN is not set in backend/.env")
+    if not (settings.telegram_bot_token or settings.bale_bot_token):
+        raise SystemExit("Set TELEGRAM_BOT_TOKEN and/or BALE_BOT_TOKEN in backend/.env")
     async with httpx.AsyncClient(timeout=40) as http:
         ctx: dict = {"http": http, "job_try": 1}
         ctx["queue"] = InlineQueue(FUNCTIONS, ctx)
         async with SessionLocal() as db:
-            await ensure_shared_bot(db, TelegramClient(http), set_webhook=False)
+            for platform in PLATFORMS:
+                if shared_token(platform):
+                    try:
+                        await ensure_shared_bot(
+                            db, TelegramClient(http), platform=platform, set_webhook=False
+                        )
+                    except TelegramError as exc:
+                        logger.error("%s bot not reachable: %s", platform, exc)
             bots = (
                 await db.scalars(select(TelegramBot).where(TelegramBot.is_active.is_(True)))
             ).all()
-            targets = [(str(b.id), decrypt_secret(b.token_encrypted), b.username) for b in bots]
+            targets = [
+                (str(b.id), decrypt_secret(b.token_encrypted), b.username, b.platform) for b in bots
+            ]
         await asyncio.gather(*(poll(*target, ctx) for target in targets))
 
 

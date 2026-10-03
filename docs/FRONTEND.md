@@ -665,6 +665,20 @@ cd backend && uv run python -m scripts.export_openapi
 - **صفحه‌ی «فراموشی رمز»** (لینکش زیر فرم ورود): `POST /auth/password/forgot` با `{email}`. همیشه `202` با یک `message` ثابت برمی‌گردد (برای امنیت). همان پیام را نشان بده.
 - **صفحه‌ی `/reset-password?token=...`** (لینکی که در ایمیل می‌آید): فرم رمز جدید (حداقل ۸ کاراکتر) → `POST /auth/password/reset` با `{token, new_password}` → `204`، بعد برو به صفحه‌ی ورود. توکن نامعتبر، منقضی یا استفاده‌شده `400` با پیام فارسی می‌دهد.
 
-### ۱۱.۷ سایت عمومی
+### ۱۱.۷ بله، کانالی جدا از تلگرام
+بله کانال مستقلی است: کلید روشن/خاموش، لینک فروشگاه، اکانت‌های وصل‌شده و ربات اختصاصی خودش را دارد. فروشگاه می‌تواند فقط تلگرام، فقط بله یا هر دو را داشته باشد. پنل صفحه‌ی جدای `/bale` و آیتم جدا در منو دارد.
+
+| کار | درخواست |
+|---|---|
+| وضعیت | `GET /bale` → `{available, enabled, shared_bot_username, shop_link, shop_code, admins[], custom_bot, custom_bot_allowed, plan}` (همین فیلدها در `GET /telegram` هم هست، به‌علاوه‌ی business و channels) |
+| روشن/خاموش | `PATCH /bale` با `{enabled}`؛ روی تلگرام اثری ندارد |
+| لینک اتصال اکانت بله | `POST /bale/link` |
+| حذف اکانت | `DELETE /bale/admins/{id}` |
+| ربات اختصاصی بله | `PUT /bale/custom-bot` با `{token}`، حذف: `DELETE /bale/custom-bot` |
+
+- گفتگوهای بله `channel: "bale"` دارند؛ داشبورد `setup.bale_available`، `bale_owner_linked` و `bale_custom_bot` دارد.
+- پست‌های کانال و تلگرام بیزینس فقط در تلگرام هستند.
+
+### ۱۱.۸ سایت عمومی
 - **واتس‌اپ:** کاشی واتس‌اپ در `components/site/channels.tsx` کامنت شد (API واتس‌اپ شماره‌های ایران را قبول نمی‌کند). اگر متن‌های landing جایی هنوز از واتس‌اپ یا اتصال اینستاگرام حرف می‌زنند، بازنویسی‌شان با تصمیم شما و مهرشاد است.
 - در `CHANNELS`، `telegram` حالا `live: true` و `instagram` `live: false` است.

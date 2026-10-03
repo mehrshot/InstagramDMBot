@@ -1,4 +1,7 @@
-"""Telegram: bots, the owner's linked accounts, Business connections, channels and posts.
+"""Telegram (and Bale): bots, the owner's linked accounts, Business connections, channels.
+
+Bale (بله) has a Telegram-compatible Bot API, so its bots live in the same tables with
+`platform = "bale"`. Bale has no Business connections or channel-post updates.
 
 Three ways a shop's customers reach the bot (all served by the same backend):
 - shared bot: the one "Javab" bot; the shop's start link (?start=s_<slug>) tells it which shop
@@ -20,13 +23,20 @@ from app.models.base import Base, Timestamps, UUIDPk
 
 class TelegramBot(UUIDPk, Timestamps, Base):
     __tablename__ = "telegram_bots"
+    __table_args__ = (
+        UniqueConstraint("platform", "bot_user_id", name="uq_telegram_bots_account"),
+        UniqueConstraint("shop_id", "platform", name="uq_telegram_bots_shop_platform"),
+    )
 
-    # None for the shared Javab bot; otherwise the shop that owns this custom bot.
+    # "telegram" or "bale".
+    platform: Mapped[str] = mapped_column(String(16), default="telegram", server_default="telegram")
+    # None for the shared Javab bot; otherwise the shop that owns this custom bot (a shop can
+    # have one on Telegram and one on Bale).
     shop_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("shops.id", ondelete="CASCADE"), unique=True
+        ForeignKey("shops.id", ondelete="CASCADE"), index=True
     )
     token_encrypted: Mapped[str] = mapped_column(Text)
-    bot_user_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    bot_user_id: Mapped[int] = mapped_column(BigInteger)
     username: Mapped[str] = mapped_column(String(64))
     # Telegram echoes this in X-Telegram-Bot-Api-Secret-Token on every webhook call.
     webhook_secret: Mapped[str] = mapped_column(String(64))
@@ -39,15 +49,19 @@ class TelegramBot(UUIDPk, Timestamps, Base):
 
 
 class TelegramAdmin(UUIDPk, Timestamps, Base):
-    """A Telegram account linked to a shop: gets alerts and manages the shop from the bot."""
+    """A Telegram/Bale account linked to a shop: gets alerts and manages it from the bot."""
 
     __tablename__ = "telegram_admins"
+    __table_args__ = (
+        UniqueConstraint("platform", "telegram_user_id", name="uq_telegram_admins_account"),
+    )
 
     shop_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("shops.id", ondelete="CASCADE"), index=True
     )
-    # One shop per Telegram account keeps the bot's admin menu unambiguous.
-    telegram_user_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    platform: Mapped[str] = mapped_column(String(16), default="telegram", server_default="telegram")
+    # One shop per account keeps the bot's admin menu unambiguous.
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger)
     username: Mapped[str | None] = mapped_column(String(64))
     first_name: Mapped[str] = mapped_column(String(128), default="")
     notify: Mapped[bool] = mapped_column(Boolean, default=True)

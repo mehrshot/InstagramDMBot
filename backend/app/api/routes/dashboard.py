@@ -42,6 +42,10 @@ class SetupStatus(BaseModel):
     # ways customers reach the shop there (start link is always one; + own bot, business).
     telegram_available: bool
     telegram_owner_linked: bool
+    # Bale (بله) is a separate channel with the same kind of setup.
+    bale_available: bool
+    bale_owner_linked: bool
+    bale_custom_bot: bool
     telegram_custom_bot: bool
     telegram_business: bool
     telegram_channels: int
@@ -161,8 +165,14 @@ async def dashboard(shop: CurrentShop, db: DbSession) -> DashboardOut:
             or 0
         )
 
-    shared_bot = await db.scalar(
-        select(TelegramBot.id).where(TelegramBot.shop_id.is_(None), TelegramBot.is_active.is_(True))
+    shared_platforms = set(
+        (
+            await db.scalars(
+                select(TelegramBot.platform).where(
+                    TelegramBot.shop_id.is_(None), TelegramBot.is_active.is_(True)
+                )
+            )
+        ).all()
     )
     settings = get_settings()
     return DashboardOut(
@@ -178,9 +188,19 @@ async def dashboard(shop: CurrentShop, db: DbSession) -> DashboardOut:
         ),
         setup=SetupStatus(
             instagram_available=settings.instagram_enabled,
-            telegram_available=shared_bot is not None,
-            telegram_owner_linked=await exists(TelegramAdmin) > 0,
-            telegram_custom_bot=await exists(TelegramBot, TelegramBot.is_active.is_(True)) > 0,
+            telegram_available="telegram" in shared_platforms,
+            bale_available="bale" in shared_platforms,
+            telegram_owner_linked=await exists(TelegramAdmin, TelegramAdmin.platform == "telegram")
+            > 0,
+            telegram_custom_bot=await exists(
+                TelegramBot, TelegramBot.is_active.is_(True), TelegramBot.platform == "telegram"
+            )
+            > 0,
+            bale_owner_linked=await exists(TelegramAdmin, TelegramAdmin.platform == "bale") > 0,
+            bale_custom_bot=await exists(
+                TelegramBot, TelegramBot.is_active.is_(True), TelegramBot.platform == "bale"
+            )
+            > 0,
             telegram_business=await exists(
                 TelegramBusinessConnection, TelegramBusinessConnection.is_enabled.is_(True)
             )

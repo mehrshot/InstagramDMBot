@@ -1,19 +1,22 @@
-"""Client for the Telegram Bot API.
+"""Client for the Telegram Bot API, and for Bale's (بله) Telegram-compatible copy of it.
 
 Every Bot API call the app makes lives here. The token is part of the URL, so it is never
-logged and network errors are reported by type only.
+logged and network errors are reported by type only. A client talks to one platform; use
+`for_platform` to get the client for a given bot.
 """
 
 import logging
 import random
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
 from app.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
+
+Platform = Literal["telegram", "bale"]
 
 # Telegram rejects messages longer than this (captions: 1024).
 MAX_TEXT_LENGTH = 4096
@@ -41,12 +44,16 @@ class TelegramError(Exception):
     @property
     def token_invalid(self) -> bool:
         """The bot token was revoked (or the bot deleted): the owner has to set it again."""
-        return self.status == 401 or (self.status == 404 and "not found" in str(self).lower())
+        text = str(self).lower()
+        if self.status == 401:
+            return True
+        # Telegram: 404 "Not Found" for a deleted bot; Bale: 403 "Token not found".
+        return self.status in (403, 404) and ("token" in text or text.strip() == "not found")
 
     @property
     def blocked(self) -> bool:
         """The user blocked the bot or deleted their account; sending again won't help."""
-        return self.status == 403
+        return self.status == 403 and not self.token_invalid
 
     @property
     def retryable(self) -> bool:
@@ -64,9 +71,29 @@ class BotInfo:
 
 
 class TelegramClient:
-    def __init__(self, http: httpx.AsyncClient, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        http: httpx.AsyncClient,
+        settings: Settings | None = None,
+        platform: Platform = "telegram",
+    ) -> None:
         self._http = http
         self._settings = settings or get_settings()
+        self.platform: Platform = platform
+
+    def for_platform(self, platform: str) -> "TelegramClient":
+        """The client for a bot of `platform` ("telegram" or "bale")."""
+        if platform == self.platform:
+            return self
+        return TelegramClient(
+            self._http, self._settings, "bale" if platform == "bale" else "telegram"
+        )
+
+    @property
+    def base(self) -> str:
+        if self.platform == "bale":
+            return self._settings.bale_api_base.rstrip("/")
+        return self._settings.telegram_api_base.rstrip("/")
 
     @property
     def dry_run(self) -> bool:
@@ -82,6 +109,10 @@ class TelegramClient:
         )
 
     async def set_webhook(self, token: str, url: str, secret: str) -> None:
+        if self.platform == "bale":
+            # Bale takes only the URL (no secret header): the secret travels in the URL.
+            await self._call(token, "setWebhook", {"url": f"{url}?secret={secret}"})
+            return
         await self._call(
             token,
             "setWebhook",
@@ -100,7 +131,7 @@ class TelegramClient:
         self, token: str, offset: int, poll_seconds: int = 25
     ) -> list[dict[str, Any]]:
         """Long polling, for local development without a public webhook URL."""
-        base = self._settings.telegram_api_base.rstrip("/")
+        base = self.base
         try:
             resp = await self._http.post(
                 f"{base}/bot{token}/getUpdates",
@@ -204,7 +235,7 @@ class TelegramClient:
         path = info.get("file_path")
         if not path:
             raise TelegramError("file has no path", status=400)
-        base = self._settings.telegram_api_base.rstrip("/")
+        base = self.base
         try:
             resp = await self._http.get(f"{base}/file/bot{token}/{path}", timeout=60)
         except httpx.HTTPError as exc:
@@ -221,7 +252,7 @@ class TelegramClient:
         if allow_dry_run and self.dry_run:
             logger.info("DRY RUN telegram %s: %s", method, _loggable(payload))
             return {"message_id": random.randint(10**6, 10**9)}
-        base = self._settings.telegram_api_base.rstrip("/")
+        base = self.base
         try:
             resp = await self._http.post(f"{base}/bot{token}/{method}", json=payload, timeout=30)
         except httpx.HTTPError as exc:

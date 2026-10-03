@@ -76,9 +76,14 @@ class Shop(UUIDPk, Timestamps, Base):
 
     # Telegram: customers reach the shop through the shared bot with this shop's start link.
     telegram_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    # Bale is a separate channel with its own switch (a shop may use one and not the other).
+    bale_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     # One-time code for linking the owner's Telegram account (t.me/<bot>?start=a_<code>).
     telegram_link_code: Mapped[str | None] = mapped_column(String(64), unique=True)
     telegram_link_expires_at: Mapped[datetime | None] = mapped_column()
+
+    def channel_enabled(self, platform: str) -> bool:
+        return self.bale_enabled if platform == "bale" else self.telegram_enabled
 
     owner: Mapped[User] = relationship(back_populates="shop")
     instagram_account: Mapped["InstagramAccount | None"] = relationship(
