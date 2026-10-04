@@ -36,6 +36,17 @@ class User(UUIDPk, Timestamps, Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(120), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Set when the owner opened the link we emailed them.
+    email_verified_at: Mapped[datetime | None] = mapped_column()
+    # A verified mobile number (+98912...), by an SMS code or by sharing the contact of their
+    # Telegram/Bale account with our bot. One number belongs to one account.
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True)
+    phone_verified_at: Mapped[datetime | None] = mapped_column()
+    # The SMS code waiting to be typed in: the number it went to, its hash and lifetime.
+    phone_pending: Mapped[str | None] = mapped_column(String(20))
+    phone_code_hash: Mapped[str | None] = mapped_column(String(64))
+    phone_code_expires_at: Mapped[datetime | None] = mapped_column()
+    phone_code_attempts: Mapped[int] = mapped_column(default=0, server_default="0")
 
     shop: Mapped["Shop"] = relationship(back_populates="owner", uselist=False)
 
@@ -73,6 +84,9 @@ class Shop(UUIDPk, Timestamps, Base):
     # When we last told the owner the wallet is low / empty (so we don't repeat it).
     low_balance_notified_at: Mapped[datetime | None] = mapped_column()
     empty_wallet_notified_at: Mapped[datetime | None] = mapped_column()
+    # The sign-up gift is given once, after the owner links their Telegram/Bale account
+    # (and verifies their phone); see services/gifts.py.
+    signup_gift_at: Mapped[datetime | None] = mapped_column()
 
     # Telegram: customers reach the shop through the shared bot with this shop's start link.
     telegram_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")

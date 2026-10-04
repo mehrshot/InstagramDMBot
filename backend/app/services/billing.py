@@ -94,11 +94,6 @@ def usage_cost(prompt_tokens: int, completion_tokens: int) -> int:
     return max(math.ceil(cost), settings.usage_min_rial_per_reply)
 
 
-def voice_cost(seconds: int) -> int:
-    minutes = max(1, math.ceil(seconds / 60))
-    return minutes * get_settings().usage_rial_per_voice_minute
-
-
 def can_spend(shop: Shop) -> bool:
     return not enabled() or shop.balance_rial > 0
 
@@ -164,16 +159,6 @@ async def charge_usage(
         description,
         {"prompt_tokens": prompt, "completion_tokens": completion, **(details or {})},
     )
-    return await _crossed_low_balance(db, shop, balance)
-
-
-async def charge_amount(
-    db: AsyncSession, shop: Shop, cost: int, description: str, details: dict[str, Any] | None = None
-) -> bool:
-    """Deduct a fixed usage amount (e.g. transcribing a voice note); True if now running low."""
-    if not enabled() or cost <= 0:
-        return False
-    balance = await apply(db, shop, -cost, WalletEntryKind.USAGE, description, details)
     return await _crossed_low_balance(db, shop, balance)
 
 

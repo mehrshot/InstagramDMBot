@@ -2,7 +2,7 @@
 
 Every product lives in Javab's own catalogue (`products`), whatever way the owner taught it:
 typed in the panel, a live Google Sheet (re-synced every few minutes), an Excel/CSV upload,
-something the AI understood from text/voice/a document (services/teach.py), or a post in the
+something the AI understood from text/a document (services/teach.py), or a post in the
 shop's Telegram channel. The bot looks products up through a tool call, so prices and stock
 always come from the owner's data instead of the model's imagination.
 

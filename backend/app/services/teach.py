@@ -1,11 +1,11 @@
 """Teaching Javab: turn whatever the owner sends into product and knowledge changes.
 
-Owners describe their shop in every possible way: they type a price list, send a voice note
-("the black linen manteau is now 1.3 million, two left in size 44"), paste a Google Doc link
-with no particular structure, upload a PDF, forward a channel post, or connect a sheet. All of
-it goes through one path:
+Owners describe their shop in every possible way: they type a price list or a change ("the
+black linen manteau is now 1.3 million, two left in size 44"), paste a Google Doc link with no
+particular structure, upload a PDF, forward a channel post, or connect a sheet. All of it goes
+through one path:
 
-    input ──► text (transcribe / download / extract) ──► AI extraction ──► TeachProposal
+    input ──► text (download / extract) ──► AI extraction ──► TeachProposal
                                                                               │
                      owner confirms (panel or a Telegram button) ──► apply ◄──┘
 
@@ -146,7 +146,6 @@ _TOOL = {
 
 _SOURCE_HINTS = {
     "text": "a message the owner typed",
-    "voice": "the transcript of a voice note from the owner (expect spoken, informal Persian)",
     "url": "the content of a document the owner linked",
     "file": "the text of a file the owner uploaded",
     "photo": "the text read from a photo the owner sent (a price list, a label...)",

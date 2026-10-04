@@ -21,6 +21,7 @@ os.environ["BILLING_ENABLED"] = "false"
 os.environ["TELEGRAM_API_BASE"] = "https://tg.test"
 os.environ["BALE_API_BASE"] = "https://bale.test"
 os.environ["ZARINPAL_SANDBOX"] = "true"
+os.environ["ABAN_API_BASE"] = "https://aban.test"
 
 import json
 from collections.abc import AsyncIterator
@@ -204,6 +205,59 @@ class FakeZarinpal:
         )
 
 
+@dataclass
+class FakeAban:
+    """Aban Gateway's invoice API (card-to-card with automatic confirmation)."""
+
+    invoices: dict[str, dict[str, Any]] = field(default_factory=dict)
+    created: list[dict[str, Any]] = field(default_factory=list)
+    verifies: list[str] = field(default_factory=list)
+    # When set, creating an invoice fails with this (status, error code).
+    create_error: tuple[int, str] | None = None
+
+    def pay(self, invoice_id: str) -> None:
+        """The owner transferred the exact amount and the bank SMS arrived."""
+        self.invoices[invoice_id]["status"] = "paid"
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        if request.headers.get("authorization") != "Bearer ag_test_token":
+            return httpx.Response(401, json={"detail": "bad token"})
+        path = request.url.path
+        if request.method == "POST" and path == "/api/v1/invoices":
+            if self.create_error:
+                status, code = self.create_error
+                return httpx.Response(status, json={"error": {"code": code, "message": code}})
+            body = json.loads(request.content)
+            self.created.append(body)
+            invoice_id = f"inv_{len(self.created):020d}"
+            invoice = {
+                "invoice_id": invoice_id,
+                "status": "pending",
+                "amount_rial": body["amount_rial"],
+                "payable_rial": body["amount_rial"] + 3240,
+                "order_id": body.get("order_id"),
+                "payment_url": f"https://abangateway.ir/pay/{invoice_id}",
+                "verified": False,
+            }
+            self.invoices[invoice_id] = invoice
+            return httpx.Response(201, json=invoice)
+        parts = path.split("/")  # ['', 'api', 'v1', 'invoices', id, action?]
+        invoice = self.invoices.get(parts[4]) if len(parts) > 4 else None
+        if invoice is None:
+            return httpx.Response(404, json={"error": {"code": "invoice_not_found"}})
+        if request.method == "GET":
+            return httpx.Response(200, json=invoice)
+        if parts[-1] == "verify":
+            self.verifies.append(invoice["invoice_id"])
+            if invoice["status"] != "paid":
+                return httpx.Response(402, json={"error": {"code": "not_yet_paid"}})
+            if invoice["verified"]:
+                return httpx.Response(409, json={"error": {"code": "already_verified"}})
+            invoice["verified"] = True
+            return httpx.Response(200, json={"verified": True, **invoice})
+        return httpx.Response(404, json={"error": {"code": "invalid_request"}})
+
+
 class FakeWeb:
     """Google Sheets/Drive downloads, an OpenAI-compatible LLM, Telegram and Zarinpal, behind
     httpx.MockTransport.
@@ -215,7 +269,7 @@ class FakeWeb:
     def __init__(self) -> None:
         self.telegram = FakeTelegram()
         self.zarinpal = FakeZarinpal()
-        self.transcript = "مانتو کتان مشکی تموم شد"
+        self.aban = FakeAban()
         self.files: dict[str, tuple[int, bytes, str]] = {}
         self.llm_replies: list[dict[str, Any]] = []
         self.llm_requests: list[dict[str, Any]] = []
@@ -228,8 +282,8 @@ class FakeWeb:
             return self.telegram.handler(request)
         if request.url.host == "sandbox.zarinpal.com":
             return self.zarinpal.handler(request)
-        if request.url.host == "llm.test" and request.url.path.endswith("/audio/transcriptions"):
-            return httpx.Response(200, json={"text": self.transcript})
+        if request.url.host == "aban.test":
+            return self.aban.handler(request)
         if request.url.host == "llm.test":
             body = json.loads(request.content)
             self.llm_requests.append(body)
@@ -344,6 +398,23 @@ async def auth_headers(client: AsyncClient) -> dict[str, str]:
         json={"email": "owner@shop.ir", "password": "strongpass1", "shop_name": "Mahsa Shop"},
     )
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits() -> None:
+    """Rate limits live in memory; every test starts with none used."""
+    from app.api.routes import account, auth
+
+    auth.configure_login_throttle()
+    for throttle in (
+        auth._verify_email_minute,
+        auth._verify_email_day,
+        account._sms_per_user,
+        account._sms_per_phone,
+        account._sms_per_user_day,
+    ):
+        throttle.clear()
+    auth._last_reset_request.clear()
 
 
 @pytest.fixture

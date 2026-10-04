@@ -94,6 +94,40 @@ def reset_token_matches(fingerprint: str, password_hash: str) -> bool:
     return hmac.compare_digest(fingerprint, _password_fingerprint(password_hash))
 
 
+def create_email_verify_token(user_id: uuid.UUID, email: str) -> str:
+    """Link token proving the owner can read this mailbox; void once the email changes."""
+    settings = get_settings()
+    now = datetime.now(UTC)
+    payload = {
+        "sub": str(user_id),
+        "type": "email_verify",
+        "em": hashlib.sha256(email.encode()).hexdigest()[:16],
+        "iat": now,
+        "exp": now + timedelta(days=settings.email_verify_days),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
+
+
+def read_email_verify_token(token: str) -> tuple[uuid.UUID, str]:
+    """Returns (user id, email fingerprint); raises TokenError."""
+    try:
+        payload = jwt.decode(token, get_settings().secret_key, algorithms=[_ALGORITHM])
+        if payload.get("type") != "email_verify":
+            raise TokenError("wrong token type")
+        return uuid.UUID(payload["sub"]), str(payload["em"])
+    except (jwt.PyJWTError, KeyError, ValueError) as exc:
+        raise TokenError("invalid token") from exc
+
+
+def email_token_matches(fingerprint: str, email: str) -> bool:
+    return hmac.compare_digest(fingerprint, hashlib.sha256(email.encode()).hexdigest()[:16])
+
+
+def secret_digest(value: str) -> str:
+    """Keyed hash (hex) for values we only ever compare: SMS codes, gift claims."""
+    return hmac.new(get_settings().secret_key.encode(), value.encode(), hashlib.sha256).hexdigest()
+
+
 def _fernet() -> Fernet:
     key = get_settings().encryption_key
     if not key:

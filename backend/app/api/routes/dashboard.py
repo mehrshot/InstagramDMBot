@@ -25,6 +25,7 @@ from app.models import (
     TelegramBusinessConnection,
     TelegramChannel,
 )
+from app.services import gifts
 from app.services.llm import LLMError
 from app.services.responder import ChatTurn, LLMResponder, PlaceholderResponder
 
@@ -65,11 +66,22 @@ class Stats(BaseModel):
     open_unanswered: int
 
 
+class GiftStatus(BaseModel):
+    """The sign-up gift: given once the owner links Telegram/Bale (+ verifies their phone)."""
+
+    amount_toman: int  # 0: no gift on this server
+    granted: bool
+    messenger_linked: bool
+    phone_required: bool
+    phone_verified: bool
+
+
 class WalletStatus(BaseModel):
     enabled: bool
     balance_toman: int
     low_balance: bool
     plan: str
+    gift: GiftStatus
 
 
 class DashboardOut(BaseModel):
@@ -182,6 +194,7 @@ async def dashboard(shop: CurrentShop, db: DbSession) -> DashboardOut:
             balance_toman=shop.balance_rial // 10,
             low_balance=settings.billing_enabled and shop.balance_rial < settings.low_balance_rial,
             plan=shop.plan.value,
+            gift=GiftStatus(**await gifts.status(db, shop)),
         ),
         pending_proposals=await exists(
             TeachProposal, TeachProposal.status == ProposalStatus.PENDING

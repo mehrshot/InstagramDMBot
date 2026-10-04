@@ -266,38 +266,20 @@ async def test_owner_teaches_by_text_and_confirms(
     assert "1 محصول اضافه شد" in fake_web.telegram.sent()[-1]["text"]
 
 
-async def test_owner_voice_note(
+async def test_owner_voice_note_is_not_understood_yet(
     db: AsyncSession,
     setup: tuple[Shop, TelegramBot],
     fake_web: FakeWeb,
     queue: RecordingQueue,
     llm_on: None,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.core.config import get_settings
-
+    """Voice notes come later, as their own feature: for now the owner is asked to type."""
     shop, bot = setup
-    db.add(Product(shop_id=shop.id, name="مانتو کتان", color="مشکی", stock=3, extra={}))
-    await db.commit()
     await _link_owner(db, shop, bot, fake_web, queue)
     voice = {"file_id": "VOICE1", "duration": 4}
     await _update(db, bot, fake_web, queue, _private(OWNER, voice=voice))
-    assert "پیام صوتی" in fake_web.telegram.sent()[-1]["text"]  # no speech model configured
-
-    monkeypatch.setattr(get_settings(), "llm_transcribe_model", "whisper-1")
-    fake_web.llm_replies.append(
-        FakeWeb.tool_call(
-            "propose_changes",
-            {
-                "summary": "مانتو مشکی تمام شد",
-                "products": [{"ref": "#1", "stock": 0}],
-            },
-        )
-    )
-    await _update(db, bot, fake_web, queue, _private(OWNER, voice=voice))
-    texts = [m["text"] for m in fake_web.telegram.sent()]
-    assert any("مانتو کتان مشکی تموم شد" in t for t in texts)  # the transcript is echoed
-    assert "موجودی: 3 ← 0" in texts[-1]
+    assert "تایپ کنید" in fake_web.telegram.sent()[-1]["text"]
+    assert fake_web.llm_requests == []
 
 
 async def test_channel_posts_become_products(

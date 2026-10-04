@@ -1,6 +1,6 @@
 """Teach Javab from the panel: any text, a link or a file becomes a proposal to confirm.
 
-The same proposals are made by the Telegram bot (voice notes, photos, forwarded posts), so
+The same proposals are made by the Telegram bot (photos, files, forwarded posts), so
 the panel can also list and confirm those.
 """
 
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/teach", tags=["teach"])
 
 class ProposalOut(BaseModel):
     id: uuid.UUID
-    # text | voice | url | file | photo | telegram_post
+    # text | url | file | photo | telegram_post
     source: str
     source_label: str
     status: ProposalStatus

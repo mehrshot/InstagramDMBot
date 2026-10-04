@@ -87,6 +87,17 @@ export default function Register() {
         <Button type="submit" loading={busy} className="w-full" disabled={!form.email || !form.shop_name.trim() || form.password.length < 8}>
           {t.auth.register}
         </Button>
+        <p className="text-center text-xs leading-6 text-slate-500">
+          {t.launch.signupTerms.before}
+          <Link to="/terms" className="font-medium text-brand-700 hover:underline">
+            {t.launch.signupTerms.terms}
+          </Link>
+          {t.launch.signupTerms.and}
+          <Link to="/privacy" className="font-medium text-brand-700 hover:underline">
+            {t.launch.signupTerms.privacy}
+          </Link>
+          {t.launch.signupTerms.after}
+        </p>
       </form>
     </AuthShell>
   );

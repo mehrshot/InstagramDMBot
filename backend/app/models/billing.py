@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, Index, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Timestamps, UUIDPk, str_enum
@@ -11,7 +11,7 @@ from app.models.base import Base, Timestamps, UUIDPk, str_enum
 
 class WalletEntryKind(enum.StrEnum):
     TOPUP = "topup"  # paid through the gateway
-    USAGE = "usage"  # an AI answer (or reading a voice note / document for the owner)
+    USAGE = "usage"  # an AI answer (or reading a document for the owner)
     PLAN_FEE = "plan_fee"  # monthly fee of the pro/business plan
     BONUS = "bonus"  # free credit (sign-up gift)
     ADJUSTMENT = "adjustment"  # set by us by hand (support, card-to-card payment, refund)
@@ -60,3 +60,18 @@ class Payment(UUIDPk, Timestamps, Base):
     card_pan: Mapped[str | None] = mapped_column(String(32))
     error: Mapped[str | None] = mapped_column(Text)
     paid_at: Mapped[datetime | None] = mapped_column()
+
+
+class GiftClaim(UUIDPk, Timestamps, Base):
+    """A Telegram/Bale account or a phone number that already earned a shop the sign-up gift.
+
+    Kept (as a hash, without the number itself) even when that shop is deleted, so deleting
+    and re-creating accounts doesn't earn the gift again.
+    """
+
+    __tablename__ = "gift_claims"
+
+    # sha256 of "<kind>:<value>" with our secret: kind is telegram | bale | phone.
+    key: Mapped[str] = mapped_column(String(64), unique=True)
+    # The shop that got the gift (no foreign key: the claim outlives the shop).
+    shop_id: Mapped[uuid.UUID] = mapped_column(Uuid)

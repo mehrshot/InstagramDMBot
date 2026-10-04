@@ -119,13 +119,14 @@ const landing: Dict["landing"] = {
       bullets: [
         "Google Sheets syncs automatically every 5 minutes",
         "If a colour or size is sold out, it suggests the variants still in stock",
-        "On Instagram, it also sends the customer that product's post",
+        "Learns product photos and details from your Telegram channel posts",
       ],
     },
     handoff: {
       title: "Hands the conversation to you when it should",
       body: "A question your info doesn't cover gets a polite holding reply and is handed to you, shown above everything else in your panel.",
       bullets: [
+        "You hear about it right away in your own Telegram or Bale, and reply from there",
         "Browser notification and a count in the tab title",
         "Replying to the customer yourself closes the handoff automatically",
         "While you're in the conversation, Javab stays quiet for that customer",
@@ -199,7 +200,7 @@ const landing: Dict["landing"] = {
     title: "From sign-up to first conversation in four steps",
     lead: "Nothing to install and no technical knowledge needed — it all happens in the panel.",
     steps: [
-      { title: "Connect a channel", body: "Connect Instagram through its official flow — no password needed. WhatsApp, Telegram and Bale are coming soon." },
+      { title: "Connect a channel", body: "Your shop's own link on Telegram and Bale is ready; put it in your bio and channel. No passwords needed. Instagram is coming soon." },
       { title: "Info and products", body: "Enter shipping, payment, returns and FAQs, and connect your product list." },
       { title: "Test Javab", body: "Ask questions as a customer on the test page and see the replies. Nothing is sent to anyone." },
       { title: "Go live", body: "Flip one switch. From then on, Javab talks to your customers and you only see what's handed to you." },
@@ -225,11 +226,11 @@ const landing: Dict["landing"] = {
     items: [
       {
         q: "Which channels does Javab work on?",
-        a: "Today, Instagram: the account must be professional (Business or Creator), with “Allow access to messages” turned on in its message settings. WhatsApp, Telegram and Bale are being added.",
+        a: "Today, Telegram and Bale. Every shop gets its own link that takes customers straight to that shop's assistant; you can also have your own bot with your shop's name, or let it answer from your personal Telegram account. Instagram is coming soon.",
       },
       {
         q: "Do you need my account passwords to connect?",
-        a: "No. Each channel connects through that platform's official page and you grant message access yourself. You can revoke it any time from the panel.",
+        a: "No. Telegram and Bale connect with a one-time link from the panel, and we never ask for any password. You can disconnect any time from the panel.",
       },
       {
         q: "What happens when Javab doesn't know an answer?",
@@ -241,7 +242,7 @@ const landing: Dict["landing"] = {
       },
       {
         q: "How do I add my products?",
-        a: "Connect a Google Sheets link or an Excel/CSV file and say what each column holds. Google Sheets syncs automatically every 5 minutes. There's a ready-made template in the panel.",
+        a: "Any way you like: describe them to the bot in your own words, send a PDF, Word or Excel file, connect a Google Sheet, or forward your Telegram channel posts. Before saving, it shows you a summary of what it understood for your OK.",
       },
       {
         q: "Does it reply to comments too?",

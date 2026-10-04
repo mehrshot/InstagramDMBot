@@ -1,5 +1,5 @@
 from app.models.base import Base
-from app.models.billing import Payment, PaymentStatus, WalletEntry, WalletEntryKind
+from app.models.billing import GiftClaim, Payment, PaymentStatus, WalletEntry, WalletEntryKind
 from app.models.conversation import (
     Channel,
     Conversation,
@@ -31,6 +31,7 @@ __all__ = [
     "Base",
     "Channel",
     "Conversation",
+    "GiftClaim",
     "HandoffResolution",
     "InstagramAccount",
     "InstagramPost",

@@ -1,5 +1,8 @@
-"""The wallet: pay-as-you-go answers, an empty wallet, plans and Zarinpal top-ups."""
+"""The wallet: pay-as-you-go answers, an empty wallet, plans, and top-ups (Aban, Zarinpal)."""
 
+import hashlib
+import hmac
+import json
 import uuid
 from datetime import timedelta
 
@@ -16,13 +19,15 @@ from app.models import (
     InstagramAccount,
     Message,
     MessageSender,
+    Payment,
+    PaymentStatus,
     Plan,
     Shop,
     User,
     WalletEntry,
     WalletEntryKind,
 )
-from app.services import billing
+from app.services import billing, payments
 from app.services.messaging import reply_to_conversation
 from app.services.responder import Reply
 from tests.conftest import FakeMeta, FakeWeb
@@ -106,7 +111,6 @@ def test_usage_cost() -> None:
     # 4000 prompt tokens * 300 + 150 completion * 1200, per 1000 = 1380 rial
     assert billing.usage_cost(4000, 150) == 1380
     assert billing.usage_cost(10, 5) == get_settings().usage_min_rial_per_reply
-    assert billing.voice_cost(61) == 2 * get_settings().usage_rial_per_voice_minute
 
 
 async def test_answer_is_paid_from_the_wallet(
@@ -180,16 +184,25 @@ async def test_billing_off_charges_nothing(
     assert [m["message"]["text"] for m in fake_meta.sent] == ["بله موجوده"]
 
 
-async def test_signup_gift(client: AsyncClient, billing_on: None) -> None:
+async def test_signing_up_alone_earns_no_gift(client: AsyncClient, billing_on: None) -> None:
+    """The gift waits for a linked Telegram/Bale account (test_verification.py)."""
     resp = await client.post(
         "/api/v1/auth/register",
         json={"email": "new@shop.ir", "password": "strongpass1", "shop_name": "S"},
     )
     headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
     body = (await client.get("/api/v1/billing", headers=headers)).json()
-    assert body["balance_toman"] == get_settings().signup_credit_rial // 10
+    assert body["balance_toman"] == 0
     entries = (await client.get("/api/v1/billing/entries", headers=headers)).json()
-    assert [e["kind"] for e in entries["items"]] == ["bonus"]
+    assert entries["items"] == []
+    gift = (await client.get("/api/v1/dashboard", headers=headers)).json()["wallet"]["gift"]
+    assert gift == {
+        "amount_toman": get_settings().signup_credit_rial // 10,
+        "granted": False,
+        "messenger_linked": False,
+        "phone_required": True,
+        "phone_verified": False,
+    }
 
 
 async def test_plans(
@@ -253,6 +266,7 @@ async def test_zarinpal_topup(
     )
     assert resp.status_code == 400  # gateway not configured yet
 
+    monkeypatch.setattr(get_settings(), "payment_gateway", "zarinpal")
     monkeypatch.setattr(get_settings(), "zarinpal_merchant_id", "merchant-1")
     resp = await client.post(
         "/api/v1/billing/topup", json={"amount_toman": 100_000}, headers=auth_headers
@@ -278,3 +292,110 @@ async def test_zarinpal_topup(
     authority = resp.json()["payment_url"].rsplit("/", 1)[1]
     resp = await client.get(callback, params={"Authority": authority, "Status": "NOK"})
     assert resp.headers["location"].endswith("payment=failed")
+
+
+WEBHOOK_SECRET = "whsec-test"
+
+
+@pytest.fixture
+def aban_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(get_settings(), "aban_api_token", "ag_test_token")
+    monkeypatch.setattr(get_settings(), "aban_webhook_secret", WEBHOOK_SECRET)
+
+
+def _signed(event: dict) -> tuple[bytes, dict[str, str]]:
+    raw = json.dumps(event).encode()
+    signature = hmac.new(WEBHOOK_SECRET.encode(), raw, hashlib.sha256).hexdigest()
+    return raw, {"X-Signature": signature, "Content-Type": "application/json"}
+
+
+async def _balance(client: AsyncClient, headers: dict) -> int:
+    return (await client.get("/api/v1/billing", headers=headers)).json()["balance_toman"]
+
+
+async def test_aban_topup_by_webhook(
+    client: AsyncClient, auth_headers: dict, fake_web: FakeWeb, aban_on: None, billing_on: None
+) -> None:
+    billing_info = (await client.get("/api/v1/billing", headers=auth_headers)).json()
+    assert billing_info["gateway"] == "aban" and billing_info["topup_available"]
+    resp = await client.post(
+        "/api/v1/billing/topup", json={"amount_toman": 100_000}, headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["payment_url"] == "https://abangateway.ir/pay/inv_00000000000000000001"
+    created = fake_web.aban.created[0]
+    assert created["amount_rial"] == 1_000_000
+    assert created["callback_url"] == "https://api.test/api/v1/billing/aban/webhook"
+    assert created["return_url"].startswith("https://api.test/api/v1/billing/aban/return/")
+
+    event = {"event": "invoice.paid", "invoice_id": "inv_00000000000000000001", "status": "paid"}
+    raw, headers = _signed(event)
+    # A forged call (wrong signature) is refused and credits nothing.
+    forged = await client.post(
+        "/api/v1/billing/aban/webhook", content=raw, headers={**headers, "X-Signature": "00"}
+    )
+    assert forged.status_code == 401
+
+    # Signed, but the money hasn't arrived yet: verify says not paid, nothing is credited.
+    resp = await client.post("/api/v1/billing/aban/webhook", content=raw, headers=headers)
+    assert resp.status_code == 200
+    assert await _balance(client, auth_headers) == 0
+
+    fake_web.aban.pay("inv_00000000000000000001")
+    resp = await client.post("/api/v1/billing/aban/webhook", content=raw, headers=headers)
+    assert resp.status_code == 200
+    assert await _balance(client, auth_headers) == 100_000
+    # Delivered again (Aban retries): credited once only.
+    await client.post("/api/v1/billing/aban/webhook", content=raw, headers=headers)
+    assert await _balance(client, auth_headers) == 100_000
+    entries = (await client.get("/api/v1/billing/entries", headers=auth_headers)).json()
+    assert [e["kind"] for e in entries["items"]] == ["topup"]
+
+
+async def test_aban_return_and_reconcile(
+    client: AsyncClient,
+    auth_headers: dict,
+    fake_web: FakeWeb,
+    db: AsyncSession,
+    aban_on: None,
+    billing_on: None,
+) -> None:
+    resp = await client.post(
+        "/api/v1/billing/topup", json={"amount_toman": 100_000}, headers=auth_headers
+    )
+    assert resp.status_code == 200
+    payment = await db.scalar(select(Payment))
+    assert payment is not None and payment.authority == "inv_00000000000000000001"
+    back = f"/api/v1/billing/aban/return/{payment.id}"
+
+    # Back from the payment page before the bank SMS: "pending".
+    resp = await client.get(back)
+    assert resp.headers["location"] == "https://panel.test/billing?payment=pending"
+
+    # The webhook got lost; the periodic check finds the paid invoice.
+    fake_web.aban.pay("inv_00000000000000000001")
+    payment.created_at = utcnow() - timedelta(minutes=10)
+    await db.commit()
+    credited = await payments.reconcile_aban(db, payments.AbanGateway(fake_web.client()))
+    assert [p.id for p in credited] == [payment.id]
+    resp = await client.get(back)
+    assert resp.headers["location"] == "https://panel.test/billing?payment=success"
+    assert await _balance(client, auth_headers) == 100_000
+
+    # An expired invoice becomes a failed payment.
+    await client.post("/api/v1/billing/topup", json={"amount_toman": 100_000}, headers=auth_headers)
+    raw, headers = _signed({"event": "invoice.expired", "invoice_id": "inv_00000000000000000002"})
+    await client.post("/api/v1/billing/aban/webhook", content=raw, headers=headers)
+    db.expire_all()
+    statuses = sorted(p.status.value for p in (await db.scalars(select(Payment))).all())
+    assert statuses == [PaymentStatus.FAILED.value, PaymentStatus.PAID.value]
+
+
+async def test_aban_refusal_is_explained(
+    client: AsyncClient, auth_headers: dict, fake_web: FakeWeb, aban_on: None, billing_on: None
+) -> None:
+    fake_web.aban.create_error = (503, "capacity_full")
+    resp = await client.post(
+        "/api/v1/billing/topup", json={"amount_toman": 100_000}, headers=auth_headers
+    )
+    assert resp.status_code == 400 and "شلوغ" in resp.json()["detail"]

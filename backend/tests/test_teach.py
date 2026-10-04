@@ -111,7 +111,7 @@ async def test_updates_use_refs_and_respect_the_sheet(
         ],
     )
     proposal = await teach.propose(
-        db, LLMClient(fake_web.client()), shop, "دو تا مانتو فروختم...", source="voice", label="v"
+        db, LLMClient(fake_web.client()), shop, "دو تا مانتو فروختم...", source="text", label="v"
     )
     system = fake_web.llm_requests[-1]["messages"][0]["content"]
     assert "#3 | مانتو کتان | - | 44 | 1,250,000 | 3" in system

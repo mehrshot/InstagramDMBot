@@ -13,8 +13,9 @@ Customers
 
 The owner (a linked Telegram account, see /start a_<code>)
 - gets alerts with buttons (answer the customer from here, close, silence the bot);
-- teaches the bot by typing, sending a voice note, a file, a photo, a Google link or a
-  forwarded channel post; every such input becomes a proposal they confirm with a button;
+- teaches the bot by typing, sending a file, a photo, a Google link or a forwarded channel
+  post; every such input becomes a proposal they confirm with a button;
+- can verify their mobile number by sharing their contact (for the sign-up gift);
 - adds the bot as an admin of their channel, after which new product posts are added to the
   catalogue automatically (with an undo button).
 """
@@ -48,8 +49,9 @@ from app.models import (
     TelegramChannel,
     TelegramPost,
     TelegramSession,
+    User,
 )
-from app.services import billing, messaging, teach
+from app.services import billing, gifts, messaging, ops_bot, phone, teach
 from app.services.channels import (
     PLANS_FOR_BUSINESS,
     Gateways,
@@ -72,7 +74,7 @@ LINK_CODE_LIFETIME = timedelta(minutes=30)
 # message sent while a proposal still waits for the OK refines that proposal.
 HISTORY_TURNS = 8
 FOLLOW_UP_WINDOW = timedelta(minutes=30)
-# Voice notes and files the owner sends; Telegram's own bot download limit is 20 MB.
+# Files the owner sends; Telegram's own bot download limit is 20 MB.
 MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
 
 BUTTON_PRODUCTS = "📦 محصولات"
@@ -81,12 +83,12 @@ BUTTON_PAUSE = "⏸ خاموش کردن ربات"
 BUTTON_RESUME = "▶️ روشن کردن ربات"
 BUTTON_TEST = "🧪 تست به‌عنوان مشتری"
 BUTTON_HELP = "❓ راهنما"
+BUTTON_PHONE = "📱 تأیید شماره موبایل"
 
 ADMIN_HELP = """من «جواب» هستم، دستیار هوشمند فروشگاه شما 🤝
 
 برای اینکه محصولات و اطلاعات فروشگاه را یاد بگیرم، هر جور راحت‌ترید به من بگویید:
 • تایپ کنید: «مانتو کتان مشکی سایز ۴۴، یک و دویست، ۳ تا موجوده»
-• پیام صوتی بفرستید و توضیح بدهید
 • لینک گوگل شیت، گوگل داک یا فایل گوگل درایو بفرستید
 • فایل PDF، Word یا Excel لیست قیمت را بفرستید
 • عکس محصول با توضیح زیرش، یا عکس لیست قیمت بفرستید
@@ -184,6 +186,13 @@ async def _on_private_message(h: _Bot, message: dict[str, Any]) -> None:
     chat_id = int(chat["id"])
     text = (message.get("text") or message.get("caption") or "").strip()
     session = await _session(h, user_id)
+    if ops_bot.is_ops(h, user_id):
+        # The team's admin panel (OPS_ADMIN_TELEGRAM_IDS); see ops_bot.py.
+        if _command(text) in ("/ops", "/panel"):
+            await ops_bot.open_panel(h, session, chat_id)
+            return
+        if text and await ops_bot.on_text(h, session, chat_id, text):
+            return
     admin = await _admin_for(h, user_id)
 
     if text.startswith("/start"):
@@ -191,6 +200,9 @@ async def _on_private_message(h: _Bot, message: dict[str, Any]) -> None:
         await _on_start(h, session, admin, user, chat_id, param)
         return
     if admin is not None:
+        if message.get("contact"):
+            await _on_contact(h, admin, message, chat_id)
+            return
         command = _command(text)
         if command == "/admin":
             session.mode = "admin"
@@ -304,19 +316,65 @@ async def _link_owner(
     app = "بله" if h.bot.platform == "bale" else "تلگرام"
     await h.send(chat_id, f"✅ حساب {app} شما به فروشگاه «{shop.name}» وصل شد.")
     await _send_admin_menu(h, chat_id, admin)
+    await _gift_news(h, shop, chat_id)
 
 
-def _admin_keyboard(shop: Shop) -> dict[str, Any]:
+async def _gift_news(h: _Bot, shop: Shop, chat_id: int) -> None:
+    """Give the sign-up gift if this made the shop eligible, or say what's still missing."""
+    given = await gifts.check(h.db, shop)
+    if given:
+        await h.send(
+            chat_id,
+            f"🎁 {billing.toman(given)} اعتبار هدیه به کیف پول «{shop.name}» اضافه شد. "
+            "با آن ربات به مشتری‌هایتان جواب می‌دهد.",
+            await _keyboard(h, shop),
+        )
+        return
+    hint = gifts.missing_text(await gifts.status(h.db, shop))
+    if hint:
+        await h.send(chat_id, hint, await _keyboard(h, shop))
+
+
+async def _on_contact(h: _Bot, admin: TelegramAdmin, message: dict[str, Any], chat_id: int) -> None:
+    """The owner shared a contact: if it's their own, its number counts as verified."""
+    shop = await h.db.get(Shop, admin.shop_id)
+    owner = await h.db.get(User, shop.owner_id) if shop else None
+    if shop is None or owner is None:
+        return
+    contact = message["contact"]
+    sender = int((message.get("from") or {}).get("id") or 0)
+    if int(contact.get("user_id") or 0) != sender:
+        await h.send(
+            chat_id,
+            f"فقط شماره‌ی خودتان را می‌شود تأیید کرد؛ دکمه‌ی «{BUTTON_PHONE}» را بزنید.",
+            await _keyboard(h, shop),
+        )
+        return
+    try:
+        number = phone.normalize_contact_phone(str(contact.get("phone_number") or ""))
+        await phone.set_verified(h.db, owner, number)
+    except phone.PhoneError as exc:
+        await h.send(chat_id, str(exc), await _keyboard(h, shop))
+        return
+    await h.send(
+        chat_id, f"✅ شماره‌ی {phone.local_format(number)} تأیید شد.", await _keyboard(h, shop)
+    )
+    await _gift_news(h, shop, chat_id)
+
+
+async def _keyboard(h: _Bot, shop: Shop) -> dict[str, Any]:
+    """The owner's menu; it offers to verify their number while the gift waits for it."""
     toggle = BUTTON_PAUSE if shop.bot_enabled else BUTTON_RESUME
-    return {
-        "keyboard": [
-            [{"text": BUTTON_PRODUCTS}, {"text": BUTTON_WALLET}],
-            [{"text": toggle}, {"text": BUTTON_TEST}],
-            [{"text": BUTTON_HELP}],
-        ],
-        "resize_keyboard": True,
-        "is_persistent": True,
-    }
+    rows: list[list[dict[str, Any]]] = [
+        [{"text": BUTTON_PRODUCTS}, {"text": BUTTON_WALLET}],
+        [{"text": toggle}, {"text": BUTTON_TEST}],
+        [{"text": BUTTON_HELP}],
+    ]
+    if shop.signup_gift_at is None and gifts.amount() and get_settings().signup_gift_requires_phone:
+        owner = await h.db.get(User, shop.owner_id)
+        if owner is not None and owner.phone_verified_at is None:
+            rows.insert(0, [{"text": BUTTON_PHONE, "request_contact": True}])
+    return {"keyboard": rows, "resize_keyboard": True, "is_persistent": True}
 
 
 async def _send_admin_menu(h: _Bot, chat_id: int, admin: TelegramAdmin) -> None:
@@ -325,7 +383,7 @@ async def _send_admin_menu(h: _Bot, chat_id: int, admin: TelegramAdmin) -> None:
         return
     state = "روشن ✅" if shop.bot_enabled else "خاموش ⏸"
     await h.send(
-        chat_id, f"مدیریت «{shop.name}» — ربات: {state}\n\n{_help(h)}", _admin_keyboard(shop)
+        chat_id, f"مدیریت «{shop.name}» — ربات: {state}\n\n{_help(h)}", await _keyboard(h, shop)
     )
 
 
@@ -362,20 +420,20 @@ async def _on_admin_message(
     if command == "/cancel":
         session.state = {}
         await h.db.commit()
-        await h.send(chat_id, "لغو شد.", _admin_keyboard(shop))
+        await h.send(chat_id, "لغو شد.", await _keyboard(h, shop))
         return
     reply_to = (session.state or {}).get("reply_to")
     if reply_to and text and not command:
         await _relay_owner_reply(h, session, shop, chat_id, reply_to, text)
         return
     if text in (BUTTON_HELP, "/help"):
-        await h.send(chat_id, _help(h), _admin_keyboard(shop))
+        await h.send(chat_id, _help(h), await _keyboard(h, shop))
         return
     if text in (BUTTON_PRODUCTS, "/products"):
-        await h.send(chat_id, await _products_summary(h, shop), _admin_keyboard(shop))
+        await h.send(chat_id, await _products_summary(h, shop), await _keyboard(h, shop))
         return
     if text in (BUTTON_WALLET, "/wallet"):
-        await h.send(chat_id, _wallet_summary(shop), _admin_keyboard(shop))
+        await h.send(chat_id, _wallet_summary(shop), await _keyboard(h, shop))
         return
     if text in (BUTTON_PAUSE, BUTTON_RESUME, "/pause", "/resume"):
         shop.bot_enabled = text in (BUTTON_RESUME, "/resume")
@@ -385,10 +443,10 @@ async def _on_admin_message(
             if shop.bot_enabled
             else ("خاموش شد ⏸ و تا روشن کردن دوباره به مشتری‌ها جواب نمی‌دهد.")
         )
-        await h.send(chat_id, f"ربات {state}", _admin_keyboard(shop))
+        await h.send(chat_id, f"ربات {state}", await _keyboard(h, shop))
         return
     if command:
-        await h.send(chat_id, "این دستور را نمی‌شناسم. /help را ببینید.", _admin_keyboard(shop))
+        await h.send(chat_id, "این دستور را نمی‌شناسم. /help را ببینید.", await _keyboard(h, shop))
         return
 
     await h.typing(chat_id)
@@ -400,7 +458,7 @@ async def _on_admin_message(
     if proposal is None:
         await h.send(
             chat_id,
-            "این پیام را متوجه نشدم. متن، صوت، فایل، عکس یا لینک بفرستید؛ /help را هم ببینید.",
+            "این پیام را متوجه نشدم. متن، فایل، عکس یا لینک بفرستید؛ /help را هم ببینید.",
         )
         return
     await _show_proposal(h, session, chat_id, proposal)
@@ -433,28 +491,8 @@ async def _proposal_from_admin_message(
             telegram_post_id=post.id,
         )
 
-    voice = message.get("voice") or message.get("audio")
-    if voice:
-        if not llm.can_transcribe:
-            raise teach.TeachError("فعلا پیام صوتی را نمی‌فهمم؛ لطفا متن را تایپ کنید.")
-        if not billing.can_spend(shop):
-            raise teach.TeachError("موجودی کیف پول تمام شده است؛ از پنل آن را شارژ کنید.")
-        data = await _download(h, voice["file_id"])
-        transcript = await llm.transcribe(data, voice.get("file_name") or "voice.ogg")
-        duration = int(voice.get("duration") or 0)
-        await billing.charge_amount(
-            h.db,
-            shop,
-            billing.voice_cost(duration),
-            "تبدیل پیام صوتی به متن",
-            {"seconds": duration},
-        )
-        if not transcript:
-            raise teach.TeachError("صدایی در این پیام تشخیص داده نشد.")
-        await h.send(chat_id, f"🎙 شنیدم:\n«{transcript[:1500]}»")
-        return await _propose_said(
-            h, shop, session, chat_id, transcript, "voice", f"پیام صوتی {duration} ثانیه‌ای"
-        )
+    if message.get("voice") or message.get("audio") or message.get("video_note"):
+        raise teach.TeachError("فعلا پیام صوتی را نمی‌فهمم؛ لطفا متن را تایپ کنید.")
 
     document = message.get("document")
     if document:
@@ -511,7 +549,7 @@ async def _propose_said(
     source: str,
     label: str,
 ) -> TeachProposal:
-    """Something the owner said (typed or spoken), read in the light of the conversation.
+    """Something the owner typed, read in the light of the conversation.
 
     If a proposal still waits for their OK, this message completes or corrects it ("make the
     price 2.5 million"): it is read together with that proposal's input and replaces it.
@@ -641,14 +679,14 @@ async def _relay_owner_reply(
     await h.db.commit()
     conversation = await _conversation(h, shop, conversation_id)
     if conversation is None:
-        await h.send(chat_id, "این گفتگو پیدا نشد.", _admin_keyboard(shop))
+        await h.send(chat_id, "این گفتگو پیدا نشد.", await _keyboard(h, shop))
         return
     error = await send_owner_reply(h.db, shop, conversation, text, h.client, h.ctx.http)
     if error:
-        await h.send(chat_id, error, _admin_keyboard(shop))
+        await h.send(chat_id, error, await _keyboard(h, shop))
         return
     await h.send(
-        chat_id, f"✅ برای {customer_label(conversation)} فرستاده شد.", _admin_keyboard(shop)
+        chat_id, f"✅ برای {customer_label(conversation)} فرستاده شد.", await _keyboard(h, shop)
     )
 
 
@@ -686,7 +724,7 @@ async def _products_summary(h: _Bot, shop: Shop) -> str:
     rows = (await h.db.scalars(select(Product).where(Product.shop_id == shop.id))).all()
     if not rows:
         return (
-            "هنوز محصولی ثبت نشده. محصولاتتان را برایم بنویسید، صوت یا فایل بفرستید، "
+            "هنوز محصولی ثبت نشده. محصولاتتان را برایم بنویسید، فایل بفرستید، "
             "یا لینک گوگل شیت/داک را بفرستید."
         )
     out_of_stock = sum(1 for p in rows if p.stock == 0)
@@ -718,6 +756,13 @@ async def _on_callback(h: _Bot, query: dict[str, Any]) -> None:
     data = str(query.get("data") or "")
     message = query.get("message") or {}
     chat_id = int((message.get("chat") or {}).get("id") or user_id)
+    if data.startswith("ops:"):
+        notice = await ops_bot.on_callback(h, query)
+        try:
+            await h.client.answer_callback(h.token, str(query.get("id") or ""), notice)
+        except TelegramError:
+            pass
+        return
     action, _, raw_id = data.partition(":")
     notice = ""
     admin = await _admin_for(h, user_id)
@@ -1155,6 +1200,12 @@ async def _admin_for(h: _Bot, user_id: int) -> TelegramAdmin | None:
     if admin is None:
         return None
     if h.bot.shop_id is not None and admin.shop_id != h.bot.shop_id:
+        return None
+    # A suspended account (ops panel) can't manage its shop from the bot either.
+    owner_active = await h.db.scalar(
+        select(User.is_active).join(Shop, Shop.owner_id == User.id).where(Shop.id == admin.shop_id)
+    )
+    if not owner_active:
         return None
     return admin
 

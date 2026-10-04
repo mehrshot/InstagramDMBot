@@ -24,6 +24,7 @@ const Bale = lazy(() => import("./pages/Bale"));
 const Billing = lazy(() => import("./pages/Billing"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Unanswered = lazy(() => import("./pages/Unanswered"));
 const Privacy = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Terms })));
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
         {/* the emailed link; works logged in or out */}
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* "/" is the public site for visitors and the dashboard once logged in */}
         {!loggedIn && <Route index element={<Landing />} />}

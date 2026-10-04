@@ -62,7 +62,7 @@ class ProductOrigin(enum.StrEnum):
     MANUAL = "manual"  # typed in the panel or edited by hand
     SHEET = "sheet"  # a live Google Sheet; re-synced, so edit it in the sheet
     FILE = "file"  # an uploaded Excel/CSV table
-    TEACH = "teach"  # understood by the AI from text, a voice note, a document or a link
+    TEACH = "teach"  # understood by the AI from text, a document or a link
     TELEGRAM_POST = "telegram_post"  # a product post in the shop's Telegram channel
 
 

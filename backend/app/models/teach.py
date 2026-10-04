@@ -18,8 +18,8 @@ class ProposalStatus(enum.StrEnum):
 class TeachProposal(UUIDPk, Timestamps, Base):
     """What the AI understood from something the owner taught it, waiting for their OK.
 
-    The owner can teach Javab in any form (typed text, a voice note, a Google Doc link, a
-    file, a channel post); all of them become a proposal of product and knowledge changes
+    The owner can teach Javab in any form (typed text, a Google Doc link, a file, a photo,
+    a channel post); all of them become a proposal of product and knowledge changes
     that the owner confirms in the panel or with a button in Telegram.
     """
 
@@ -28,9 +28,9 @@ class TeachProposal(UUIDPk, Timestamps, Base):
     shop_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("shops.id", ondelete="CASCADE"), index=True
     )
-    # text | voice | url | file | telegram_post | photo
+    # text | url | file | telegram_post | photo
     source: Mapped[str] = mapped_column(String(32))
-    # Short description of the input for the owner ("صوت ۴۲ ثانیه‌ای", the link, file name).
+    # Short description of the input for the owner (the link, the file name).
     source_label: Mapped[str] = mapped_column(String(500), default="")
     status: Mapped[ProposalStatus] = mapped_column(
         str_enum(ProposalStatus), default=ProposalStatus.PENDING

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -67,4 +68,8 @@ class UserOut(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    email_verified_at: datetime | None
+    # Verified mobile number (+98912...), or null.
+    phone: str | None
+    phone_verified_at: datetime | None
     shop: ShopOut

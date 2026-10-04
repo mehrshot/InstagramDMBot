@@ -60,10 +60,6 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 700
     llm_temperature: float = 0.3
 
-    # Optional speech-to-text model for voice messages the owner sends the Telegram bot
-    # (OpenAI-compatible /audio/transcriptions). Empty: voice notes are not understood.
-    llm_transcribe_model: str = ""
-
     # Per-shop limits.
     knowledge_char_limit: int = 40_000
     product_row_limit: int = 2_000
@@ -97,11 +93,13 @@ class Settings(BaseSettings):
 
     # Billing: shops top up a wallet and every AI answer is paid from it. Amounts in rial.
     billing_enabled: bool = True
+    # The sign-up gift (500,000 rial = 50,000 toman). Given once, only after the owner links
+    # their Telegram/Bale account, and (when required) verifies their mobile number.
     signup_credit_rial: int = 500_000
+    signup_gift_requires_phone: bool = True
     usage_rial_per_1k_prompt_tokens: int = 300
     usage_rial_per_1k_completion_tokens: int = 1_200
     usage_min_rial_per_reply: int = 500
-    usage_rial_per_voice_minute: int = 1_000
     # The owner is told once the balance drops below this.
     low_balance_rial: int = 100_000
     # Monthly fees of the plans above "basic" (paid from the wallet every 30 days).
@@ -110,7 +108,18 @@ class Settings(BaseSettings):
     topup_min_rial: int = 500_000
     topup_max_rial: int = 500_000_000
 
-    # Zarinpal payment gateway, for wallet top-ups.
+    # Wallet top-ups: "aban" (Aban Gateway, card-to-card confirmed automatically from the bank
+    # SMS; no e-Namad needed) or "zarinpal".
+    payment_gateway: str = "aban"
+    # Aban Gateway: API token (ag_live_… or ag_test_… for testing without money) and the
+    # webhook secret, both from its panel (Settings → API tokens / Webhook).
+    aban_api_token: str = ""
+    aban_webhook_secret: str = ""
+    aban_api_base: str = "https://api.abangateway.ir"
+    # How long an Aban invoice stays payable.
+    aban_invoice_minutes: int = 30
+
+    # Zarinpal payment gateway (alternative).
     zarinpal_merchant_id: str = ""
     zarinpal_sandbox: bool = False
 
@@ -122,15 +131,41 @@ class Settings(BaseSettings):
     smtp_from: str = "Javab <no-reply@javab.app>"
     smtp_starttls: bool = True
     password_reset_minutes: int = 30
+    email_verify_days: int = 7
+
+    # SMS for verifying mobile numbers: "kavenegar" or "smsir" (both send a code with a
+    # template approved in their panel). Empty: codes are only logged (development).
+    sms_provider: str = ""
+    sms_api_key: str = ""
+    # Kavenegar: the template name; SMS.ir: the template id. The template has one
+    # parameter, the code (Kavenegar: %token, SMS.ir: CODE).
+    sms_template: str = ""
+    phone_code_minutes: int = 10
+
+    # Wrong passwords: after this many failures for one email (or 4x for one IP) within the
+    # window, logging in is refused until the window passes.
+    login_max_failures: int = 5
+    login_failure_window_minutes: int = 15
 
     # Error monitoring: Sentry (or a Sentry-compatible service such as GlitchTip), and/or
     # error alerts sent by the shared Telegram bot to an operations chat.
     sentry_dsn: str = ""
     ops_telegram_chat_id: str = ""
+    # Telegram user ids of the team (comma separated): the shared Telegram bot gives them the
+    # admin panel (/ops). Get your id from @userinfobot.
+    ops_admin_telegram_ids: str = ""
 
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def ops_admin_ids(self) -> set[int]:
+        ids = set()
+        for part in self.ops_admin_telegram_ids.replace(" ", "").split(","):
+            if part.lstrip("-").isdigit():
+                ids.add(int(part))
+        return ids
 
     @property
     def llm_configured(self) -> bool:

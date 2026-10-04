@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CreditCard, History, Layers, Wallet } from "lucide-react";
 import { api } from "../api/client";
@@ -14,12 +14,18 @@ export default function Billing() {
   const { t } = useI18n();
   const B = t.launch.billing;
   const [params, setParams] = useSearchParams();
-  const billing = useQuery({ queryKey: keys.billing, queryFn: () => api<BillingData>("/billing") });
-
-  // back from the payment gateway: ?payment=success&ref=… | ?payment=failed
+  // back from the payment gateway: ?payment=success[&ref=…] | ?payment=pending | ?payment=failed
   const payment = params.get("payment");
   const ref = params.get("ref") ?? "";
   const [notice] = useState(payment);
+  // Card-to-card (Aban): the bank SMS may confirm it a few seconds after the owner is back,
+  // so keep checking the balance for a couple of minutes.
+  const [watchUntil] = useState(() => (payment === "pending" ? Date.now() + 120_000 : 0));
+  const billing = useQuery({
+    queryKey: keys.billing,
+    queryFn: () => api<BillingData>("/billing"),
+    refetchInterval: () => (Date.now() < watchUntil ? 5_000 : false),
+  });
   useEffect(() => {
     if (payment) setParams({}, { replace: true });
   }, [payment, setParams]);
@@ -44,7 +50,8 @@ export default function Billing() {
   return (
     <div className="max-w-5xl space-y-6">
       {header}
-      {notice === "success" && <Alert kind="success">{B.paymentSuccess(ref)}</Alert>}
+      {notice === "success" && <Alert kind="success">{ref ? B.paymentSuccess(ref) : B.paymentSuccessNoRef}</Alert>}
+      {notice === "pending" && <Alert kind="info">{B.paymentPending}</Alert>}
       {notice === "failed" && <Alert kind="error">{B.paymentFailed}</Alert>}
       {!b.enabled && <Alert kind="info">{B.disabled}</Alert>}
 
@@ -118,6 +125,13 @@ function Topup({ b }: { b: BillingData }) {
             <Button type="submit" loading={pay.isPending} disabled={!value || value < b.topup_min_toman || value > b.topup_max_toman}>
               {pay.isPending ? B.redirecting : B.pay}
             </Button>
+            {b.gateway === "aban" && <p className="text-sm leading-6 text-slate-600">{B.cardToCardHint}</p>}
+            <p className="text-xs text-slate-500">
+              {B.nonRefundable}{" "}
+              <Link to="/terms#wallet" className="font-medium text-brand-700 hover:underline">
+                {B.termsLink}
+              </Link>
+            </p>
           </form>
         )}
       </div>
@@ -219,7 +233,6 @@ function Pricing({ b }: { b: BillingData }) {
         <li>{B.pricingAnswer}</li>
         <li>{B.perAnswer(f.num(b.pricing.typical_answer_toman))}</li>
         <li>{B.pricingMin(f.num(b.pricing.min_per_answer_toman))}</li>
-        <li>{B.pricingVoice(f.num(b.pricing.per_voice_minute_toman))}</li>
       </ul>
     </Card>
   );

@@ -254,6 +254,67 @@
         }
       }
     },
+    "/api/v1/auth/email/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Email",
+        "description": "The link from the verification email (the panel's /verify-email page calls this).",
+        "operationId": "verify_email_api_v1_auth_email_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email/resend": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Resend Verification",
+        "operationId": "resend_verification_api_v1_auth_email_resend_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -405,6 +466,99 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ShopOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/phone": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Start Phone Verification",
+        "description": "Text a 6-digit code to this mobile number.",
+        "operationId": "start_phone_verification_api_v1_me_phone_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneStartOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/phone/verify": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Confirm Phone",
+        "operationId": "confirm_phone_api_v1_me_phone_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneVerifiedOut"
                 }
               }
             }
@@ -3390,6 +3544,10 @@
             "type": "boolean",
             "title": "Topup Available"
           },
+          "gateway": {
+            "type": "string",
+            "title": "Gateway"
+          },
           "topup_min_toman": {
             "type": "integer",
             "title": "Topup Min Toman"
@@ -3410,6 +3568,7 @@
           "plans",
           "pricing",
           "topup_available",
+          "gateway",
           "topup_min_toman",
           "topup_max_toman"
         ],
@@ -4122,6 +4281,40 @@
         ],
         "title": "ForgotPasswordRequest"
       },
+      "GiftStatus": {
+        "properties": {
+          "amount_toman": {
+            "type": "integer",
+            "title": "Amount Toman"
+          },
+          "granted": {
+            "type": "boolean",
+            "title": "Granted"
+          },
+          "messenger_linked": {
+            "type": "boolean",
+            "title": "Messenger Linked"
+          },
+          "phone_required": {
+            "type": "boolean",
+            "title": "Phone Required"
+          },
+          "phone_verified": {
+            "type": "boolean",
+            "title": "Phone Verified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount_toman",
+          "granted",
+          "messenger_linked",
+          "phone_required",
+          "phone_verified"
+        ],
+        "title": "GiftStatus",
+        "description": "The sign-up gift: given once the owner links Telegram/Bale (+ verifies their phone)."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4552,6 +4745,72 @@
         "type": "object",
         "title": "PauseIn"
       },
+      "PhoneConfirm": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 12,
+            "minLength": 4,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "PhoneConfirm"
+      },
+      "PhoneStart": {
+        "properties": {
+          "phone": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone"
+        ],
+        "title": "PhoneStart"
+      },
+      "PhoneStartOut": {
+        "properties": {
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone",
+          "minutes"
+        ],
+        "title": "PhoneStartOut"
+      },
+      "PhoneVerifiedOut": {
+        "properties": {
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "gift_toman": {
+            "type": "integer",
+            "title": "Gift Toman"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone",
+          "gift_toman"
+        ],
+        "title": "PhoneVerifiedOut"
+      },
       "Plan": {
         "type": "string",
         "enum": [
@@ -4880,10 +5139,6 @@
             "type": "number",
             "title": "Min Per Answer Toman"
           },
-          "per_voice_minute_toman": {
-            "type": "number",
-            "title": "Per Voice Minute Toman"
-          },
           "typical_answer_toman": {
             "type": "integer",
             "title": "Typical Answer Toman"
@@ -4894,7 +5149,6 @@
           "per_1k_prompt_tokens_toman",
           "per_1k_completion_tokens_toman",
           "min_per_answer_toman",
-          "per_voice_minute_toman",
           "typical_answer_toman"
         ],
         "title": "PricingOut",
@@ -6316,6 +6570,41 @@
             "type": "string",
             "title": "Full Name"
           },
+          "email_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified At"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "phone_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Verified At"
+          },
           "shop": {
             "$ref": "#/components/schemas/ShopOut"
           }
@@ -6325,6 +6614,9 @@
           "id",
           "email",
           "full_name",
+          "email_verified_at",
+          "phone",
+          "phone_verified_at",
           "shop"
         ],
         "title": "UserOut"
@@ -6368,6 +6660,21 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyEmailRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "VerifyEmailRequest"
       },
       "WalletEntryKind": {
         "type": "string",
@@ -6463,6 +6770,9 @@
           "plan": {
             "type": "string",
             "title": "Plan"
+          },
+          "gift": {
+            "$ref": "#/components/schemas/GiftStatus"
           }
         },
         "type": "object",
@@ -6470,7 +6780,8 @@
           "enabled",
           "balance_toman",
           "low_balance",
-          "plan"
+          "plan",
+          "gift"
         ],
         "title": "WalletStatus"
       }

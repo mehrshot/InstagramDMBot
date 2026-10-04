@@ -1,26 +1,32 @@
+import asyncio
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import DbSession
+from app.api.deps import CurrentUser, DbSession, HttpClient
 from app.core.config import get_settings
 from app.core.security import (
     TokenError,
+    create_email_verify_token,
     create_password_reset_token,
     create_token,
     decode_token,
+    email_token_matches,
     hash_password,
+    read_email_verify_token,
     read_password_reset_token,
     reset_token_matches,
     verify_password,
 )
-from app.models import Shop, User, WalletEntryKind
+from app.core.throttle import Throttle, minutes_text
+from app.core.timeutil import utcnow
+from app.models import Shop, User
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenPair
-from app.services import billing
+from app.services import ops
 from app.services.email import send_email
 
 logger = logging.getLogger(__name__)
@@ -29,6 +35,32 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # One reset email per address per minute, so the endpoint can't be used to spam someone.
 _RESET_INTERVAL_SECONDS = 60
 _last_reset_request: dict[str, float] = {}
+# Wrong passwords, per email and per IP (an IP may be shared, e.g. an office, so it gets more).
+_login_failures_email = Throttle(5, 15 * 60)
+_login_failures_ip = Throttle(20, 15 * 60)
+# Verification emails: one per minute and five per day per account.
+_verify_email_minute = Throttle(1, 60)
+_verify_email_day = Throttle(5, 24 * 3600)
+
+
+def configure_login_throttle() -> None:
+    """Apply LOGIN_MAX_FAILURES / LOGIN_FAILURE_WINDOW_MINUTES (and reset the counters)."""
+    settings = get_settings()
+    window = settings.login_failure_window_minutes * 60
+    for throttle, limit in (
+        (_login_failures_email, settings.login_max_failures),
+        (_login_failures_ip, settings.login_max_failures * 4),
+    ):
+        throttle.limit = limit
+        throttle.window = window
+        throttle.clear()
+
+
+configure_login_throttle()
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=10, max_length=2000)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -57,7 +89,7 @@ def _tokens_for(user: User) -> TokenPair:
 
 
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, db: DbSession) -> TokenPair:
+async def register(body: RegisterRequest, db: DbSession, http: HttpClient) -> TokenPair:
     email_taken = HTTPException(status.HTTP_409_CONFLICT, "این ایمیل قبلا ثبت شده است")
     if await db.scalar(select(User.id).where(User.email == body.email)):
         raise email_taken
@@ -74,19 +106,38 @@ async def register(body: RegisterRequest, db: DbSession) -> TokenPair:
     except IntegrityError:  # concurrent registration with the same email
         await db.rollback()
         raise email_taken from None
-    credit = get_settings().signup_credit_rial
-    if billing.enabled() and credit > 0:
-        await billing.apply(db, user.shop, credit, WalletEntryKind.BONUS, "هدیه‌ی ثبت‌نام")
+    # No credit yet: the sign-up gift comes after linking Telegram/Bale (services/gifts.py).
+    await _send_verification(user)
+    try:
+        await asyncio.wait_for(ops.new_signup(db, http, user, user.shop), timeout=5)
+    except Exception:
+        logger.warning("could not announce the sign-up of %s", user.id)
     return _tokens_for(user)
 
 
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "?"
+
+
 @router.post("/login", response_model=TokenPair)
-async def login(body: LoginRequest, db: DbSession) -> TokenPair:
+async def login(body: LoginRequest, request: Request, db: DbSession) -> TokenPair:
+    ip = _client_ip(request)
+    for throttle, key in ((_login_failures_email, body.email), (_login_failures_ip, ip)):
+        if throttle.blocked(key):
+            wait = minutes_text(throttle.retry_after(key))
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                f"چند بار رمز اشتباه وارد شد. {wait} دیگر دوباره امتحان کنید "
+                "یا از «فراموشی رمز» استفاده کنید.",
+            )
     user = await db.scalar(select(User).where(User.email == body.email))
     if user is None or not verify_password(body.password, user.password_hash):
+        _login_failures_email.hit(body.email)
+        _login_failures_ip.hit(ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "ایمیل یا رمز عبور اشتباه است")
     if not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "حساب کاربری غیرفعال است")
+    _login_failures_email.reset(body.email)
     return _tokens_for(user)
 
 
@@ -156,3 +207,56 @@ async def reset_password(body: ResetPasswordRequest, db: DbSession) -> None:
         raise invalid  # already used: the password changed since the link was made
     user.password_hash = hash_password(body.new_password)
     await db.commit()
+
+
+async def _send_verification(user: User) -> None:
+    settings = get_settings()
+    token = create_email_verify_token(user.id, user.email)
+    link = f"{settings.frontend_url.rstrip('/')}/verify-email?token={token}"
+    try:
+        await send_email(
+            user.email,
+            "تأیید ایمیل «جواب»",
+            "سلام،\n\nبه «جواب» خوش آمدید! برای تأیید ایمیلتان روی این لینک بزنید:\n"
+            f"{link}\n\n"
+            f"این لینک {settings.email_verify_days} روز کار می‌کند. اگر شما در «جواب» "
+            "ثبت‌نام نکرده‌اید، این ایمیل را نادیده بگیرید.\n\n«جواب»",
+        )
+    except Exception:
+        logger.exception("could not send the verification email")
+
+
+@router.post("/email/verify", status_code=status.HTTP_204_NO_CONTENT)
+async def verify_email(body: VerifyEmailRequest, db: DbSession) -> None:
+    """The link from the verification email (the panel's /verify-email page calls this)."""
+    invalid = HTTPException(
+        status.HTTP_400_BAD_REQUEST,
+        "لینک تأیید نامعتبر است یا منقضی شده. از پنل دوباره درخواست بدهید.",
+    )
+    try:
+        user_id, fingerprint = read_email_verify_token(body.token)
+    except TokenError:
+        raise invalid from None
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active or not email_token_matches(fingerprint, user.email):
+        raise invalid
+    if user.email_verified_at is None:
+        user.email_verified_at = utcnow()
+        await db.commit()
+
+
+@router.post("/email/resend", status_code=status.HTTP_202_ACCEPTED)
+async def resend_verification(user: CurrentUser) -> ForgotPasswordOut:
+    if user.email_verified_at is not None:
+        return ForgotPasswordOut(message="ایمیل شما قبلا تأیید شده است.")
+    key = str(user.id)
+    for throttle in (_verify_email_minute, _verify_email_day):
+        if throttle.blocked(key):
+            wait = minutes_text(throttle.retry_after(key))
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS, f"لطفا {wait} دیگر دوباره درخواست بدهید."
+            )
+    _verify_email_minute.hit(key)
+    _verify_email_day.hit(key)
+    await _send_verification(user)
+    return ForgotPasswordOut(message=f"لینک تأیید به {user.email} فرستاده شد.")

@@ -20,7 +20,16 @@ from app.core.monitoring import setup_monitoring
 from app.core.queue import ArqQueue
 from app.core.timeutil import utcnow
 from app.models import InstagramAccount, ProposalStatus, TeachProposal, TelegramBot
-from app.services import billing, instagram_accounts, messaging, posts, products, telegram_bot
+from app.services import (
+    billing,
+    instagram_accounts,
+    messaging,
+    ops,
+    payments,
+    posts,
+    products,
+    telegram_bot,
+)
 from app.services.instagram import InstagramClient, InstagramError
 from app.services.llm import LLMClient, LLMError
 from app.services.notify import TelegramNotifier
@@ -128,6 +137,15 @@ async def renew_plans(ctx: dict[str, Any]) -> None:
                 logger.exception("could not tell shop %s about its plan", shop.id)
 
 
+async def reconcile_payments(ctx: dict[str, Any]) -> None:
+    """Credit Aban top-ups whose webhook never arrived (a safety net, not the main path)."""
+    async with SessionLocal() as db:
+        gateway = payments.AbanGateway(ctx["http"])
+        for payment in await payments.reconcile_aban(db, gateway):
+            logger.warning("payment %s credited by the periodic check", payment.id)
+            await ops.topup_paid(db, ctx["http"], payment)
+
+
 async def drop_stale_proposals(ctx: dict[str, Any]) -> None:
     async with SessionLocal() as db:
         await db.execute(
@@ -164,6 +182,7 @@ class WorkerSettings:
         cron(sync_instagram_posts, hour={4}, minute={30}),
         cron(sync_product_sheets, minute=set(range(0, 60, 5))),
         cron(renew_plans, minute={15}),
+        cron(reconcile_payments, minute=set(range(3, 60, 10))),
         cron(drop_stale_proposals, hour={2}, minute={45}),
     ]
     on_startup = startup

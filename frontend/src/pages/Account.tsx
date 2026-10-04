@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { KeyRound, Languages, Store, SunMoon, Trash, TriangleAlert, UserRound } from "lucide-react";
 import { api } from "../api/client";
 import { useMe } from "../api/queries";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/toast";
+import { VerificationCard } from "../components/verify";
 import { Alert, Button, Card, CardHeader, ConfirmDialog, Field, IconChip, Input, Modal, PageHeader, PageLoading, Tabs } from "../components/ui";
 import { useI18n, type Lang } from "../i18n";
 import { errorMessage, fieldError } from "../lib/errors";
@@ -14,6 +16,15 @@ export default function Account() {
   const { t, lang, setLang } = useI18n();
   const { choice, setChoice } = useTheme();
   const { data: me, isPending, error } = useMe();
+  const { hash } = useLocation();
+
+  // /account#phone (from the gift card): bring the phone form into view once it's rendered.
+  useEffect(() => {
+    if (!me || !hash) return;
+    // after the app's own scroll-to-top on navigation
+    const timer = setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+    return () => clearTimeout(timer);
+  }, [me, hash]);
 
   const header = <PageHeader icon={<UserRound />} title={t.account.title} />;
   if (isPending)
@@ -84,6 +95,7 @@ export default function Account() {
           </div>
         </Card>
 
+        <VerificationCard me={me} />
         <ChangePassword />
         <DeleteAccount />
       </div>

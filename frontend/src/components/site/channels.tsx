@@ -2,16 +2,16 @@ import { cx } from "../ui";
 
 // Messaging channels Javab works on. Marks are single-colour (currentColor) so all four sit in
 // the same style: Instagram, WhatsApp and Telegram from Simple Icons (CC0), Bale from bale.ai.
-// Only Instagram is connected in the product today; flip `live` as each channel ships.
+// Telegram and Bale are live; Instagram waits for Meta's approval. Flip `live` as it ships.
 
 export type ChannelKey = "instagram" | "whatsapp" | "telegram" | "bale";
 
 export const CHANNELS: { key: ChannelKey; live: boolean }[] = [
   { key: "telegram", live: true },
+  { key: "bale", live: true },
   { key: "instagram", live: false },
   // WhatsApp is off: its Business Platform rejects +98 numbers (docs/channels-plan.md).
   // { key: "whatsapp", live: false },
-  { key: "bale", live: true },
 ];
 
 const PATHS: Record<ChannelKey, { viewBox: string; d: string }> = {

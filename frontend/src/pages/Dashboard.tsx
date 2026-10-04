@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import { keys, useDashboard, useMe } from "../api/queries";
 import type { Shop } from "../api/types";
 import { useToast } from "../components/toast";
+import { EmailNotVerified, GiftCard } from "../components/verify";
 import { Alert, Card, CardHeader, ConfirmDialog, IconChip, LinkButton, PageLoading, Toggle, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
@@ -109,9 +110,11 @@ export default function Dashboard() {
         </Alert>
       )}
       {!s.ai_ready && <Alert kind="info">{t.dashboard.alertAi}</Alert>}
+      {me && <EmailNotVerified me={me} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
+          <GiftCard gift={data.wallet.gift} />
           {!allDone && <Checklist steps={steps} botOn={s.bot_enabled} setBot={setBot} busy={toggleBot.isPending} />}
 
           {/* A brand-new shop sees only the checklist, not a wall of zeros. */}

@@ -158,8 +158,13 @@ class TelegramClient:
         business_connection_id: str | None = None,
         reply_markup: dict[str, Any] | None = None,
         disable_preview: bool = False,
+        html: bool = False,
     ) -> int:
-        """Send a text message; returns its message_id. `text` must fit MAX_TEXT_LENGTH."""
+        """Send a text message; returns its message_id. `text` must fit MAX_TEXT_LENGTH.
+
+        With `html`, the text uses Telegram's HTML subset (<b>, <i>, <code>…); escape anything
+        that comes from users.
+        """
         payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
         if business_connection_id:
             payload["business_connection_id"] = business_connection_id
@@ -167,8 +172,32 @@ class TelegramClient:
             payload["reply_markup"] = reply_markup
         if disable_preview:
             payload["link_preview_options"] = {"is_disabled": True}
+        if html:
+            payload["parse_mode"] = "HTML"
         data = await self._call(token, "sendMessage", payload)
         return int(data.get("message_id", 0))
+
+    async def edit_message_text(
+        self,
+        token: str,
+        chat_id: int | str,
+        message_id: int,
+        text: str,
+        *,
+        reply_markup: dict[str, Any] | None = None,
+        html: bool = False,
+    ) -> None:
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "link_preview_options": {"is_disabled": True},
+        }
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
+        if html:
+            payload["parse_mode"] = "HTML"
+        await self._call(token, "editMessageText", payload)
 
     async def send_photo(
         self,
@@ -227,7 +256,7 @@ class TelegramClient:
         )
 
     async def download_file(self, token: str, file_id: str, max_bytes: int) -> bytes:
-        """Download a file the user sent (voice note, document, photo)."""
+        """Download a file the user sent (a document, a photo)."""
         info = await self._call(token, "getFile", {"file_id": file_id}, allow_dry_run=False)
         size = info.get("file_size")
         if isinstance(size, int) and size > max_bytes:

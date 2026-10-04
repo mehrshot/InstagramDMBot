@@ -1,19 +1,24 @@
 """The shop's wallet (pay as you go), plans, and top-ups through the payment gateway."""
 
+import asyncio
+import json
+import logging
 import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentShop, DbSession, HttpClient
 from app.core.config import get_settings
-from app.models import Plan, WalletEntry, WalletEntryKind
-from app.services import billing, payments
-from app.services.payments import PaymentError, Zarinpal
+from app.models import Payment, PaymentStatus, Plan, WalletEntry, WalletEntryKind
+from app.services import billing, ops, payments
+from app.services.payments import AbanGateway, PaymentError, Zarinpal
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -31,7 +36,6 @@ class PricingOut(BaseModel):
     per_1k_prompt_tokens_toman: float
     per_1k_completion_tokens_toman: float
     min_per_answer_toman: float
-    per_voice_minute_toman: float
     # A typical answer for a shop with a mid-size catalogue, to set expectations.
     typical_answer_toman: int
 
@@ -49,6 +53,8 @@ class BillingOut(BaseModel):
     pricing: PricingOut
     # Whether online top-up (payment gateway) is available.
     topup_available: bool
+    # "aban" (card-to-card with automatic confirmation) or "zarinpal".
+    gateway: str
     topup_min_toman: int
     topup_max_toman: int
 
@@ -79,18 +85,27 @@ class TopupIn(BaseModel):
 
 
 class TopupOut(BaseModel):
-    # Send the browser here; after paying, Zarinpal returns the owner to FRONTEND_URL/billing
-    # with ?payment=success&ref=<bank reference> or ?payment=failed.
+    # Send the browser here; after paying, the owner comes back to FRONTEND_URL/billing with
+    # ?payment=success, ?payment=pending (card-to-card not confirmed yet) or ?payment=failed.
     payment_url: str
 
 
-def get_gateway(http: HttpClient) -> Zarinpal:
+def get_gateway(http: HttpClient) -> AbanGateway | Zarinpal:
+    return payments.gateway_for(http)
+
+
+def get_zarinpal(http: HttpClient) -> Zarinpal:
     return Zarinpal(http)
 
 
+def get_aban(http: HttpClient) -> AbanGateway:
+    return AbanGateway(http)
+
+
 @router.get("", response_model=BillingOut)
-async def get_billing(shop: CurrentShop) -> BillingOut:
+async def get_billing(shop: CurrentShop, http: HttpClient) -> BillingOut:
     settings = get_settings()
+    gateway = payments.gateway_for(http)
     return BillingOut(
         enabled=billing.enabled(),
         balance_toman=shop.balance_rial // 10,
@@ -111,10 +126,10 @@ async def get_billing(shop: CurrentShop) -> BillingOut:
             per_1k_prompt_tokens_toman=settings.usage_rial_per_1k_prompt_tokens / 10,
             per_1k_completion_tokens_toman=settings.usage_rial_per_1k_completion_tokens / 10,
             min_per_answer_toman=settings.usage_min_rial_per_reply / 10,
-            per_voice_minute_toman=settings.usage_rial_per_voice_minute / 10,
             typical_answer_toman=billing.usage_cost(4000, 150) // 10,
         ),
-        topup_available=bool(settings.zarinpal_merchant_id),
+        topup_available=gateway.configured,
+        gateway=gateway.name,
         topup_min_toman=settings.topup_min_rial // 10,
         topup_max_toman=settings.topup_max_rial // 10,
     )
@@ -154,7 +169,9 @@ async def list_entries(
 
 
 @router.post("/plan", response_model=BillingOut)
-async def change_plan(body: PlanChange, shop: CurrentShop, db: DbSession) -> BillingOut:
+async def change_plan(
+    body: PlanChange, shop: CurrentShop, db: DbSession, http: HttpClient
+) -> BillingOut:
     """Upgrade (starts now, the month's fee is paid from the wallet) or downgrade (applies
     when the paid month ends)."""
     try:
@@ -162,7 +179,7 @@ async def change_plan(body: PlanChange, shop: CurrentShop, db: DbSession) -> Bil
     except billing.BillingError as exc:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
     await db.refresh(shop)
-    return await get_billing(shop)
+    return await get_billing(shop, http)
 
 
 @router.post("/topup", response_model=TopupOut)
@@ -170,7 +187,7 @@ async def topup(
     body: TopupIn,
     shop: CurrentShop,
     db: DbSession,
-    gateway: Zarinpal = Depends(get_gateway),
+    gateway: AbanGateway | Zarinpal = Depends(get_gateway),
 ) -> TopupOut:
     try:
         url = await payments.start_topup(db, shop, body.amount_toman * 10, gateway)
@@ -179,20 +196,88 @@ async def topup(
     return TopupOut(payment_url=url)
 
 
+async def _after_topup(db: DbSession, http: HttpClient, payment: Payment) -> None:
+    """Tell the owner and the team, without holding the gateway's request for long."""
+    try:
+        await asyncio.wait_for(ops.topup_paid(db, http, payment), timeout=10)
+    except Exception:
+        logger.exception("could not announce payment %s", payment.id)
+
+
+@router.post("/aban/webhook", include_in_schema=False)
+async def aban_webhook(
+    request: Request,
+    db: DbSession,
+    http: HttpClient,
+    gateway: AbanGateway = Depends(get_aban),
+) -> Response:
+    """Aban Gateway reports invoice changes here, signed with our webhook secret."""
+    raw = await request.body()
+    if not gateway.signature_ok(raw, request.headers.get("x-signature", "")):
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+    try:
+        event = json.loads(raw)
+    except ValueError:
+        return Response(status_code=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(event, dict):
+        return Response(status_code=status.HTTP_400_BAD_REQUEST)
+    try:
+        credited = await payments.aban_webhook(db, event, gateway)
+    except PaymentError:
+        # Aban retries; verifying can succeed then.
+        return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+    if credited is not None:
+        await _after_topup(db, http, credited)
+    return Response(status_code=status.HTTP_200_OK)
+
+
+@router.get("/aban/return/{payment_id}", include_in_schema=False)
+async def aban_return(
+    payment_id: uuid.UUID,
+    db: DbSession,
+    http: HttpClient,
+    gateway: AbanGateway = Depends(get_aban),
+) -> RedirectResponse:
+    """The owner's browser comes back here from Aban's payment page."""
+    panel = f"{get_settings().frontend_url.rstrip('/')}/billing"
+    payment = await db.get(Payment, payment_id)
+    if payment is None or payment.gateway != "aban":
+        return RedirectResponse(f"{panel}?payment=failed")
+    if payment.status == PaymentStatus.PENDING:
+        try:
+            if await payments.settle_aban(db, payment, gateway):
+                await _after_topup(db, http, payment)
+        except PaymentError:
+            pass
+    if payment.status == PaymentStatus.PAID:
+        return RedirectResponse(f"{panel}?payment=success")
+    if payment.status == PaymentStatus.PENDING:
+        # Card-to-card: the bank SMS may arrive a little later; the webhook will credit it.
+        return RedirectResponse(f"{panel}?payment=pending")
+    return RedirectResponse(f"{panel}?payment=failed")
+
+
 @router.get("/zarinpal/callback", include_in_schema=False)
 async def zarinpal_callback(
     db: DbSession,
-    gateway: Zarinpal = Depends(get_gateway),
+    http: HttpClient,
+    gateway: Zarinpal = Depends(get_zarinpal),
     authority: str = Query(alias="Authority", default=""),
     payment_status: str = Query(alias="Status", default=""),
 ) -> RedirectResponse:
     """Zarinpal sends the owner's browser here after paying; we verify and go to the panel."""
     panel = f"{get_settings().frontend_url.rstrip('/')}/billing"
+    was_pending = authority != "" and (
+        await db.scalar(select(Payment.status).where(Payment.authority == authority))
+        == PaymentStatus.PENDING
+    )
     payment = (
         await payments.complete_topup(db, authority, payment_status == "OK", gateway)
         if authority
         else None
     )
     if payment is not None and payment.status.value == "paid":
+        if was_pending:
+            await _after_topup(db, http, payment)
         return RedirectResponse(f"{panel}?payment=success&ref={payment.ref_id or ''}")
     return RedirectResponse(f"{panel}?payment=failed")

@@ -10,6 +10,7 @@ from datetime import timedelta
 
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.security import encrypt_secret, hash_password
 from app.core.timeutil import utcnow
@@ -33,7 +34,8 @@ from app.services.accounts import delete_user
 
 EMAIL = "demo@shop.ir"
 PASSWORD = "demopass123"
-DEMO_CREDIT_RIAL = 5_000_000  # 500,000 toman
+# The same credit a new shop gets as its gift (50,000 toman by default).
+DEMO_CREDIT_RIAL = get_settings().signup_credit_rial
 
 KNOWLEDGE = [
     (KnowledgeSection.ABOUT, "", "مزون مهسا، تولیدکننده‌ی مانتو و شومیز زنانه از سال ۱۳۹۸."),
@@ -111,14 +113,23 @@ async def main() -> None:
         if old is not None:
             await delete_user(db, old)
 
-        user = User(email=EMAIL, password_hash=hash_password(PASSWORD), full_name="مهسا")
+        now = utcnow()
+        user = User(
+            email=EMAIL,
+            password_hash=hash_password(PASSWORD),
+            full_name="مهسا",
+            email_verified_at=now,
+        )
         user.shop = Shop(
-            name="مزون مهسا", slug="demo-mahsa", bot_enabled=True, balance_rial=DEMO_CREDIT_RIAL
+            name="مزون مهسا",
+            slug="demo-mahsa",
+            bot_enabled=True,
+            balance_rial=DEMO_CREDIT_RIAL,
+            signup_gift_at=now,
         )
         db.add(user)
         await db.flush()
         shop_id = user.shop.id
-        now = utcnow()
 
         db.add(
             InstagramAccount(
@@ -150,7 +161,7 @@ async def main() -> None:
                 kind=WalletEntryKind.BONUS,
                 amount_rial=DEMO_CREDIT_RIAL,
                 balance_after_rial=DEMO_CREDIT_RIAL,
-                description="هدیه‌ی ثبت‌نام",
+                description="هدیه‌ی شروع کار",
                 details={},
             )
         )

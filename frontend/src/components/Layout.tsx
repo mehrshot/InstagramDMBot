@@ -5,6 +5,7 @@ import {
   BookOpen,
   Camera,
   FlaskConical,
+  Gift,
   HelpCircle,
   Inbox,
   Languages,
@@ -39,6 +40,8 @@ export default function Layout() {
   const { t, f } = useI18n();
   const { data: me } = useMe();
   const { data: dash } = useDashboard();
+  const gift = dash?.wallet.gift;
+  const giftWaiting = !!dash?.wallet.enabled && !!gift && !gift.granted && gift.amount_toman > 0;
   const [drawer, setDrawer] = useState(false);
   const location = useLocation();
 
@@ -96,7 +99,18 @@ export default function Layout() {
       <main className="min-w-0 flex-1 pb-[var(--chrome-bottom)]">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
           {/* pages load on demand; the shell stays put meanwhile */}
-          {dash?.wallet.enabled && dash.wallet.low_balance && location.pathname !== "/billing" && (
+          {giftWaiting && location.pathname !== "/" && (
+            <Link
+              to="/"
+              className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-ink-900 ring-1 ring-brand-100 transition-colors hover:bg-brand-100"
+            >
+              <Gift className="size-5 shrink-0 text-brand-600" aria-hidden />
+              <span className="min-w-0 flex-1">{t.launch.gift.banner(f.num(gift.amount_toman))}</span>
+              <span className="font-bold text-brand-700">{t.launch.gift.bannerAction}</span>
+            </Link>
+          )}
+          {/* a brand-new shop has no credit yet: the gift banner/card says how to get it instead */}
+          {dash?.wallet.enabled && dash.wallet.low_balance && !giftWaiting && location.pathname !== "/billing" && (
             <Link
               to="/billing"
               className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 transition-colors hover:bg-amber-100"

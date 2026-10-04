@@ -178,8 +178,8 @@ function Roles() {
 }
 
 /**
- * The messaging channels Javab works on, as four identical tiles. Only Instagram is connected
- * in the product today, so the others say "coming soon" instead of offering a dead button.
+ * The messaging channels Javab works on, as identical tiles. Channels that aren't connected in
+ * the product yet say "coming soon" instead of offering a dead button.
  */
 function Channels() {
   const { t } = useI18n();
@@ -187,7 +187,7 @@ function Channels() {
   return (
     <Section id="channels" tone="tint" compact>
       <SectionHeader id="channels" eyebrow={C.eyebrow} title={C.title} lead={C.lead} />
-      <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <ul className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         {CHANNELS.map(({ key, live }, i) => {
           const name = C.names[key];
           return (

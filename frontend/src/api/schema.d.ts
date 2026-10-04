@@ -127,6 +127,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Email
+         * @description The link from the verification email (the panel's /verify-email page calls this).
+         */
+        post: operations["verify_email_api_v1_auth_email_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Verification */
+        post: operations["resend_verification_api_v1_auth_email_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -181,6 +218,43 @@ export interface paths {
         head?: never;
         /** Update Shop */
         patch: operations["update_shop_api_v1_shop_patch"];
+        trace?: never;
+    };
+    "/api/v1/me/phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Phone Verification
+         * @description Text a 6-digit code to this mobile number.
+         */
+        post: operations["start_phone_verification_api_v1_me_phone_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/phone/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Phone */
+        post: operations["confirm_phone_api_v1_me_phone_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/instagram": {
@@ -1276,6 +1350,8 @@ export interface components {
             pricing: components["schemas"]["PricingOut"];
             /** Topup Available */
             topup_available: boolean;
+            /** Gateway */
+            gateway: string;
             /** Topup Min Toman */
             topup_min_toman: number;
             /** Topup Max Toman */
@@ -1516,6 +1592,22 @@ export interface components {
              */
             email: string;
         };
+        /**
+         * GiftStatus
+         * @description The sign-up gift: given once the owner links Telegram/Bale (+ verifies their phone).
+         */
+        GiftStatus: {
+            /** Amount Toman */
+            amount_toman: number;
+            /** Granted */
+            granted: boolean;
+            /** Messenger Linked */
+            messenger_linked: boolean;
+            /** Phone Required */
+            phone_required: boolean;
+            /** Phone Verified */
+            phone_verified: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1678,6 +1770,30 @@ export interface components {
             /** Minutes */
             minutes?: number | null;
         };
+        /** PhoneConfirm */
+        PhoneConfirm: {
+            /** Code */
+            code: string;
+        };
+        /** PhoneStart */
+        PhoneStart: {
+            /** Phone */
+            phone: string;
+        };
+        /** PhoneStartOut */
+        PhoneStartOut: {
+            /** Phone */
+            phone: string;
+            /** Minutes */
+            minutes: number;
+        };
+        /** PhoneVerifiedOut */
+        PhoneVerifiedOut: {
+            /** Phone */
+            phone: string;
+            /** Gift Toman */
+            gift_toman: number;
+        };
         /**
          * Plan
          * @description What a shop pays for on top of usage. Usage (AI answers) costs the same on every plan.
@@ -1794,8 +1910,6 @@ export interface components {
             per_1k_completion_tokens_toman: number;
             /** Min Per Answer Toman */
             min_per_answer_toman: number;
-            /** Per Voice Minute Toman */
-            per_voice_minute_toman: number;
             /** Typical Answer Toman */
             typical_answer_toman: number;
         };
@@ -2266,6 +2380,12 @@ export interface components {
             email: string;
             /** Full Name */
             full_name: string;
+            /** Email Verified At */
+            email_verified_at: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Phone Verified At */
+            phone_verified_at: string | null;
             shop: components["schemas"]["ShopOut"];
         };
         /** ValidationError */
@@ -2280,6 +2400,11 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerifyEmailRequest */
+        VerifyEmailRequest: {
+            /** Token */
+            token: string;
         };
         /**
          * WalletEntryKind
@@ -2327,6 +2452,7 @@ export interface components {
             low_balance: boolean;
             /** Plan */
             plan: string;
+            gift: components["schemas"]["GiftStatus"];
         };
     };
     responses: never;
@@ -2544,6 +2670,57 @@ export interface operations {
             };
         };
     };
+    verify_email_api_v1_auth_email_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_verification_api_v1_auth_email_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordOut"];
+                };
+            };
+        };
+    };
     me_api_v1_me_get: {
         parameters: {
             query?: never;
@@ -2666,6 +2843,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShopOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_phone_verification_api_v1_me_phone_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhoneStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneStartOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_phone_api_v1_me_phone_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhoneConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneVerifiedOut"];
                 };
             };
             /** @description Validation Error */
