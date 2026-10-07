@@ -21,20 +21,22 @@
 
 ## فهرست
 
-- [«جواب» چیست](#جواب-چیست)
-- [همه‌ی قابلیت‌ها](#همهی-قابلیتها)
-- [چطور کار می‌کند](#چطور-کار-میکند)
-- [اجرا روی کامپیوتر خودتان، قدم‌به‌قدم](#اجرا-روی-کامپیوتر-خودتان-قدمبهقدم)
-- [کار با ربات](#کار-با-ربات)
-- [همه‌ی تنظیمات `.env`](#همهی-تنظیمات-env)
-- [نصب روی سرور](#نصب-روی-سرور)
-- [اسکریپت‌های کمکی](#اسکریپتهای-کمکی)
-- [ساختار پروژه](#ساختار-پروژه)
-- [تست‌ها](#تستها)
-- [مستندات بیشتر](#مستندات-بیشتر)
-- [وضعیت و قدم‌های بعدی](#وضعیت-و-قدمهای-بعدی)
+- [«جواب» چیست](#about)
+- [همه‌ی قابلیت‌ها](#features)
+- [چطور کار می‌کند](#how)
+- [اجرا روی کامپیوتر خودتان، قدم‌به‌قدم](#setup)
+- [کار با ربات](#bot)
+- [همه‌ی تنظیمات `.env`](#env)
+- [نصب روی سرور](#deploy)
+- [اسکریپت‌های کمکی](#scripts)
+- [ساختار پروژه](#structure)
+- [تست‌ها](#tests)
+- [مستندات بیشتر](#docs)
+- [وضعیت و قدم‌های بعدی](#status)
 
 ---
+
+<a id="about"></a>
 
 ## «جواب» چیست
 
@@ -51,6 +53,8 @@
 | 💬 واتس‌اپ | ❌ فعلا نه: پلتفرم واتس‌اپ شماره‌های ایران را نمی‌پذیرد |
 
 ---
+
+<a id="features"></a>
 
 ## همه‌ی قابلیت‌ها
 
@@ -113,6 +117,8 @@
 - قیمت‌ها و پلن‌ها زنده از تنظیمات سرور خوانده می‌شوند.
 - **ضد اسپم:** سهمیه‌ی روزانه برای مهمان، کاربر واردشده، هر IP و کل مهمان‌ها، که با **یک حلقه** کنار گفتگو نشان داده می‌شود. مهمانی که سهمیه‌اش تمام شود به ساخت حساب رایگان دعوت می‌شود.
 
+<a id="ops"></a>
+
 ### 🛠 پنل مدیریت تیم داخل ربات (`/ops`)
 اعضای تیم در ربات تلگرام «جواب» دستور `/ops` را می‌فرستند و یک پنل کامل می‌گیرند که در یک پیام، با دکمه‌ها، جابه‌جا می‌شود:
 - **🏠 خانه:**
@@ -132,6 +138,8 @@
 - پشتیبان خودکار دیتابیس هر چند ساعت، با یک نسخه‌ی رمزشده در تلگرام تیم.
 
 ---
+
+<a id="how"></a>
 
 ## چطور کار می‌کند
 
@@ -159,11 +167,13 @@ flowchart LR
 
 ---
 
+<a id="setup"></a>
+
 ## اجرا روی کامپیوتر خودتان، قدم‌به‌قدم
 
 ### قدم ۰: پیش‌نیازها
 - [uv](https://docs.astral.sh/uv/) برای پایتون
-- [Node.js 20+](https://nodejs.org/) برای پنل
+- [Node.js](https://nodejs.org/) نسخه‌ی ۲۰ یا بالاتر برای پنل
 - اگر تلگرام فیلتر است، فیلترشکن روشن. بله فیلترشکن نمی‌خواهد.
 
 به Docker و Redis روی کامپیوتر خودتان نیازی نیست.
@@ -182,24 +192,26 @@ uv sync
 
 <div dir="rtl">
 
+<a id="step-env"></a>
+
 ### قدم ۲: ساخت فایل `backend/.env`
-یک فایل به اسم `.env` داخل پوشه‌ی `backend` بسازید و این‌ها را در آن بگذارید (توضیح هر کدام در [جدول تنظیمات](#همهی-تنظیمات-env) آمده):
+یک فایل به اسم `.env` داخل پوشه‌ی `backend` بسازید و این‌ها را در آن بگذارید (توضیح هر کدام در [جدول تنظیمات](#env) آمده):
 
 </div>
 
 ```env
 DATABASE_URL=sqlite+aiosqlite:///./dev.db
 QUEUE_BACKEND=inline
-SECRET_KEY=یک-رشته‌ی-تصادفی-حداقل-۳۲-حرفی
-ENCRYPTION_KEY=خروجی-دستور-پایین
+SECRET_KEY=<a random string, 32+ characters>
+ENCRYPTION_KEY=<output of the command below>
 
 LLM_BASE_URL=https://api.avalai.ir/v1
-LLM_API_KEY=کلید-AvalAI
+LLM_API_KEY=<your AvalAI key>
 LLM_MODEL=gpt-6-luna
 
-TELEGRAM_BOT_TOKEN=توکن-از-BotFather
-BALE_BOT_TOKEN=توکن-از-botfather-بله
-OPS_ADMIN_TELEGRAM_IDS=شناسه‌ی-تلگرام-شما,شناسه‌ی-علی
+TELEGRAM_BOT_TOKEN=<token from @BotFather>
+BALE_BOT_TOKEN=<token from Bale's @botfather>
+OPS_ADMIN_TELEGRAM_IDS=<your Telegram id>,<Ali's Telegram id>
 ```
 
 <div dir="rtl">
@@ -294,7 +306,7 @@ uv run python -m scripts.telegram_poll
 </div>
 
 ```bash
-uv run python -m scripts.seed_house --email ایمیل-حساب-تیم
+uv run python -m scripts.seed_house --email team@example.com
 ```
 
 <div dir="rtl">
@@ -302,6 +314,8 @@ uv run python -m scripts.seed_house --email ایمیل-حساب-تیم
 فروشگاه خود «جواب» را با اطلاعات اولیه می‌سازد. اگر حسابی با آن ایمیل نباشد ساخته می‌شود و رمزش یک بار نمایش داده می‌شود. بعد بخش «از خود جواب بپرسید» در صفحه‌ی اول سایت کار می‌کند. با همان حساب وارد پنل شوید تا اطلاعاتش را کامل کنید و تلگرام تیم را وصل کنید.
 
 ---
+
+<a id="bot"></a>
 
 ## کار با ربات
 
@@ -324,16 +338,18 @@ uv run python -m scripts.seed_house --email ایمیل-حساب-تیم
 | `/cancel` | لغو کار در جریان (مثلا جواب دادن به مشتری) |
 | هر متن، فایل، عکس، لینک یا پست فورواردشده | یاد دادن به ربات؛ خلاصه با دکمه‌های «✅ ثبت کن» و «❌ بی‌خیال» |
 
-**ربات اختصاصی:** در @BotFather ربات بسازید و توکنش را در صفحه‌ی تلگرام یا بله‌ی پنل بگذارید (پلن حرفه‌ای).
+**ربات اختصاصی:** در BotFather ربات بسازید و توکنش را در صفحه‌ی تلگرام یا بله‌ی پنل بگذارید (پلن حرفه‌ای).
 
-**جواب از اکانت شخصی (Telegram Business):** در تلگرام، Settings ← Telegram Business (در نسخه‌های جدید Chat Automation) ← Chatbots، و یوزرنیم ربات را اضافه کنید (پلن بیزینس). برای ربات مشترک باید در @BotFather گزینه‌ی **Bot Settings ← Secretary Mode** (اسم قبلی‌اش Business Mode) روشن باشد.
+**جواب از اکانت شخصی (Telegram Business):** در تلگرام، Settings ← Telegram Business (در نسخه‌های جدید Chat Automation) ← Chatbots، و یوزرنیم ربات را اضافه کنید (پلن بیزینس). برای ربات مشترک باید در BotFather گزینه‌ی **Bot Settings ← Secretary Mode** (اسم قبلی‌اش Business Mode) روشن باشد.
 
 **کانال تلگرام:** ربات را ادمین کانال کنید (فقط اجازه‌ی Post messages) تا پست‌های محصول جدید خودکار ثبت شوند.
 
 ### برای تیم «جواب»
-`/ops` یا `/panel` در ربات تلگرام، فقط برای شناسه‌های `OPS_ADMIN_TELEGRAM_IDS`. جزئیاتش در [پنل مدیریت تیم](#-پنل-مدیریت-تیم-داخل-ربات-ops).
+`/ops` یا `/panel` در ربات تلگرام، فقط برای شناسه‌های `OPS_ADMIN_TELEGRAM_IDS`. جزئیاتش در [پنل مدیریت تیم](#ops).
 
 ---
+
+<a id="env"></a>
 
 ## همه‌ی تنظیمات `.env`
 
@@ -364,7 +380,7 @@ uv run python -m scripts.seed_house --email ایمیل-حساب-تیم
 | متغیر | کاربرد | از کجا می‌آید | لازم؟ |
 |---|---|---|---|
 | `SECRET_KEY` | امضای توکن‌های ورود و لینک‌های ایمیل | `python -c "import secrets; print(secrets.token_urlsafe(48))"` | ✅ |
-| `ENCRYPTION_KEY` | رمزنگاری توکن ربات‌ها و اتصال‌ها در دیتابیس. **عوض کردن یا گم کردنش، توکن‌های ذخیره‌شده را غیرقابل خواندن می‌کند** | دستور Fernet در [قدم ۲](#قدم-۲-ساخت-فایل-backendenv) | ✅ |
+| `ENCRYPTION_KEY` | رمزنگاری توکن ربات‌ها و اتصال‌ها در دیتابیس. **عوض کردن یا گم کردنش، توکن‌های ذخیره‌شده را غیرقابل خواندن می‌کند** | دستور Fernet در [قدم ۲](#step-env) | ✅ |
 
 ### 🧠 هوش مصنوعی
 
@@ -383,10 +399,10 @@ uv run python -m scripts.seed_house --email ایمیل-حساب-تیم
 
 | متغیر | کاربرد | از کجا می‌آید | لازم؟ |
 |---|---|---|---|
-| `TELEGRAM_BOT_TOKEN` | ربات مشترک «جواب» در تلگرام | تلگرام ← @BotFather ← `/newbot` | ✅ |
-| `BALE_BOT_TOKEN` | ربات مشترک «جواب» در بله | اپ بله ← @botfather ← `/newbot` | برای بله |
-| `OPS_ADMIN_TELEGRAM_IDS` | شناسه‌ی عددی اعضای تیم (با کاما جدا) برای پنل `/ops` | به @userinfobot در تلگرام پیام بدهید | توصیه‌شده |
-| `OPS_TELEGRAM_CHAT_ID` | گروه تلگرام تیم برای هشدار خطا، پشتیبان‌ها و خبر ثبت‌نام و پرداخت | ربات را عضو گروه کنید و شناسه‌ی گروه را از @userinfobot بگیرید | توصیه‌شده |
+| `TELEGRAM_BOT_TOKEN` | ربات مشترک «جواب» در تلگرام | تلگرام ← BotFather ← `/newbot` | ✅ |
+| `BALE_BOT_TOKEN` | ربات مشترک «جواب» در بله | اپ بله ← botfather ← `/newbot` | برای بله |
+| `OPS_ADMIN_TELEGRAM_IDS` | شناسه‌ی عددی اعضای تیم (با کاما جدا) برای پنل `/ops` | به userinfobot در تلگرام پیام بدهید | توصیه‌شده |
+| `OPS_TELEGRAM_CHAT_ID` | گروه تلگرام تیم برای هشدار خطا، پشتیبان‌ها و خبر ثبت‌نام و پرداخت | ربات را عضو گروه کنید و شناسه‌ی گروه را از userinfobot بگیرید | توصیه‌شده |
 
 ### 💳 کیف پول و قیمت‌ها (همه به **ریال**؛ هر تومان ۱۰ ریال)
 
@@ -466,6 +482,8 @@ uv run python -m scripts.seed_house --email ایمیل-حساب-تیم
 
 ---
 
+<a id="deploy"></a>
+
 ## نصب روی سرور
 
 یک سرور لینوکس با Docker، مثلا یک VPS در اروپا، و دو زیردامنه که رکورد A آن‌ها به IP سرور اشاره کند (برای API و پنل).
@@ -486,7 +504,7 @@ cp .env.example .env
 
 <div dir="rtl">
 
-فایل `.env` را طبق [جدول بالا](#همهی-تنظیمات-env) پر کنید، بعد:
+فایل `.env` را طبق [جدول بالا](#env) پر کنید، بعد:
 
 </div>
 
@@ -512,11 +530,11 @@ docker compose up -d --build
 </div>
 
 ```bash
-docker compose exec api python -m scripts.seed_house --email ایمیل-حساب-تیم
+docker compose exec api python -m scripts.seed_house --email team@example.com
 ```
 
 ```bash
-docker compose exec api python -m scripts.send_test_email ایمیل-خودتان
+docker compose exec api python -m scripts.send_test_email you@example.com
 ```
 
 <div dir="rtl">
@@ -532,6 +550,8 @@ git pull && docker compose up -d --build
 <div dir="rtl">
 
 ---
+
+<a id="scripts"></a>
 
 ## اسکریپت‌های کمکی
 
@@ -549,6 +569,8 @@ git pull && docker compose up -d --build
 | `export_openapi` | خروجی گرفتن از قرارداد API در `docs/openapi.json` |
 
 ---
+
+<a id="structure"></a>
 
 ## ساختار پروژه
 
@@ -584,6 +606,8 @@ docker-compose.yml
 
 ---
 
+<a id="tests"></a>
+
 ## تست‌ها
 
 </div>
@@ -614,6 +638,8 @@ npm run build
 
 ---
 
+<a id="docs"></a>
+
 ## مستندات بیشتر
 
 | سند | محتوا |
@@ -629,6 +655,8 @@ npm run build
 مستندات تعاملی API روی هر سرور در `/docs` در دسترس است.
 
 ---
+
+<a id="status"></a>
 
 ## وضعیت و قدم‌های بعدی
 
