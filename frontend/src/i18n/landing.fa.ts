@@ -11,6 +11,7 @@ const landing = {
     roles: "قابلیت‌ها",
     channels: "کانال‌ها",
     how: "راه‌اندازی",
+    ask: "بپرسید",
     faq: "سوال‌ها",
     login: "ورود",
     start: "ساخت حساب",

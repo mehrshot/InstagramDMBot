@@ -19,7 +19,12 @@ from app.services.telegram import MAX_TEXT_LENGTH, TelegramClient, TelegramError
 
 logger = logging.getLogger(__name__)
 
-CHANNEL_LABELS = {Channel.INSTAGRAM: "اینستاگرام", Channel.TELEGRAM: "تلگرام", Channel.BALE: "بله"}
+CHANNEL_LABELS = {
+    Channel.INSTAGRAM: "اینستاگرام",
+    Channel.TELEGRAM: "تلگرام",
+    Channel.BALE: "بله",
+    Channel.WEB: "سایت",
+}
 
 
 def channel_label(conversation: Conversation) -> str:

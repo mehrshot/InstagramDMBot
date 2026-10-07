@@ -12,6 +12,7 @@ const launch: Dict["launch"] = {
     instagram: "Instagram",
     telegram: "Telegram",
     bale: "Bale",
+    web: "Website",
     business: "Your Telegram account",
     openIn: (channel) => `Open in ${channel}`,
   },
@@ -266,6 +267,35 @@ const launch: Dict["launch"] = {
     },
   },
 
+  ask: {
+    botName: "Javab assistant",
+    status: "Online · the same bot that works for your shop",
+    empty: "Ask anything about Javab, and see how the bot answers while you're at it.",
+    suggestions: ["What exactly does Javab do?", "How much does it cost?", "How do I connect Telegram?", "What if the bot doesn't know the answer?"],
+    placeholder: "Type your question…",
+    send: "Send",
+    typing: "Typing",
+    team: "Javab team",
+    waiting: "Your question went to the Javab team; their answer will appear here.",
+    unavailable: "The assistant will be available here soon.",
+    ringLabel: (percent, answers) => `${percent}% of today's allowance left (about ${answers} more answers)`,
+    ringEmpty: "Today's allowance is used up",
+    guestHint: "As a guest you have a smaller daily allowance; a free account gives you more.",
+    guestLimit: "Today's guest allowance is used up. Create a free account (one minute) to continue.",
+    memberLimit: (time) => `You've used today's allowance; it opens again at ${time}.`,
+    signUp: "Create a free account",
+    logIn: "Log in",
+    launcher: "Ask about Javab",
+    sectionEyebrow: "Try it",
+    sectionTitle: "Ask Javab itself",
+    sectionLead: "This chat is answered by the same bot that will work for your shop; we use Javab to answer your questions too.",
+    sectionPoints: [
+      "It answers only from what we've taught it; it never guesses",
+      "What it doesn't know goes to our team, and our answer appears right here",
+      "It politely turns away unrelated questions so your credit isn't wasted",
+    ],
+  },
+
   signupTerms: {
     before: "By creating an account you accept Javab's ",
     terms: "Terms of Service",
@@ -296,6 +326,7 @@ const launch: Dict["launch"] = {
     done: "Your email is verified. Thanks!",
     toPanel: "Go to the panel",
     noToken: "The link is incomplete. Ask for a new one in the panel (Account).",
+    sentAfterSignup: (email) => `Welcome! We sent a verification link to ${email}.`,
   },
 
   gift: {

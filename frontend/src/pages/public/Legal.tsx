@@ -136,6 +136,13 @@ const privacy: Page = {
           هوشمند آگاه کند.
         </p>
 
+        <h3>گفتگو با دستیار «جواب» در سایت</h3>
+        <p>
+          اگر در سایت ما با دستیار «جواب» گفتگو کنید، متن پیام‌ها، یک شناسه‌ی تصادفی که مرورگرتان نگه می‌دارد (و اگر وارد شده باشید، حسابتان) ذخیره می‌شود تا
+          گفتگو ادامه پیدا کند و تیم ما بتواند به سوال‌هایی که ربات نمی‌داند جواب بدهد. برای جلوگیری از سوءاستفاده، مقدار مصرف روزانه به‌همراه نشانی IP شما
+          شمرده می‌شود و این شمارنده‌ها حداکثر ۷ روز نگه داشته می‌شوند.
+        </p>
+
         <h3>اینستاگرام (پس از فعال شدن)</h3>
         <p>
           وقتی اتصال اینستاگرام فعال شود و فروشگاهی پیج حرفه‌ای خود را از مسیر رسمی متا وصل کند، این‌ها را هم دریافت می‌کنیم: پیام‌های دایرکت آن پیج و جواب‌ها
@@ -266,6 +273,13 @@ const privacy: Page = {
           </li>
         </ul>
         <p>This data belongs to that shop and only that shop's owner sees it in their panel. The shop is responsible for letting its customers know an AI assistant is used.</p>
+
+        <h3>Chatting with the Javab assistant on our website</h3>
+        <p>
+          If you chat with the Javab assistant on our website, the messages, a random ID your browser keeps (and your account, if you're logged in) are stored so the
+          conversation can continue and our team can answer what the bot doesn't know. To prevent abuse, daily usage is counted together with your IP address; these
+          counters are kept for at most 7 days.
+        </p>
 
         <h3>Instagram (once enabled)</h3>
         <p>

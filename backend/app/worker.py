@@ -19,7 +19,13 @@ from app.core.database import SessionLocal
 from app.core.monitoring import setup_monitoring
 from app.core.queue import ArqQueue
 from app.core.timeutil import utcnow
-from app.models import InstagramAccount, ProposalStatus, TeachProposal, TelegramBot
+from app.models import (
+    InstagramAccount,
+    ProposalStatus,
+    SiteChatUsage,
+    TeachProposal,
+    TelegramBot,
+)
 from app.services import (
     billing,
     instagram_accounts,
@@ -153,6 +159,10 @@ async def drop_stale_proposals(ctx: dict[str, Any]) -> None:
                 TeachProposal.status == ProposalStatus.PENDING,
                 TeachProposal.created_at < utcnow() - PROPOSAL_LIFETIME,
             )
+        )
+        # The website chat's daily counters (they include visitors' IP addresses).
+        await db.execute(
+            delete(SiteChatUsage).where(SiteChatUsage.created_at < utcnow() - timedelta(days=7))
         )
         await db.commit()
 

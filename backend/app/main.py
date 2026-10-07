@@ -19,6 +19,7 @@ from app.api.routes import (
     instagram,
     knowledge,
     products,
+    site,
     teach,
     telegram,
     webhooks,
@@ -107,6 +108,7 @@ def create_app() -> FastAPI:
         conversations,
         dashboard,
         billing,
+        site,
     ):
         app.include_router(module.router, prefix=api_prefix)
     app.include_router(telegram.bale_router, prefix=api_prefix)

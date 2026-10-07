@@ -10,6 +10,7 @@ const landing: Dict["landing"] = {
     roles: "Capabilities",
     channels: "Channels",
     how: "Setup",
+    ask: "Ask",
     faq: "FAQ",
     login: "Log in",
     start: "Create account",

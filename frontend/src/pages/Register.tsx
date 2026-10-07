@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import AuthShell from "../components/AuthShell";
+import { useToast } from "../components/toast";
 import { Alert, Button, Field, Input } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage, fieldError } from "../lib/errors";
@@ -11,6 +12,7 @@ export default function Register() {
   const { t } = useI18n();
   const { register } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState({ email: "", password: "", full_name: "", shop_name: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -30,6 +32,7 @@ export default function Register() {
         shop_name: form.shop_name.trim(),
         ...(form.full_name.trim() ? { full_name: form.full_name.trim() } : {}),
       });
+      toast.success(t.launch.verify.sentAfterSignup(form.email.trim()));
       navigate("/", { replace: true });
     } catch (err) {
       setError(err);

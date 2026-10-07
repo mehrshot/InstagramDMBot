@@ -6,7 +6,8 @@ that into a `ChannelSender` that can send text and product posts there.
 
     Instagram account ─┐                     ┌─► InstagramSender (Graph API)
     shared/custom bot ─┼─► Conversation ─────┼─► TelegramSender (Telegram or Bale Bot API)
-    Telegram Business ─┘                     └─► TelegramSender (business_connection_id)
+    Telegram Business ─┤                     ├─► TelegramSender (business_connection_id)
+    website widget ────┘                     └─► WebSender (stored; the widget reads it)
 """
 
 import logging
@@ -245,6 +246,24 @@ def plan_allows(shop: Shop, conversation_ref: str, bot: TelegramBot | None = Non
     return True
 
 
+class WebSender:
+    """The website chat widget: nothing is pushed anywhere. Messages are stored like on any
+    channel, and the widget shows them (it asks for new ones while it's open)."""
+
+    channel = Channel.WEB
+    reply_window = None
+    max_text_length = 4000
+
+    async def send_text(self, text: str) -> str:
+        return f"web:{uuid.uuid4()}"
+
+    async def send_post(self, post: PostLink) -> str:
+        return f"web:{uuid.uuid4()}"
+
+    async def typing(self) -> None:
+        return None
+
+
 async def sender_for(
     db: AsyncSession, shop: Shop, conversation: Conversation, gateways: Gateways
 ) -> ChannelSender | None:
@@ -284,6 +303,9 @@ async def sender_for(
             logger.info("shop %s plan doesn't include %s", shop.id, conversation.channel_ref)
             return None
         return TelegramSender(db, bot, gateways.telegram, int(conversation.customer_id), business)
+
+    if conversation.channel == Channel.WEB:
+        return WebSender()
 
     return None
 

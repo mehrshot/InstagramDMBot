@@ -51,7 +51,7 @@ from app.models import (
     TelegramSession,
     User,
 )
-from app.services import billing, gifts, messaging, ops_bot, phone, teach
+from app.services import billing, gifts, messaging, ops_bot, phone, site_chat, teach
 from app.services.channels import (
     PLANS_FOR_BUSINESS,
     Gateways,
@@ -267,12 +267,30 @@ async def _on_start(
         if shop is not None:
             await h.send(chat_id, _welcome(shop))
             return
+    house = await site_chat.house_shop(h.db) if h.bot.is_shared else None
+    if house is not None:
+        # No shop link: Javab's own assistant answers questions about Javab.
+        session.shop_id = house.id
+        session.mode = "customer"
+        await h.db.commit()
+        await h.send(chat_id, _house_welcome())
+        return
     await h.send(
         chat_id,
         "سلام! 👋 این ربات «جواب» است؛ دستیار هوشمند فروشگاه‌های آنلاین.\n\n"
         "• اگر مشتری یک فروشگاه هستید، از لینکی که فروشگاه گذاشته وارد شوید.\n"
         f"• اگر صاحب فروشگاه هستید، از پنل «جواب» ({get_settings().frontend_url}) "
         "بخش تلگرام، حسابتان را وصل کنید.",
+    )
+
+
+def _house_welcome() -> str:
+    return (
+        "سلام! 👋 من دستیار هوشمند «جواب» هستم. هر سوالی درباره‌ی «جواب» دارید بپرسید: "
+        "چه کار می‌کند، قیمت‌ها، راه‌اندازی، تلگرام و بله…\n\n"
+        "• مشتری یک فروشگاه هستید؟ از لینکی که خود فروشگاه گذاشته وارد شوید.\n"
+        f"• صاحب فروشگاه هستید؟ از پنل «جواب» ({get_settings().frontend_url}) حسابتان را وصل "
+        "کنید."
     )
 
 
@@ -884,6 +902,8 @@ async def _on_customer_message(
             await h.db.commit()
             await h.send(chat_id, _welcome(shop))
             return
+        shop = await site_chat.house_shop(h.db) if h.bot.is_shared else None
+    if shop is None:
         await h.send(
             chat_id,
             "برای گفتگو با یک فروشگاه، از لینکی که خود فروشگاه گذاشته وارد شوید یا کد "

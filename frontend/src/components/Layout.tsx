@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useDashboard, useMe } from "../api/queries";
+import { AskJavabLauncher } from "./AskJavab";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n";
 import { useHandoffWatcher } from "../lib/notifications";
@@ -128,6 +129,7 @@ export default function Layout() {
         </div>
       </main>
 
+      {location.pathname !== "/playground" && <AskJavabLauncher />}
       <BottomTabs handoffs={dash?.open_handoffs} onMore={() => setDrawer(true)} />
       <Drawer open={drawer} onClose={() => setDrawer(false)} groups={groups} />
     </div>

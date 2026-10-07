@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Globe } from "lucide-react";
 import type { Channel } from "../api/types";
 import { useI18n } from "../i18n";
 import { ChannelMark } from "./site/channels";
@@ -7,6 +7,7 @@ import { Button, cx } from "./ui";
 
 /** The channel's logo in its own colour, for conversation lists and headers. */
 export function ChannelIcon({ channel, className }: { channel: Channel; className?: string }) {
+  if (channel === "web") return <Globe aria-hidden className={cx("size-3.5 shrink-0 text-brand-600", className)} />;
   const tone = channel === "telegram" ? "text-sky-500" : channel === "bale" ? "text-emerald-500" : "text-pink-600";
   return <ChannelMark channel={channel} className={cx("size-3.5", tone, className)} />;
 }
@@ -17,6 +18,7 @@ export function useChannelLabel() {
   return (channel: Channel, business?: boolean) => {
     if (channel === "telegram") return business ? t.launch.channel.business : t.launch.channel.telegram;
     if (channel === "bale") return t.launch.channel.bale;
+    if (channel === "web") return t.launch.channel.web;
     return t.launch.channel.instagram;
   };
 }

@@ -16,6 +16,7 @@ from app.models.knowledge import (
     ProductSource,
     ProductSourceKind,
 )
+from app.models.site import SiteChatUsage
 from app.models.teach import ProposalStatus, TeachProposal
 from app.models.telegram import (
     TelegramAdmin,
@@ -48,6 +49,7 @@ __all__ = [
     "ProductSourceKind",
     "ProposalStatus",
     "Shop",
+    "SiteChatUsage",
     "TeachProposal",
     "TelegramAdmin",
     "TelegramBot",

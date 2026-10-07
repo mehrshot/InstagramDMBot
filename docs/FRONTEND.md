@@ -686,6 +686,8 @@ cd backend && uv run python -m scripts.export_openapi
 - **شماره:** `POST /me/phone` با `{phone}` → `{phone, minutes}` و پیامک کد؛ `POST /me/phone/verify` با `{code}` → `{phone, gift_toman}` (اگر همین تأیید هدیه را آزاد کرد، `gift_toman > 0`). خطاها `400`/`429` با پیام فارسی. راه دوم: دکمه‌ی «📱 تأیید شماره موبایل» در ربات.
 - **ورود:** بعد از چند رمز اشتباه، `POST /auth/login` پاسخ `429` با پیام فارسی (چند دقیقه صبر) می‌دهد.
 - **پرداخت با آبان گیت‌وی (کارت‌به‌کارت):** `GET /billing` حالا `gateway` (`"aban"` یا `"zarinpal"`) دارد. برگشت از درگاه: `?payment=success` (شاید بدون `ref`)، `?payment=pending` (پیامک بانک هنوز نرسیده؛ پنل تا دو دقیقه هر ۵ ثانیه موجودی را دوباره می‌خواند) یا `?payment=failed`. برای `aban` زیر فرم شارژ توضیح کارت‌به‌کارت (واریز دقیق همان مبلغ) آمده است.
+- **کانال تازه‌ی `web`:** گفتگوهای ویجت سایت `channel: "web"` دارند (آیکن کره، برچسب «سایت»).
+- **ویجت «از خود جواب بپرسید»:** `components/AskJavab.tsx`. `GET /site/chat?visitor=<uuid>` و `POST /site/chat` با `{visitor, text}` (عمومی؛ اگر توکن باشد سهمیه‌ی کاربر واردشده). پاسخ: `{available, messages[], quota: {tier, used_tokens, limit_tokens, left_percent, answers_left, exhausted, resets_at}, waiting_for_team}`. وقتی `waiting_for_team` است هر ۵ ثانیه دوباره بخوان (جواب تیم با `sender: "owner"` می‌آید). `429` یعنی سهمیه یا سرعت. در لندینگ بخش `#ask` و در پنل دکمه‌ی شناور.
 - **حقوقی:** `/privacy`، `/terms` (بخش `#wallet`: اعتبار قابل استرداد نیست) و `/data-deletion` بازنویسی شدند. فرم ثبت‌نام و فرم شارژ به آن‌ها لینک دارند.
 
 ### ۱۱.۹ سایت عمومی

@@ -94,8 +94,13 @@ def usage_cost(prompt_tokens: int, completion_tokens: int) -> int:
     return max(math.ceil(cost), settings.usage_min_rial_per_reply)
 
 
+def is_house(shop: Shop) -> bool:
+    """Javab's own shop (the website assistant): it answers for us and is never charged."""
+    return bool(shop.slug) and shop.slug == get_settings().site_assistant_shop_slug
+
+
 def can_spend(shop: Shop) -> bool:
-    return not enabled() or shop.balance_rial > 0
+    return not enabled() or is_house(shop) or shop.balance_rial > 0
 
 
 async def apply(
@@ -147,7 +152,7 @@ async def charge_usage(
     details: dict[str, Any] | None = None,
 ) -> bool:
     """Deduct one AI answer. Returns True when the owner should now be told the balance is low."""
-    if not enabled() or not (prompt_tokens or completion_tokens):
+    if not enabled() or is_house(shop) or not (prompt_tokens or completion_tokens):
         return False
     prompt, completion = prompt_tokens or 0, completion_tokens or 0
     cost = usage_cost(prompt, completion)
@@ -266,3 +271,38 @@ async def renew_plans(db: AsyncSession) -> list[tuple[Shop, str]]:
 def toman(rial: int) -> str:
     """Rial amount as a Persian-friendly toman string: "۱۲٬۵۰۰ تومان"."""
     return f"{rial // 10:,} تومان".replace(",", "٬")
+
+
+def house_facts() -> str:
+    """Live prices and plans for Javab's own assistant, so it never quotes stale numbers."""
+    settings = get_settings()
+    lines = [
+        "CURRENT PRICES AND PLANS OF JAVAB (always up to date; prefer these over any other numbers)"
+    ]
+    if not settings.billing_enabled:
+        lines.append("- Javab is free to use right now (billing is switched off).")
+    else:
+        lines.append(
+            f"- Pay as you go: each bot answer costs about {toman(usage_cost(4000, 150))} "
+            f"(at least {toman(settings.usage_min_rial_per_reply)}); it depends on how much "
+            "text the AI reads and writes. Off-topic questions customers ask are not charged."
+        )
+        lines.append(
+            f"- Wallet top-up between {toman(settings.topup_min_rial)} and "
+            f"{toman(settings.topup_max_rial)}; credit is non-refundable."
+        )
+        gift = settings.signup_credit_rial
+        if gift:
+            condition = (
+                "after linking their Telegram or Bale account and verifying their mobile number"
+                if settings.signup_gift_requires_phone
+                else "after linking their Telegram or Bale account"
+            )
+            lines.append(
+                f"- New shops get {toman(gift)} of gift credit {condition}, once per person."
+            )
+    for info in PLANS.values():
+        fee = plan_fee(info.key)
+        price = f"{toman(fee)} a month" if fee else "no monthly fee"
+        lines.append(f"- Plan «{info.label}» ({price}): " + "؛ ".join(info.features))
+    return "\n".join(lines)

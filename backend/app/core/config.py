@@ -90,6 +90,22 @@ class Settings(BaseSettings):
 
     # A safety net against one chatty customer (or a spammer) draining a shop's wallet.
     max_bot_replies_per_customer_hour: int = 30
+    # Questions unrelated to the shop (weather, homework, jokes) get a short canned reply
+    # instead of a full AI answer, and aren't charged; after this many in a row the bot stays
+    # silent until the customer asks about the shop again. A small, cheap AI call decides
+    # when a message doesn't obviously look like a shopping question.
+    off_topic_guard: bool = True
+    off_topic_max_replies: int = 2
+    # Optional cheaper model for that check; empty = LLM_MODEL.
+    llm_triage_model: str = ""
+
+    # Javab's own assistant on the website ("ask Javab"), answered by the shop with this
+    # slug (the team teaches it like any shop; it isn't charged). Daily AI token allowances:
+    site_assistant_shop_slug: str = "javab"
+    site_chat_guest_tokens: int = 25_000  # a visitor who isn't logged in
+    site_chat_member_tokens: int = 100_000  # a logged-in user
+    site_chat_ip_tokens: int = 150_000  # all guests behind one IP (mobile networks share)
+    site_chat_daily_tokens: int = 3_000_000  # all guests together
 
     # Billing: shops top up a wallet and every AI answer is paid from it. Amounts in rial.
     billing_enabled: bool = True
@@ -130,6 +146,8 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "Javab <no-reply@javab.app>"
     smtp_starttls: bool = True
+    # Port 465 providers want SSL from the first byte instead of STARTTLS.
+    smtp_ssl: bool = False
     password_reset_minutes: int = 30
     email_verify_days: int = 7
 

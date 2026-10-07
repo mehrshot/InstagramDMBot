@@ -27,7 +27,7 @@ from app.core.timeutil import utcnow
 from app.models import Shop, User
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenPair
 from app.services import ops
-from app.services.email import send_email
+from app.services.email import action_email, send_email
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -177,14 +177,15 @@ async def forgot_password(body: ForgotPasswordRequest, db: DbSession) -> ForgotP
     token = create_password_reset_token(user.id, user.password_hash)
     link = f"{settings.frontend_url.rstrip('/')}/reset-password?token={token}"
     try:
-        await send_email(
-            user.email,
-            "تغییر رمز عبور «جواب»",
-            "سلام،\n\nبرای انتخاب رمز عبور تازه روی این لینک بزنید:\n"
-            f"{link}\n\n"
-            f"این لینک {settings.password_reset_minutes} دقیقه و فقط یک بار کار می‌کند. "
-            "اگر شما درخواست نداده‌اید، این ایمیل را نادیده بگیرید.\n\n«جواب»",
+        text, page = action_email(
+            title="انتخاب رمز عبور تازه",
+            intro="برای انتخاب رمز عبور تازه‌ی حساب «جواب» روی دکمه‌ی زیر بزنید:",
+            button="انتخاب رمز تازه",
+            link=link,
+            note=f"این لینک {settings.password_reset_minutes} دقیقه و فقط یک بار کار می‌کند. "
+            "اگر شما درخواست نداده‌اید، این ایمیل را نادیده بگیرید.",
         )
+        await send_email(user.email, "تغییر رمز عبور «جواب»", text, page)
     except Exception:
         logger.exception("could not send password reset email")
     return answer
@@ -214,14 +215,15 @@ async def _send_verification(user: User) -> None:
     token = create_email_verify_token(user.id, user.email)
     link = f"{settings.frontend_url.rstrip('/')}/verify-email?token={token}"
     try:
-        await send_email(
-            user.email,
-            "تأیید ایمیل «جواب»",
-            "سلام،\n\nبه «جواب» خوش آمدید! برای تأیید ایمیلتان روی این لینک بزنید:\n"
-            f"{link}\n\n"
-            f"این لینک {settings.email_verify_days} روز کار می‌کند. اگر شما در «جواب» "
-            "ثبت‌نام نکرده‌اید، این ایمیل را نادیده بگیرید.\n\n«جواب»",
+        text, page = action_email(
+            title="به «جواب» خوش آمدید!",
+            intro="برای تأیید ایمیل حسابتان روی دکمه‌ی زیر بزنید:",
+            button="تأیید ایمیل",
+            link=link,
+            note=f"این لینک {settings.email_verify_days} روز کار می‌کند. اگر شما در «جواب» "
+            "ثبت‌نام نکرده‌اید، این ایمیل را نادیده بگیرید.",
         )
+        await send_email(user.email, "تأیید ایمیل «جواب»", text, page)
     except Exception:
         logger.exception("could not send the verification email")
 

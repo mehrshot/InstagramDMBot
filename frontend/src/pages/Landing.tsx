@@ -23,6 +23,7 @@ import {
   ClipboardList,
   ListChecks,
 } from "lucide-react";
+import { AskJavab } from "../components/AskJavab";
 import { CHANNELS, ChannelMark } from "../components/site/channels";
 import HeroChat from "../components/site/HeroChat";
 import SiteFooter from "../components/site/SiteFooter";
@@ -65,6 +66,7 @@ export default function Landing() {
         <Problem />
         <Features />
         <How />
+        <Ask />
         <Trust />
         <Faq />
         <FinalCta />
@@ -398,6 +400,36 @@ function How() {
           <Arrow />
         </Link>
       </Reveal>
+    </Section>
+  );
+}
+
+/** Visitors chat with Javab's own assistant: the product, answering about itself. */
+function Ask() {
+  const { t } = useI18n();
+  const A = t.launch.ask;
+  return (
+    <Section id="ask" tone="tint">
+      <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <Reveal>
+          <p className="text-sm font-bold text-brand-700">{A.sectionEyebrow}</p>
+          <h2 id="ask-title" className="mt-3 text-3xl font-extrabold text-ink-950 sm:text-4xl">
+            {A.sectionTitle}
+          </h2>
+          <p className="mt-4 text-[17px] leading-8 text-slate-600">{A.sectionLead}</p>
+          <ul className="mt-6 space-y-3">
+            {A.sectionPoints.map((point) => (
+              <li key={point} className="flex items-start gap-3 text-[15px] leading-7 text-slate-700">
+                <Check className="mt-1 size-5 shrink-0 text-brand-600" aria-hidden />
+                {point}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+        <Reveal delay={120}>
+          <AskJavab />
+        </Reveal>
+      </div>
     </Section>
   );
 }

@@ -18,6 +18,8 @@ os.environ["LLM_MODEL"] = "test-model"
 os.environ["INSTAGRAM_ENABLED"] = "true"
 # Wallet charging is covered by its own tests (which switch it on).
 os.environ["BILLING_ENABLED"] = "false"
+# The off-topic check is an extra AI call; covered by its own tests (test_off_topic.py).
+os.environ["OFF_TOPIC_GUARD"] = "false"
 os.environ["TELEGRAM_API_BASE"] = "https://tg.test"
 os.environ["BALE_API_BASE"] = "https://bale.test"
 os.environ["ZARINPAL_SANDBOX"] = "true"
