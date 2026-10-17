@@ -24,6 +24,25 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- If the app can't start (a very old browser), say so instead of showing a blank page. -->
+    <div id="boot-fallback" dir="rtl" hidden style="max-width:28rem;margin:4rem auto;padding:0 1rem;font-family:Tahoma,system-ui,sans-serif;text-align:center;color:#1d2939;line-height:1.9">
+      <p style="font-size:1.125rem;font-weight:600">جواب</p>
+      <p>این صفحه به مرورگر جدیدتری نیاز دارد. لطفا Chrome یا Safari را به‌روز کنید، یا لینک را در مرورگر دیگری باز کنید.</p>
+      <p dir="ltr">This page needs a newer browser. Please update Chrome or Safari, or open the link in another browser.</p>
+    </div>
+    <script>
+      (function () {
+        function showFallback() {
+          var root = document.getElementById("root");
+          if (root && !root.firstChild) document.getElementById("boot-fallback").hidden = false;
+        }
+        window.addEventListener("error", function () { setTimeout(showFallback, 0); });
+        setTimeout(showFallback, 8000);
+      })();
+    </script>
+    <script nomodule>
+      document.getElementById("boot-fallback").hidden = false;
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,8 +1,11 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart3,
   BellRing,
   BookOpen,
+  CalendarClock,
   Camera,
   FlaskConical,
   Gift,
@@ -13,6 +16,7 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  MessageCircleMore,
   Package,
   Send,
   Settings,
@@ -20,7 +24,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { useDashboard, useMe } from "../api/queries";
+import { api } from "../api/client";
+import { keys, useDashboard, useMe } from "../api/queries";
 import { AskJavabLauncher } from "./AskJavab";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n";
@@ -48,6 +53,23 @@ export default function Layout() {
 
   useHandoffWatcher(dash);
 
+  // The browser's time zone: insights read "best hours to post" in the owner's local time.
+  const qc = useQueryClient();
+  const zoneSent = useRef(false);
+  useEffect(() => {
+    let timezone: string | undefined;
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      timezone = undefined;
+    }
+    if (!me || !timezone || me.shop.timezone === timezone || zoneSent.current) return;
+    zoneSent.current = true;
+    api("/shop", { method: "PATCH", json: { timezone } })
+      .then(() => qc.invalidateQueries({ queryKey: keys.me }))
+      .catch(() => undefined);
+  }, [me, qc]);
+
   // Close the mobile drawer on navigation
   useEffect(() => setDrawer(false), [location.pathname]);
 
@@ -58,6 +80,7 @@ export default function Layout() {
     document.title = n > 0 ? `(${f.num(n)}) ${base}` : base;
   }, [me, dash, t, f]);
 
+  const igSoon = dash && !dash.setup.instagram_available ? t.launch.nav.soon : undefined;
   const groups: Group[] = [
     { items: [{ to: "/", label: t.nav.dashboard, icon: <LayoutDashboard />, end: true }] },
     {
@@ -66,6 +89,14 @@ export default function Layout() {
         { to: "/handoffs", label: t.nav.handoffs, icon: <BellRing />, badge: dash?.open_handoffs },
         { to: "/inbox", label: t.nav.inbox, icon: <Inbox /> },
         { to: "/unanswered", label: t.nav.unanswered, icon: <HelpCircle />, badge: dash?.last_7_days.open_unanswered, badgeTone: "neutral" },
+        { to: "/comments", label: t.social.nav.comments, icon: <MessageCircleMore />, badge: dash?.social.comments_waiting, tag: igSoon },
+      ],
+    },
+    {
+      label: t.social.nav.groupGrow,
+      items: [
+        { to: "/stories", label: t.social.nav.stories, icon: <CalendarClock />, tag: igSoon },
+        { to: "/insights", label: t.social.nav.insights, icon: <BarChart3 />, tag: igSoon },
       ],
     },
     {
@@ -83,7 +114,7 @@ export default function Layout() {
         { to: "/bale", label: t.launch.nav.bale, icon: <MessageCircle />, tag: dash && !dash.setup.bale_available ? t.launch.nav.soon : undefined },
         { to: "/settings", label: t.nav.settings, icon: <Settings /> },
         { to: "/billing", label: t.launch.nav.billing, icon: <Wallet /> },
-        { to: "/instagram", label: t.nav.instagram, icon: <Camera />, tag: dash && !dash.setup.instagram_available ? t.launch.nav.soon : undefined },
+        { to: "/instagram", label: t.nav.instagram, icon: <Camera />, tag: igSoon },
         { to: "/account", label: t.nav.account, icon: <UserRound /> },
       ],
     },

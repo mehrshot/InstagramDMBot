@@ -73,6 +73,20 @@ class Shop(UUIDPk, Timestamps, Base):
     # How long the bot stays silent in a thread after the owner replies manually.
     handoff_pause_minutes: Mapped[int] = mapped_column(default=120)
 
+    # The owner's time zone (IANA name); the panel keeps it in sync. Used to read the page's
+    # insights in local time (best hours to post).
+    timezone: Mapped[str] = mapped_column(
+        String(40), default="Asia/Tehran", server_default="Asia/Tehran"
+    )
+
+    # Comments on the shop's posts and reels: "off", "public" (reply under the comment),
+    # "private" (answer in a DM) or "both" (the answer in a DM and a short public note).
+    comment_mode: Mapped[str] = mapped_column(String(8), default="both", server_default="both")
+    # Thank people for compliments ("عالیه 😍") with a short public reply.
+    comment_thank_praise: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    # Hide comments the bot recognises as spam (they stay visible to their author).
+    comment_hide_spam: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
     # Billing: a prepaid wallet in rial. Every AI answer is deducted from it.
     plan: Mapped[Plan] = mapped_column(
         str_enum(Plan), default=Plan.BASIC, server_default=Plan.BASIC.value

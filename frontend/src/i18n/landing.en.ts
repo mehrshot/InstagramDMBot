@@ -138,6 +138,34 @@ const landing: Dict["landing"] = {
       body: "Friendly or formal, with or without emoji. Write rules Javab must never break, and pause it for any single customer whenever you like.",
       bullets: ["Before you start, ask questions as a customer on the test page", "Turn Javab on or off for everyone with one switch"],
     },
+    comments: {
+      title: "Answers comments, publicly or by DM",
+      body: "Javab reads the comments under your posts and reels, and the post's caption tells it which product \"how much?\" is about. It answers by private message with a short public note, or however you choose.",
+      bullets: [
+        "What it doesn't know, it doesn't reply to: it waits for you, sorted by price, stock, ordering, complaint…",
+        "Thanks people for compliments, ignores friends tagging friends, and can hide spam",
+        "Try any comment in the panel and see the reply before you switch it on",
+      ],
+    },
+    stories: {
+      title: "Your stories, published on time",
+      body: "Upload story photos and videos, pick a time for each, and Javab publishes them to your account right on schedule. Add a line about what each story shows.",
+      bullets: [
+        "When someone replies to a story, the bot knows what it's about and answers",
+        "It also thanks people who mention your shop in their story",
+        "A clear timeline of today's, tomorrow's and past stories",
+      ],
+    },
+    insights: {
+      title: "Your page's numbers, and a content assistant",
+      body: "Javab reads your page's reach, engagement, followers and how every post did, and tells you plainly what works: which format, which day, which hour, which hashtags.",
+      bullets: [
+        "An AI content assistant turns your numbers into ideas, captions and a weekly plan",
+        "Ask it \"what should I post this week?\" or \"write a caption for this product\"",
+        "Numbers refresh daily, or whenever you press refresh",
+      ],
+    },
+    instagramTag: "With Instagram, coming soon",
   },
 
   demos: {
@@ -194,6 +222,45 @@ const landing: Dict["landing"] = {
       rules: "Rules",
       rulesText: "Never offer discounts. Don't talk about competitors.",
     },
+    comments: {
+      title: "Comments",
+      author: "rana.k",
+      comment: "How much is this manto?",
+      privateLabel: "Private message",
+      privateReply: "Hi Rana! The linen manto is 1,250,000 toman, in black and navy 🖤",
+      publicLabel: "Public reply",
+      publicReply: "Sent you the details in a message 💌",
+      waitingTitle: "Waiting for you",
+      waiting: [
+        { category: "Ordering & delivery", text: "Can I order 20 pieces? Wholesale price?" },
+        { category: "Complaint", text: "My order still hasn't arrived!" },
+      ],
+    },
+    stories: {
+      title: "Scheduled stories",
+      items: [
+        { when: "Today 18:00", note: "Weekend sale on silk blouses", status: "Scheduled" },
+        { when: "Tomorrow 19:00", note: "Cream linen shirt back in stock", status: "Scheduled" },
+        { when: "Yesterday 20:00", note: "New linen manto, 1,250,000 toman", status: "Published" },
+      ],
+      reply: "Replied to your story: \"Is it available in 40?\"",
+      answer: "Yes, 40 is available in black 🖤",
+    },
+    insights: {
+      title: "Insights",
+      reach: "Reach (7 days)",
+      reachValue: "11.8K",
+      change: "+21.8%",
+      formats: [
+        { label: "Reel", value: 92 },
+        { label: "Carousel", value: 38 },
+        { label: "Photo", value: 22 },
+      ],
+      best: "Best time to post",
+      bestValue: "Wednesday & Thursday, 18:00",
+      idea: "An idea from the content assistant",
+      ideaText: "Reel: \"3 ways to style the linen manto\" on Thursday at 18:00",
+    },
   },
 
   how: {
@@ -247,7 +314,7 @@ const landing: Dict["landing"] = {
       },
       {
         q: "Does it reply to comments too?",
-        a: "Not yet. Javab works on customers' private messages.",
+        a: "Yes, with Instagram. You choose: under the comment, by private message, or both. What it doesn't know, it doesn't reply to: it waits for you in the panel, sorted by topic. Scheduled stories and page insights come with Instagram too.",
       },
     ],
   },

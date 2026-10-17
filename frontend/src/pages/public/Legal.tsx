@@ -147,12 +147,28 @@ const privacy: Page = {
         <p>
           وقتی اتصال اینستاگرام فعال شود و فروشگاهی پیج حرفه‌ای خود را از مسیر رسمی متا وصل کند، این‌ها را هم دریافت می‌کنیم: پیام‌های دایرکت آن پیج و جواب‌ها
           (متن و نوع پیوست)، شناسه‌ی اینستاگرامی و نام کاربری مشتری‌ها، شناسه و نام کاربری پیج، پست‌های پیج (برای معرفی محصول) و توکن دسترسی صادرشده توسط متا که
-          رمزنگاری‌شده ذخیره می‌شود.
+          رمزنگاری‌شده ذخیره می‌شود. همچنین:
         </p>
+        <ul>
+          <li>
+            <b>کامنت‌ها:</b> متن کامنت‌های زیر پست و ریلزهای فروشگاه، شناسه و نام کاربری نویسنده، پستی که زیرش نوشته شده، دسته‌بندی آن، و جواب عمومی یا خصوصی‌ای که ربات
+            یا فروشگاه فرستاده.
+          </li>
+          <li>جواب مشتری‌ها به استوری‌های فروشگاه و منشن فروشگاه در استوری‌شان (به‌صورت پیام دایرکت؛ فقط ثبت می‌کنیم که جواب استوری بوده، نه خود استوری).</li>
+          <li>
+            <b>استوری‌های زمان‌بندی‌شده:</b> عکس و ویدیوهایی که برای انتشار به‌عنوان استوری آپلود می‌کنید، با زمان و توضیح هر کدام. فایل تا زمان انتشار روی سرور ما
+            می‌ماند، از طریق یک لینک محرمانه در اختیار اینستاگرام قرار می‌گیرد تا دانلودش کند، و ۳۰ روز بعد از انتشار پاک می‌شود.
+          </li>
+          <li>
+            <b>آمار پیج:</b> آماری که متا از پیج شما در اختیار می‌گذارد (فالوورها، بازدید، نمایش، تعامل و عملکرد هر پست)، و تحلیل‌ها، گزارش‌ها و گفت‌وگوهای شما با دستیار
+            محتوا. فقط برای نمایش به خودتان و پیشنهاد محتوا استفاده می‌شوند.
+          </li>
+        </ul>
 
         <h2>۳. برای چه استفاده می‌کنیم</h2>
         <ul>
-          <li>ساختن و فرستادن جواب به مشتری از طرف فروشگاه، و ارجاع گفتگو به صاحب فروشگاه وقتی ربات جواب را نمی‌داند.</li>
+          <li>ساختن و فرستادن جواب به پیام‌ها و کامنت‌های مشتری از طرف فروشگاه، و سپردن چیزی که ربات نمی‌داند به صاحب فروشگاه.</li>
+          <li>انتشار به‌موقع استوری‌هایی که صاحب فروشگاه زمان‌بندی می‌کند، و نمایش آمار پیج و پیشنهاد محتوا به او.</li>
           <li>نمایش گفتگوها، محصولات و گزارش‌ها در پنل، و فرستادن اعلان‌ها به تلگرام یا بله‌ی صاحب فروشگاه.</li>
           <li>محاسبه‌ی هزینه، کم کردن از کیف پول، شارژ آنلاین و تمدید پلن.</li>
           <li>
@@ -285,12 +301,28 @@ const privacy: Page = {
         <p>
           When Instagram is enabled and a shop connects its professional account through Meta's official flow, we also receive: Direct Messages to that account and the replies
           (text and attachment type), customers' Instagram-scoped IDs and usernames, the account's ID and username, its posts (to show products), and an access token issued by
-          Meta, which is stored encrypted.
+          Meta, which is stored encrypted. Also:
         </p>
+        <ul>
+          <li>
+            <b>Comments:</b> the text of comments on the shop's posts and reels, the author's Instagram-scoped ID and username, the post it was written under, its category,
+            and the public or private reply the bot or the shop sent.
+          </li>
+          <li>Customers' replies to the shop's stories and mentions of the shop in their stories (they arrive as direct messages; we record that it was a story reply, not the story).</li>
+          <li>
+            <b>Scheduled stories:</b> the photos and videos you upload to be published as stories, with each one's time and your description of it. The file is kept on our
+            servers until it's published, made available to Instagram through a secret link so it can download it, and deleted 30 days after publishing.
+          </li>
+          <li>
+            <b>Page insights:</b> your Instagram account's numbers that Meta provides (followers, reach, views, interactions and how each post did), and the content
+            assistant's analyses, reports and your chats with it. They are used only to show them to you and to make suggestions.
+          </li>
+        </ul>
 
         <h2>3. How we use it</h2>
         <ul>
-          <li>To generate and send replies to customers on the shop's behalf, and to hand a conversation to the owner when the bot doesn't know the answer.</li>
+          <li>To generate and send replies to messages and comments on the shop's behalf, and to leave what the bot doesn't know to the owner.</li>
+          <li>To publish the stories the owner schedules on time, and to show the page's insights and suggest content.</li>
           <li>To show conversations, products and reports in the panel, and to send notifications to the owner's Telegram or Bale.</li>
           <li>To calculate costs, charge the wallet, process top-ups and renew plans.</li>
           <li>To verify emails and phone numbers and prevent abuse — for example giving the welcome gift only once per person, and limiting login attempts and code requests.</li>

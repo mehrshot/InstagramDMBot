@@ -3,6 +3,7 @@
 import landing from "./landing.fa";
 import panel from "./panel.fa";
 import launch from "./launch.fa";
+import social from "./social.fa";
 
 const fa = {
   appName: "جواب",
@@ -443,6 +444,7 @@ const fa = {
   landing,
   panel,
   launch,
+  social,
 };
 
 export default fa;

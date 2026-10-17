@@ -1,6 +1,6 @@
 """Panel home: setup checklist, test chat, and usage numbers."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
@@ -11,14 +11,19 @@ from app.api.deps import LLM, CurrentShop, DbSession
 from app.core.config import get_settings
 from app.core.timeutil import utcnow
 from app.models import (
+    CommentStatus,
     Conversation,
     InstagramAccount,
+    InstagramComment,
+    InstagramInsights,
     KnowledgeEntry,
     Message,
     MessageSender,
     Product,
     ProductSource,
     ProposalStatus,
+    ScheduledStory,
+    StoryStatus,
     TeachProposal,
     TelegramAdmin,
     TelegramBot,
@@ -84,6 +89,19 @@ class WalletStatus(BaseModel):
     gift: GiftStatus
 
 
+class SocialStats(BaseModel):
+    """Beyond DMs: comments, stories and the page's reach."""
+
+    # Comments that wait for the owner (the bot didn't know the answer).
+    comments_waiting: int
+    comments_answered_7_days: int
+    stories_scheduled: int
+    next_story_at: datetime | None
+    # From the last insights read (None until the first one).
+    followers: int | None
+    reach_7_days: int | None
+
+
 class DashboardOut(BaseModel):
     setup: SetupStatus
     wallet: WalletStatus
@@ -92,6 +110,7 @@ class DashboardOut(BaseModel):
     # DMs waiting for the owner right now (the bot didn't know the answer).
     open_handoffs: int
     last_7_days: Stats
+    social: SocialStats
     tokens_this_month: int
 
 
@@ -186,9 +205,34 @@ async def dashboard(shop: CurrentShop, db: DbSession) -> DashboardOut:
             )
         ).all()
     )
+    next_story = await db.scalar(
+        select(func.min(ScheduledStory.scheduled_at)).where(
+            ScheduledStory.shop_id == shop.id, ScheduledStory.status == StoryStatus.SCHEDULED
+        )
+    )
+    page = await db.scalar(select(InstagramInsights).where(InstagramInsights.shop_id == shop.id))
+    page_data = page.data if page and page.data else {}
+    social = SocialStats(
+        comments_waiting=await exists(
+            InstagramComment, InstagramComment.status == CommentStatus.UNANSWERED
+        ),
+        comments_answered_7_days=await exists(
+            InstagramComment,
+            InstagramComment.status == CommentStatus.ANSWERED,
+            InstagramComment.commented_at >= since,
+        ),
+        stories_scheduled=await exists(
+            ScheduledStory, ScheduledStory.status == StoryStatus.SCHEDULED
+        ),
+        next_story_at=next_story,
+        followers=(page_data.get("profile") or {}).get("followers"),
+        reach_7_days=(page_data.get("week") or {}).get("reach"),
+    )
+
     settings = get_settings()
     return DashboardOut(
         open_handoffs=open_handoffs or 0,
+        social=social,
         wallet=WalletStatus(
             enabled=settings.billing_enabled,
             balance_toman=shop.balance_rial // 10,

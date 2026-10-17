@@ -1,5 +1,23 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { BellRing, BookOpen, Check, CircleCheck, Clock, ExternalLink, FileText, Lock, PackageSearch, SlidersHorizontal } from "lucide-react";
+import {
+  BarChart3,
+  BellRing,
+  BookOpen,
+  CalendarClock,
+  Check,
+  CircleCheck,
+  CircleDashed,
+  Clock,
+  ExternalLink,
+  FileText,
+  Globe,
+  Lightbulb,
+  Lock,
+  MessageCircleMore,
+  PackageSearch,
+  SlidersHorizontal,
+  TrendingUp,
+} from "lucide-react";
 import { useI18n } from "../../i18n";
 import { LogoMark } from "../Logo";
 import { Badge, Toggle, buttonClass, cx } from "../ui";
@@ -254,6 +272,125 @@ export function ToneDemo() {
           {d.rules}
         </div>
         <p className="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700">{d.rulesText}</p>
+      </div>
+    </DemoCard>
+  );
+}
+
+export function CommentsDemo() {
+  const { t } = useI18n();
+  const d = t.landing.demos.comments;
+  return (
+    <DemoCard icon={<MessageCircleMore />} title={d.title}>
+      <ul className="stagger space-y-3">
+        <li style={idx(0)} className="flex gap-2.5">
+          <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">R</span>
+          <div className="min-w-0">
+            <div className="ltr text-xs font-semibold text-ink-900">@{d.author}</div>
+            <p className="mt-1 w-fit rounded-lg rounded-ss-sm bg-slate-100 px-3 py-1.5 text-[13.5px] leading-6">{d.comment}</p>
+          </div>
+        </li>
+        <li style={idx(1)} className="ms-10 rounded-lg border border-brand-200 bg-brand-50/60 px-3 py-2">
+          <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
+            <Lock className="size-3" aria-hidden />
+            {d.privateLabel}
+          </div>
+          <p className="text-[13.5px] leading-6">{d.privateReply}</p>
+        </li>
+        <li style={idx(2)} className="ms-10 rounded-lg border border-slate-200 px-3 py-2">
+          <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <Globe className="size-3" aria-hidden />
+            {d.publicLabel}
+          </div>
+          <p className="text-[13.5px] leading-6">{d.publicReply}</p>
+        </li>
+      </ul>
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <div className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">{d.waitingTitle}</div>
+        <ul className="space-y-2">
+          {d.waiting.map((w) => (
+            <li key={w.text} className="flex items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2 text-[13px]">
+              <Badge tone={w === d.waiting[1] ? "red" : "brand"}>{w.category}</Badge>
+              <span className="min-w-0 truncate text-slate-700">{w.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </DemoCard>
+  );
+}
+
+export function StoriesDemo() {
+  const { t } = useI18n();
+  const d = t.landing.demos.stories;
+  const tiles = ["from-brand-600 to-brand-400", "from-amber-700 to-amber-300", "from-slate-900 to-slate-600"];
+  return (
+    <DemoCard icon={<CalendarClock />} title={d.title}>
+      <ol className="stagger space-y-3">
+        {d.items.map((item, i) => (
+          <li key={item.note} style={idx(i)} className="flex items-center gap-3">
+            <span aria-hidden className={cx("aspect-[9/16] w-9 shrink-0 rounded-md bg-gradient-to-b", tiles[i % tiles.length])} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-xs">
+                <Badge tone={i === d.items.length - 1 ? "green" : "brand"}>{item.status}</Badge>
+                <span className="num font-medium text-ink-900">{item.when}</span>
+              </div>
+              <p className="mt-1 truncate text-[13px] text-slate-600">{item.note}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-5 space-y-2 rounded-lg bg-slate-50 p-3">
+        <p className="flex w-fit max-w-[90%] items-center gap-1.5 rounded-lg rounded-ss-sm bg-surface px-3 py-1.5 text-[13px] ring-1 ring-slate-200">
+          <CircleDashed className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+          {d.reply}
+        </p>
+        <p className="ms-auto w-fit max-w-[85%] rounded-lg rounded-se-sm bg-brand-600 px-3 py-1.5 text-[13px] text-white">{d.answer}</p>
+      </div>
+    </DemoCard>
+  );
+}
+
+export function InsightsDemo() {
+  const { t } = useI18n();
+  const d = t.landing.demos.insights;
+  const max = Math.max(...d.formats.map((f) => f.value));
+  return (
+    <DemoCard icon={<BarChart3 />} title={d.title}>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div className="text-xs text-slate-500">{d.reach}</div>
+          <div className="num mt-0.5 text-2xl font-semibold tracking-tight text-ink-950">{d.reachValue}</div>
+        </div>
+        <span className="flex items-center gap-1 text-xs font-medium text-emerald-700">
+          <TrendingUp className="size-3.5" aria-hidden />
+          <span dir="ltr">{d.change}</span>
+        </span>
+      </div>
+      <ul className="stagger mt-4 space-y-2.5">
+        {d.formats.map((f, i) => (
+          <li key={f.label} style={idx(i)}>
+            <div className="mb-1 flex justify-between text-xs text-slate-600">
+              <span>{f.label}</span>
+              <span className="num">{f.value}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-brand-500" style={{ width: `${(f.value / max) * 100}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 flex items-center gap-2 text-[13px]">
+        <Clock className="size-4 text-slate-400" aria-hidden />
+        <span className="text-slate-500">{d.best}:</span>
+        <span className="font-medium text-ink-900">{d.bestValue}</span>
+      </div>
+      <div className="mt-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 text-[13px]">
+        <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
+          <Lightbulb className="size-3.5" aria-hidden />
+          {d.idea}
+        </div>
+        <p className="text-ink-900">{d.ideaText}</p>
       </div>
     </DemoCard>
   );

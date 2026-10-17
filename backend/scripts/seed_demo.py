@@ -2,9 +2,11 @@
 
   uv run python -m scripts.seed_demo
 
-Log in with  demo@shop.ir / demopass123 . Safe to re-run: it recreates the demo account.
+Log in with  demo@shop.ir / demopass123  (or the --password given). Safe to re-run: it
+recreates the demo account.
 """
 
+import argparse
 import asyncio
 from datetime import timedelta
 
@@ -31,6 +33,8 @@ from app.models import (
     WalletEntryKind,
 )
 from app.services.accounts import delete_user
+from app.services.instagram import SCOPES
+from scripts import demo_social
 
 EMAIL = "demo@shop.ir"
 PASSWORD = "demopass123"
@@ -86,6 +90,32 @@ CONVERSATIONS = [
         ],
         True,
     ),
+    (
+        # Replied to the shop's story; the bot knew what the story showed from its note.
+        "niloofar.a",
+        [
+            (
+                "customer",
+                "سایز ۴۰ هم داره؟ [story_reply: مانتو کتان جدید، مشکی و سرمه‌ای، "
+                "۱,۲۵۰,۰۰۰ تومان، سایز ۴۰ تا ۴۴]",
+                False,
+                95,
+            ),
+            ("bot", "بله عزیزم، مانتو کتان مشکی سایز ۴۰ موجوده، ۱,۲۵۰,۰۰۰ تومان 🖤", False, 94),
+        ],
+        False,
+    ),
+    (
+        # Commented "قیمتش چنده؟"; the bot answered by private reply.
+        "rana.k",
+        [
+            ("customer", "[comment] قیمت این مانتو چنده؟", False, 35),
+            ("bot", "سلام رعنا جان! مانتو کتان ۱,۲۵۰,۰۰۰ تومانه، مشکی و سرمه‌ای 🖤", False, 34),
+            ("customer", "عالیه، پرداخت در محل هم دارید؟", False, 20),
+            ("bot", "پرداخت در محل فقط برای تهرانه؛ بقیه شهرها کارت‌به‌کارت یا درگاه 🙏", False, 19),
+        ],
+        False,
+    ),
 ]
 # Instagram posts of the demo page: (media id, shortcode, caption, days ago). The bot links a
 # post to a product when the caption names it (or its code); the last one names no product.
@@ -107,7 +137,7 @@ HANDOFFS = {
 }
 
 
-async def main() -> None:
+async def main(password: str) -> None:
     async with SessionLocal() as db:
         old = await db.scalar(select(User.id).where(User.email == EMAIL))
         if old is not None:
@@ -116,7 +146,7 @@ async def main() -> None:
         now = utcnow()
         user = User(
             email=EMAIL,
-            password_hash=hash_password(PASSWORD),
+            password_hash=hash_password(password),
             full_name="مهسا",
             email_verified_at=now,
         )
@@ -139,6 +169,7 @@ async def main() -> None:
                 access_token_encrypted=encrypt_secret("demo-token"),
                 token_expires_at=now + timedelta(days=55),
                 posts_synced_at=now - timedelta(hours=2),
+                scopes=",".join(SCOPES),
             )
         )
         db.add_all(
@@ -213,9 +244,13 @@ async def main() -> None:
                         completion_tokens=40 if sender == "bot" else None,
                     )
                 )
+        await demo_social.seed(db, shop_id, now)
         await db.commit()
-    print(f"demo shop ready: {EMAIL} / {PASSWORD}")
+    print(f"demo shop ready: {EMAIL}" + (f" / {password}" if password == PASSWORD else ""))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Create the demo shop.")
+    # On a server people can reach, give the demo account its own password.
+    parser.add_argument("--password", default=PASSWORD)
+    asyncio.run(main(parser.parse_args().password))

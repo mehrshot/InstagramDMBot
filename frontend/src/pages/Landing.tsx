@@ -2,6 +2,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
 import {
   ArrowRight,
+  BarChart3,
+  CalendarClock,
+  MessageCircleMore,
   BookOpen,
   Check,
   ChevronDown,
@@ -29,10 +32,10 @@ import HeroChat from "../components/site/HeroChat";
 import SiteFooter from "../components/site/SiteFooter";
 import SiteHeader from "../components/site/SiteHeader";
 import { Bullets, Section, SectionHeader } from "../components/site/Section";
-import { HandoffDemo, KnowledgeDemo, ProductsDemo, ToneDemo } from "../components/site/demos";
+import { CommentsDemo, HandoffDemo, InsightsDemo, KnowledgeDemo, ProductsDemo, StoriesDemo, ToneDemo } from "../components/site/demos";
 import { Reveal, useInView } from "../components/site/motion";
 import { LogoMark } from "../components/Logo";
-import { buttonClass, cx } from "../components/ui";
+import { Badge, buttonClass, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 
 /** Public home page for visitors who aren't logged in. */
@@ -328,11 +331,14 @@ function Status({ on, delay, className, children }: { on: boolean; delay: number
 function Features() {
   const { t } = useI18n();
   const F = t.landing.features;
-  const rows: { key: string; icon: ReactNode; copy: { title: string; body: string; bullets: readonly string[] }; demo: ReactNode }[] = [
+  const rows: { key: string; icon: ReactNode; copy: { title: string; body: string; bullets: readonly string[] }; demo: ReactNode; soon?: boolean }[] = [
     { key: "knowledge", icon: <BookOpen />, copy: F.knowledge, demo: <KnowledgeDemo /> },
     { key: "products", icon: <PackageSearch />, copy: F.products, demo: <ProductsDemo /> },
     { key: "handoff", icon: <BellRing />, copy: F.handoff, demo: <HandoffDemo /> },
     { key: "control", icon: <SlidersHorizontal />, copy: F.control, demo: <ToneDemo /> },
+    { key: "comments", icon: <MessageCircleMore />, copy: F.comments, demo: <CommentsDemo />, soon: true },
+    { key: "stories", icon: <CalendarClock />, copy: F.stories, demo: <StoriesDemo />, soon: true },
+    { key: "insights", icon: <BarChart3 />, copy: F.insights, demo: <InsightsDemo />, soon: true },
   ];
   return (
     <Section id="features" tone="tint">
@@ -344,7 +350,8 @@ function Features() {
               <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-md shadow-brand-600/25 [&>svg]:size-6">
                 {row.icon}
               </span>
-              <h3 className="t-h3 mt-6 text-ink-950">{row.copy.title}</h3>
+              {row.soon && <Badge tone="brand" className="mt-6">{F.instagramTag}</Badge>}
+              <h3 className={cx("t-h3 text-ink-950", row.soon ? "mt-3" : "mt-6")}>{row.copy.title}</h3>
               <p className="mt-3 text-[16px] leading-8 text-slate-600">{row.copy.body}</p>
               <Bullets items={row.copy.bullets} className="mt-6" />
             </Reveal>

@@ -9,7 +9,12 @@ import { Alert, Button, Card, Field, Input, LinkButton, PageHeader, PageLoading,
 import { useI18n } from "../i18n";
 import { errorMessage, fieldError } from "../lib/errors";
 
-type Form = Omit<Shop, "id" | "tone" | "slug"> & { tone: "friendly" | "formal" };
+// The time zone is kept in sync by the panel (Layout), and the comment settings live on the
+// Comments page, so they aren't edited here.
+type Form = Omit<
+  Shop,
+  "id" | "tone" | "slug" | "timezone" | "comment_mode" | "comment_thank_praise" | "comment_hide_spam"
+> & { tone: "friendly" | "formal" };
 
 function toForm(s: Shop): Form {
   return {

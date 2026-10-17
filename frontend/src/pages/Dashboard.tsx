@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BellRing, Bot, BookOpen, Check, FlaskConical, HelpCircle, Inbox, MessagesSquare, SlidersHorizontal, Sparkles, UserRound, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, BellRing, Bot, BookOpen, CalendarClock, Check, FlaskConical, HelpCircle, Inbox, MessageCircleMore, MessagesSquare, SlidersHorizontal, Sparkles, UserRound, Users, Wallet } from "lucide-react";
 import { api } from "../api/client";
 import { keys, useDashboard, useMe } from "../api/queries";
 import type { Shop } from "../api/types";
@@ -128,6 +128,36 @@ export default function Dashboard() {
                 <Stat icon={<UserRound />} label={t.dashboard.statCustomerMessages} value={f.num(stats.customer_messages)} />
                 <Stat icon={<Bot />} label={t.dashboard.statBotReplies} value={f.num(stats.bot_replies)} />
                 <Stat icon={<HelpCircle />} label={t.dashboard.statOpenUnanswered} value={f.num(stats.open_unanswered)} to="/unanswered" warn={stats.open_unanswered > 0} />
+              </div>
+            </section>
+          )}
+
+          {s.instagram_available && s.instagram_connected && (
+            <section aria-labelledby="social-title">
+              <h2 id="social-title" className="mb-3 text-sm font-bold text-slate-500">
+                {t.social.dashboard.title}
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+                <Stat
+                  icon={<MessageCircleMore />}
+                  label={t.social.comments.statWaiting}
+                  value={f.num(data.social.comments_waiting)}
+                  to="/comments"
+                  warn={data.social.comments_waiting > 0}
+                />
+                <Stat icon={<Check />} label={t.social.comments.statAnswered} value={f.num(data.social.comments_answered_7_days)} to="/comments" />
+                <Stat
+                  icon={<CalendarClock />}
+                  label={data.social.next_story_at ? t.social.stories.nextAt(f.smart(data.social.next_story_at)) : t.social.stories.statScheduled}
+                  value={f.num(data.social.stories_scheduled)}
+                  to="/stories"
+                />
+                <Stat
+                  icon={data.social.followers != null ? <Users /> : <BarChart3 />}
+                  label={data.social.followers != null ? t.social.dashboard.followers : t.social.insights.title}
+                  value={data.social.followers != null ? f.num(data.social.followers) : "—"}
+                  to="/insights"
+                />
               </div>
             </section>
           )}
