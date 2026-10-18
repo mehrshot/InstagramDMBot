@@ -64,11 +64,18 @@ def file_path(story: ScheduledStory) -> Path:
 
 
 def public_url(story: ScheduledStory) -> str:
-    """Where Instagram (and the panel) downloads the story's file."""
     ext = story.file_name.rsplit(".", 1)[-1]
     base = get_settings().public_base_url.rstrip("/")
     return f"{base}/api/v1/media/stories/{story.id}/{story.token}.{ext}"
 
+
+def instagram_media_url(story: ScheduledStory) -> str:
+    settings = get_settings()
+    ext = story.file_name.rsplit(".", 1)[-1]
+    if settings.meta_redirect_base_url:
+        base = settings.meta_redirect_base_url.rstrip("/")
+        return f"{base}/api/v1/media/javab-stories/{story.id}/{story.token}.{ext}"
+    return public_url(story)
 
 def prepare_media(data: bytes, content_type: str) -> tuple[str, bytes, str, str]:
     """Check an upload and make it Instagram-ready: (kind, bytes, content type, extension)."""
@@ -204,7 +211,7 @@ async def advance(db: AsyncSession, story: ScheduledStory, instagram: InstagramC
             if claimed.rowcount == 0:
                 return
             story.status = StoryStatus.PROCESSING
-            url = public_url(story)
+            url = instagram_media_url(story)
             story.container_id = await instagram.create_story(
                 token,
                 account.ig_user_id,

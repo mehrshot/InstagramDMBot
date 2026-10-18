@@ -4,15 +4,110 @@
     {
       "name": "backend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uv", "run", "--directory", "backend", "uvicorn", "app.main:app", "--reload", "--port", "8000"],
+      "runtimeArgs": [
+        "-m",
+        "uv",
+        "run",
+        "--directory",
+        "backend",
+        "uvicorn",
+        "app.main:app",
+        "--reload",
+        "--port",
+        "8000"
+      ],
       "port": 8000,
-      "env": { "PYTHONUTF8": "1" }
+      "env": {
+        "PYTHONUTF8": "1"
+      }
     },
     {
       "name": "panel",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "replisto-backend",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "uv",
+        "run",
+        "--directory",
+        "D:/Dev/Bots/Replisto/backend",
+        "uvicorn",
+        "app.main:app",
+        "--reload",
+        "--port",
+        "8100"
+      ],
+      "port": 8100,
+      "env": {
+        "PYTHONUTF8": "1",
+        "ENVIRONMENT": "development",
+        "PUBLIC_BASE_URL": "http://localhost:8100",
+        "FRONTEND_URL": "http://localhost:3100",
+        "CORS_ORIGINS": "[\"http://localhost:3100\"]",
+        "QUEUE_BACKEND": "inline"
+      }
+    },
+    {
+      "name": "replisto-panel",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "D:/Dev/Bots/Replisto/frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3100"
+      ],
+      "port": 3100,
+      "env": {
+        "VITE_API_URL": "http://localhost:8100"
+      }
+    },
+    {
+      "name": "backend-instagram",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "uv",
+        "run",
+        "--directory",
+        "backend",
+        "uvicorn",
+        "app.main:app",
+        "--reload",
+        "--port",
+        "8001"
+      ],
+      "port": 8001,
+      "env": {
+        "PYTHONUTF8": "1",
+        "INSTAGRAM_ENABLED": "true",
+        "INSTAGRAM_DRY_RUN": "true",
+        "CORS_ORIGINS": "[\"http://localhost:3002\"]",
+        "FRONTEND_URL": "http://localhost:3002",
+        "PUBLIC_BASE_URL": "http://localhost:8001"
+      }
+    },
+    {
+      "name": "panel-instagram",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "C:\\Users\\Mehrshad\\AppData\\Local\\Temp\\claude\\D--Dev-Bots-Instagram-DM\\d9176d72-475d-4f8d-b9e6-e2469bbfefbd\\scratchpad\\spa_server.py",
+        "frontend/dist",
+        "3002"
+      ],
+      "port": 3002
     }
   ]
 }

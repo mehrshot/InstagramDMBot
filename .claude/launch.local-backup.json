@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--directory", "backend", "uvicorn", "app.main:app", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "panel",
+      "runtimeExecutable": "C:/PROGRA~1/nodejs/node.exe",
+      "runtimeArgs": ["frontend/node_modules/vite/bin/vite.js", "frontend"],
+      "port": 3000
+    },
+    {
+      "name": "logo-drafts",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--directory", "backend", "python", "-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "C:/Users/Mehrshad/AppData/Local/Temp/claude/D--Dev-Bots-Instagram-DM/f4227503-f986-49bc-ac91-a4e789ff040a/scratchpad/logo"],
+      "port": 8765
+    }
+  ]
+}

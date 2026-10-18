@@ -115,8 +115,9 @@ class InstagramClient:
 
     @property
     def redirect_uri(self) -> str:
-        return f"{self._settings.public_base_url.rstrip('/')}/api/v1/instagram/callback"
-
+        base = (self._settings.meta_redirect_base_url or self._settings.public_base_url).rstrip("/")
+        return f"{base}/api/v1/instagram/callback"
+    
     @property
     def _graph(self) -> str:
         return f"{GRAPH_URL}/{self._settings.meta_graph_api_version}"

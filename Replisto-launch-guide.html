@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replisto launch guide</title>
+<style>
+  :root { --ink:#101828; --text:#344054; --muted:#667085; --line:#e4e7ec; --brand:#2548e0; --tint:#eff4ff; --bg:#ffffff; --done:#98a2b3; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#eef1f5; --text:#c6cdda; --muted:#8b96ab; --line:#253046; --brand:#7f9cff; --tint:#141f3d; --bg:#0b111c; --done:#66728a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:40px 16px 80px; }
+  h1 { color:var(--ink); font-size:2rem; line-height:1.2; letter-spacing:-.02em; margin:0 0 4px; }
+  .meta { color:var(--muted); font-size:.875rem; margin:0 0 20px; }
+  h2 { color:var(--ink); font-size:1.3rem; letter-spacing:-.01em; margin:40px 0 10px; padding-top:20px; border-top:1px solid var(--line); }
+  strong { color:var(--ink); }
+  code { background:var(--tint); color:var(--ink); padding:1px 5px; border-radius:4px; font-size:.9em; word-break:break-all; }
+  a { color:var(--brand); }
+  .why { background:var(--tint); border-left:3px solid var(--brand); padding:10px 14px; border-radius:6px; margin:12px 0; }
+  ul.tasks { list-style:none; padding:0; margin:12px 0; }
+  ul.tasks li { margin:8px 0; }
+  ul.tasks label { display:flex; gap:12px; align-items:flex-start; cursor:pointer; padding:6px 8px; border-radius:6px; }
+  ul.tasks label:hover { background:var(--tint); }
+  ul.tasks input { width:20px; height:20px; margin-top:3px; flex-shrink:0; accent-color:var(--brand); cursor:pointer; }
+  ul.tasks input:checked + span { color:var(--done); text-decoration:line-through; }
+  ul.plain li { margin:6px 0; }
+  .progress { font-size:.9rem; color:var(--muted); margin:4px 0 0; }
+  .bar { height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:6px; }
+  .bar > div { height:100%; width:0; background:var(--brand); transition:width .3s; }
+  @media print { h2 { break-after:avoid; } .why { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Replisto launch guide</h1>
+<p class="meta">16 October 2026</p>
+
+<p>Replisto needs a few things that only you can do, because they are tied to your identity, your company's documents or your card. That is about 1.5 hours in total, split into short sessions; two of them we do together on a call. We handle everything else: the domain settings, email, server, website, legal pages and the review material.</p>
+<p class="progress"><span id="count">0</span> of <span id="total">0</span> steps done. Your ticks are saved in this browser.</p>
+<div class="bar"><div id="bar"></div></div>
+
+<h2>At a glance</h2>
+<p>Start Step 2 early: Meta takes days to weeks to verify a business, and the review in Step 7 waits for it.</p>
+<ul class="plain">
+<li>Step 1: Buy replisto.com and invite us (10 minutes)</li>
+<li>Step 2: Meta business portfolio and verification (20 minutes, then Meta's wait)</li>
+<li>Step 3: Create the Meta app, on a call with us (30 minutes)</li>
+<li>Step 4: Payment accounts: OpenAI, Whish, OMT (15 minutes)</li>
+<li>Step 5: Brevo account for sending email (5 minutes)</li>
+<li>Step 6: Server account, recommended (10 minutes)</li>
+<li>Step 7: Submit for Meta review, on a call with us (15 minutes)</li>
+</ul>
+
+<h2>Step 1: Buy replisto.com and invite us (10 minutes)</h2>
+<p class="why"><strong>Why:</strong> the domain is Replisto's permanent address, and Meta records it in the app. It should belong to your business. Once you invite us, we set up everything on it ourselves: DNS, the support@replisto.com mailbox and email sending.</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t1a"><span>Create an account at <a href="https://dash.cloudflare.com/sign-up">https://dash.cloudflare.com/sign-up</a> and turn on two-factor login.</span></label></li>
+<li><label><input type="checkbox" data-id="t1b"><span>Open <strong>Domain Registration → Register Domains</strong>, search <code>replisto.com</code>, click <strong>Purchase</strong> and pay with your card (about $10 a year).</span></label></li>
+<li><label><input type="checkbox" data-id="t1c"><span>Open <strong>Manage Account → Members → Invite</strong>, enter the email address we give you and choose the <strong>Administrator</strong> role.</span></label></li>
+</ul>
+<p>We don't need your Cloudflare password. <strong>Why an invite instead:</strong> we log in with our own account and two-factor code, nothing gets locked for a login from another country, and you can remove our access in one click.</p>
+
+<h2>Step 2: Meta business portfolio and verification (20 minutes, then Meta's wait)</h2>
+<p class="why"><strong>Why:</strong> Meta only lets an app serve the public, meaning any shop rather than a few test accounts, when a verified real business stands behind it. Verification checks your company's documents, so only you can do it. It is the slowest step, which is why it comes early.</p>
+<p>Have ready: your company's commercial registration certificate (or tax registration, or a utility bill in the company's name).</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t2a"><span>Log in to <a href="https://business.facebook.com">https://business.facebook.com</a> with your own personal Facebook account and click <strong>Create a business portfolio</strong>.</span></label></li>
+<li><label><input type="checkbox" data-id="t2b"><span>Business name: your company's legal name, letter for letter as on its registration. Business email: <code>support@replisto.com</code> (we will have set it up after Step 1).</span></label></li>
+<li><label><input type="checkbox" data-id="t2c"><span>In <strong>Settings → Business info</strong>, add the company's address, phone and website <code>https://replisto.com</code>.</span></label></li>
+<li><label><input type="checkbox" data-id="t2d"><span>Open <strong>Settings → Security Center → Start verification</strong>, choose Lebanon, upload the document, and confirm with the email option (<code>support@replisto.com</code>). The code arrives in your own inbox: we forward support@replisto.com to you.</span></label></li>
+<li><label><input type="checkbox" data-id="t2e"><span>Send us the legal name, address and contact phone you entered. <strong>Why:</strong> the website's privacy policy and terms must name the business behind Replisto, matching what Meta has.</span></label></li>
+</ul>
+<p>Meta answers by email within a few days to a few weeks. Forward any request for more documents to us and we tell you what to send.</p>
+
+<h2>Step 3: Create the Meta app, on a call with us (30 minutes)</h2>
+<p class="why"><strong>Why:</strong> the app is Replisto's official identity at Meta and holds the keys that let it read and answer messages, comments and stories. It has to be created inside your Meta account. On the call we tell you what to click and paste every value, so there is nothing to prepare or look up.</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t3a"><span>Go to <a href="https://developers.facebook.com">https://developers.facebook.com</a>, click <strong>Get started</strong> and confirm your phone number.</span></label></li>
+<li><label><input type="checkbox" data-id="t3b"><span><strong>My Apps → Create app</strong>: name <code>Replisto</code>, the Instagram use case, your business portfolio from Step 2.</span></label></li>
+<li><label><input type="checkbox" data-id="t3c"><span>Paste the addresses and texts we give you on the call (login address, webhook, privacy policy, terms, data deletion, icon).</span></label></li>
+<li><label><input type="checkbox" data-id="t3d"><span>Under <strong>App roles → Instagram Testers</strong>, add the Replisto Instagram account we name. <strong>Why:</strong> until Meta approves the app, only tester accounts can use it, and we record the review videos with this one.</span></label></li>
+<li><label><input type="checkbox" data-id="t3e"><span>Send us the <strong>Instagram App ID</strong> and <strong>App Secret</strong> through a one-time link (see the last section).</span></label></li>
+</ul>
+
+<h2>Step 4: Payment accounts (15 minutes)</h2>
+<p class="why"><strong>Why:</strong> these accounts move money, so they belong to your business. OpenAI bills the AI that writes Replisto's answers; shops' wallets pay that cost back with a margin. Whish and OMT are where shops send their top-ups.</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t4a"><span>Create an account at <a href="https://platform.openai.com">https://platform.openai.com</a>, add your card under <strong>Settings → Billing</strong> and prepay $20 to $50.</span></label></li>
+<li><label><input type="checkbox" data-id="t4b"><span>Create a key under <strong>API keys → Create new secret key</strong> named <code>Replisto server</code>, and send it to us through a one-time link.</span></label></li>
+<li><label><input type="checkbox" data-id="t4c"><span>Open (or use) a Whish Money account and an OMT account for the business, and send us the account numbers shops should pay to.</span></label></li>
+</ul>
+
+<h2>Step 5: Brevo account for sending email (5 minutes)</h2>
+<p class="why"><strong>Why:</strong> the website sends emails itself: the link that confirms a new shop's account, password resets and low-balance alerts. Brevo sends them from replisto.com for free (up to 300 a day). The account is in your name; we connect it to the domain.</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t5a"><span>Sign up at <a href="https://www.brevo.com">https://www.brevo.com</a> with <code>support@replisto.com</code> (the confirmation email reaches you through the forwarding we set up).</span></label></li>
+<li><label><input type="checkbox" data-id="t5b"><span>Invite us under <strong>Settings → Users → Invite user</strong> with full access. We do the domain setup and the SMTP key.</span></label></li>
+</ul>
+
+<h2>Step 6: Server account, recommended (10 minutes)</h2>
+<p class="why"><strong>Why:</strong> the server holds shops' data: products, customer messages, wallets. The privacy policy says your business runs Replisto, so the machine should be in your account and paid by you. We install and maintain everything on it.</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t6a"><span>Create an account at <a href="https://console.hetzner.cloud">https://console.hetzner.cloud</a> and add your card.</span></label></li>
+<li><label><input type="checkbox" data-id="t6b"><span>Click <strong>Add Server</strong>: location Falkenstein or Helsinki, image <strong>Ubuntu 24.04</strong>, type <strong>CX22</strong> (about €5 a month). Under <strong>SSH keys</strong>, paste the key we send you.</span></label></li>
+<li><label><input type="checkbox" data-id="t6c"><span>Send us the server's IP address. <strong>Why the key:</strong> it lets us work on the server without you sharing any password.</span></label></li>
+</ul>
+
+<h2>Step 7: Submit for Meta review, on a call with us (15 minutes)</h2>
+<p class="why"><strong>Why:</strong> until Meta approves each permission, Replisto only works for tester accounts. The request is submitted from your Meta account, so it is your click; we prepare the descriptions and record the demonstration videos beforehand.</p>
+<p>This happens once Step 2's verification is approved and we have moved the site to replisto.com.</p>
+<ul class="tasks">
+<li><label><input type="checkbox" data-id="t7a"><span>In the app, open <strong>App Review → Permissions and features</strong> and request advanced access for the five Instagram permissions, pasting our description and attaching our video for each.</span></label></li>
+<li><label><input type="checkbox" data-id="t7b"><span>Click <strong>Submit</strong>. Forward Meta's answer to us; if anything is rejected we fix it and you resubmit.</span></label></li>
+<li><label><input type="checkbox" data-id="t7c"><span>When all five are approved, switch <strong>App Mode</strong> from <strong>Development</strong> to <strong>Live</strong>. Replisto is then open to every shop.</span></label></li>
+</ul>
+
+<h2>What we do, and sending us keys safely</h2>
+<p>While you go through the steps above, we handle: the domain's DNS and the support mailbox, email sending, moving the site to replisto.com with HTTPS, your details in the legal pages, the server, the Replisto Instagram test account, the review descriptions and videos, and testing every feature end to end.</p>
+<p class="why"><strong>Why keys need care:</strong> the App Secret and the OpenAI key each let someone act as Replisto or spend your money. A key pasted into WhatsApp or email stays in chat histories for years.</p>
+<ul class="plain">
+<li>Send each key through a one-time link: paste it at <a href="https://onetimesecret.com">https://onetimesecret.com</a> and send us the link; it disappears after we open it once.</li>
+<li>We never need your account passwords. Keep two-factor login on for Facebook, Cloudflare, OpenAI and Hetzner.</li>
+<li>If a key is ever exposed, delete it in that service and create a new one; we update the server in minutes.</li>
+</ul>
+<p>Optional, any time: try the demo shop at <a href="https://javab.app">https://javab.app</a> with <code>demo@shop.com</code> and the password we sent you. It shows what your customers will get.</p>
+
+</main>
+<script>
+  // Ticks are remembered in this browser (localStorage), so the list survives closing the file.
+  (function () {
+    var KEY = "replisto-guide-ticks";
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { saved = {}; }
+    var boxes = document.querySelectorAll('ul.tasks input[type="checkbox"]');
+    var count = document.getElementById("count"), bar = document.getElementById("bar");
+    document.getElementById("total").textContent = boxes.length;
+    function update() {
+      var done = 0;
+      boxes.forEach(function (b) { if (b.checked) done++; });
+      count.textContent = done;
+      bar.style.width = (boxes.length ? (done / boxes.length) * 100 : 0) + "%";
+    }
+    boxes.forEach(function (b) {
+      b.checked = !!saved[b.dataset.id];
+      b.addEventListener("change", function () {
+        saved[b.dataset.id] = b.checked;
+        try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+        update();
+      });
+    });
+    update();
+  })();
+</script>
+</body>
+</html>
