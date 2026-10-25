@@ -34,7 +34,7 @@ import SiteHeader from "../components/site/SiteHeader";
 import { Bullets, Section, SectionHeader } from "../components/site/Section";
 import { CommentsDemo, HandoffDemo, InsightsDemo, KnowledgeDemo, ProductsDemo, StoriesDemo, ToneDemo } from "../components/site/demos";
 import { Reveal, useInView } from "../components/site/motion";
-import { LogoMark } from "../components/Logo";
+import { Mascot } from "../components/Mascot";
 import { Badge, buttonClass, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -342,6 +342,8 @@ function Features() {
   ];
   return (
     <Section id="features" tone="tint">
+      {/* the light-bulb moment, once, as the section comes into view */}
+      <Mascot pose="idea" className="mx-auto mb-6 w-20" />
       <SectionHeader id="features" eyebrow={F.eyebrow} title={F.title} lead={F.lead} />
       <div className="mt-16 space-y-20 lg:mt-24 lg:space-y-28">
         {rows.map((row, i) => (
@@ -511,8 +513,9 @@ function FinalCta() {
     <section aria-labelledby="cta-title" className="relative overflow-hidden bg-brand-600 text-white">
       <div aria-hidden className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_60%_80%_at_50%_100%,black,transparent)]" />
       <Reveal className="container-site relative flex flex-col items-center py-[clamp(4.5rem,10vw,7.5rem)] text-center">
-        <LogoMark px={64} className="shadow-float ring-2 ring-white/25" />
-        <h2 id="cta-title" className="t-h2 mt-8 max-w-2xl text-balance">
+        {/* hurrying over: "let's get going" */}
+        <Mascot pose="busy" className="w-32 drop-shadow-[0_16px_20px_rgba(24,6,70,0.45)]" />
+        <h2 id="cta-title" className="t-h2 mt-6 max-w-2xl text-balance">
           {C.title}
         </h2>
         <p className="t-lead mt-4 max-w-xl text-pretty text-white/80">{C.lead}</p>

@@ -8,6 +8,7 @@ import { ChannelIcon, useChannelLabel } from "../components/channel";
 import { Avatar, MessageText, useCustomerName } from "../components/conversation";
 import FaqDialog from "../components/FaqDialog";
 import { useToast } from "../components/toast";
+import { Mascot } from "../components/Mascot";
 import { Alert, Badge, Button, Card, EmptyState, ExternalButton, LinkButton, PageHeader, PageLoading, Tabs, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
@@ -70,7 +71,7 @@ export default function Handoffs() {
       ) : items.length === 0 ? (
         <Card>
           {status === "open" ? (
-            <EmptyState icon={<PartyPopper />} title={t.handoffs.emptyOpen} />
+            <EmptyState icon={<PartyPopper />} art={<Mascot pose="wave" className="w-24" />} title={t.handoffs.emptyOpen} />
           ) : (
             <EmptyState icon={<CheckCheck />} title={t.handoffs.emptyResolved} />
           )}

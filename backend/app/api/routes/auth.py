@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import CurrentUser, DbSession, HttpClient
+from app.api.deps import DbSession, HttpClient, SignedInUser
 from app.core.config import get_settings
 from app.core.security import (
     TokenError,
@@ -248,7 +248,7 @@ async def verify_email(body: VerifyEmailRequest, db: DbSession) -> None:
 
 
 @router.post("/email/resend", status_code=status.HTTP_202_ACCEPTED)
-async def resend_verification(user: CurrentUser) -> ForgotPasswordOut:
+async def resend_verification(user: SignedInUser) -> ForgotPasswordOut:
     if user.email_verified_at is not None:
         return ForgotPasswordOut(message="ایمیل شما قبلا تأیید شده است.")
     key = str(user.id)

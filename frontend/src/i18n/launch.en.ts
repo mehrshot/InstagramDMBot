@@ -327,6 +327,13 @@ const launch: Dict["launch"] = {
     toPanel: "Go to the panel",
     noToken: "The link is incomplete. Ask for a new one in the panel (Account).",
     sentAfterSignup: (email) => `Welcome! We sent a verification link to ${email}.`,
+    gateTitle: "Verify your email",
+    gateSubtitle: "One step left to create your account",
+    gateBody: (email: string) => `We sent a verification link to ${email}. Click it to activate your account; this page opens by itself.`,
+    gateSpam: "No email? Check your spam folder, or send it again.",
+    gateWaiting: "Waiting for verification…",
+    wrongEmail: "Typed the wrong email?",
+    signUpAgain: "Log out and sign up again",
   },
 
   gift: {

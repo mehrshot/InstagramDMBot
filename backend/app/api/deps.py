@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.queue import Queue
 from app.core.security import TokenError, decode_token
@@ -20,7 +21,7 @@ _bearer = HTTPBearer(auto_error=False)
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 
 
-async def get_current_user(
+async def get_signed_in_user(
     db: DbSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> User:
@@ -39,6 +40,18 @@ async def get_current_user(
     user = await db.scalar(select(User).where(User.id == user_id).options(selectinload(User.shop)))
     if user is None or not user.is_active:
         raise unauthorized
+    return user
+
+
+# Signed in, email possibly not verified yet: only for what the "verify your email" screen needs.
+SignedInUser = Annotated[User, Depends(get_signed_in_user)]
+
+
+async def get_current_user(user: SignedInUser) -> User:
+    if get_settings().require_verified_email and user.email_verified_at is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "اول ایمیلتان را با لینکی که برایتان فرستادیم تأیید کنید"
+        )
     return user
 
 

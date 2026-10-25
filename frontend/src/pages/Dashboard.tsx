@@ -7,6 +7,7 @@ import { keys, useDashboard, useMe } from "../api/queries";
 import type { Shop } from "../api/types";
 import { useToast } from "../components/toast";
 import { EmailNotVerified, GiftCard } from "../components/verify";
+import { Mascot } from "../components/Mascot";
 import { Alert, Card, CardHeader, ConfirmDialog, IconChip, LinkButton, PageLoading, Toggle, cx } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
@@ -217,7 +218,9 @@ function StatusHero({ name, on, username, toggle }: { name: string; on: boolean;
     <section aria-labelledby="dash-title" className="animate-pop-in relative overflow-hidden rounded-3xl bg-brand-600 p-6 text-white shadow-lift sm:p-8">
       <div aria-hidden className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_80%_90%_at_0%_0%,black,transparent)] rtl:[mask-image:radial-gradient(ellipse_80%_90%_at_100%_0%,black,transparent)]" />
       <div className="relative flex flex-wrap items-center justify-between gap-6">
-        <div className="min-w-0">
+        {/* while the bot is on, the mascot is hurrying on your customers */}
+        {on && <Mascot pose="busy" className="-my-3 w-20 drop-shadow-[0_10px_14px_rgba(24,6,70,0.4)] max-sm:hidden" />}
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-white/70">{t.dashboard.title}</p>
           <h1 id="dash-title" className="mt-1 text-2xl font-extrabold sm:text-3xl">
             {t.panel.dashboard.greeting(name)}

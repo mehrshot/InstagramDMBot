@@ -630,7 +630,6 @@
           "instagram"
         ],
         "summary": "Connect Url",
-        "description": "URL of Instagram's consent screen. The panel sends the browser there.",
         "operationId": "connect_url_api_v1_instagram_connect_url_get",
         "responses": {
           "200": {
@@ -657,7 +656,6 @@
           "instagram"
         ],
         "summary": "List Posts",
-        "description": "The page's posts and which products the bot links to each (newest 60).",
         "operationId": "list_posts_api_v1_instagram_posts_get",
         "responses": {
           "200": {
@@ -684,7 +682,6 @@
           "instagram"
         ],
         "summary": "Sync Posts Now",
-        "description": "Read the page's posts again now (they are also refreshed daily).",
         "operationId": "sync_posts_now_api_v1_instagram_posts_sync_post",
         "responses": {
           "200": {
@@ -9009,6 +9006,12 @@
           },
           "shop": {
             "$ref": "#/components/schemas/ShopOut"
+          },
+          "must_verify_email": {
+            "type": "boolean",
+            "title": "Must Verify Email",
+            "description": "True while the panel stays closed until the emailed link is clicked (REQUIRE_VERIFIED_EMAIL).",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -9019,7 +9022,8 @@
           "email_verified_at",
           "phone",
           "phone_verified_at",
-          "shop"
+          "shop",
+          "must_verify_email"
         ],
         "title": "UserOut"
       },

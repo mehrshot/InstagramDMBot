@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BellRing, Images, PackageSearch, RotateCcw } from "lucide-react";
 import { useI18n } from "../../i18n";
-import { LogoMark } from "../Logo";
+import { Mascot } from "../Mascot";
 import { cx } from "../ui";
 import { useInView, useReducedMotion } from "./motion";
 
@@ -93,7 +93,9 @@ export default function HeroChat() {
   };
 
   return (
-    <figure ref={ref} aria-label={c.label} className="relative mx-auto w-full max-w-[27rem] lg:me-0">
+    <figure ref={ref} aria-label={c.label} className="relative mx-auto mt-20 w-full max-w-[27rem] sm:mt-24 lg:me-0">
+      {/* the mascot standing on the card, waving */}
+      <Mascot pose="wave" className="absolute bottom-[calc(100%-0.6rem)] end-5 z-10 w-28 drop-shadow-[0_14px_18px_rgba(24,6,70,0.45)] sm:w-32" />
       {/* live status, overlapping the card edge */}
       <div className="absolute -top-4 start-6 z-10 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-semibold text-ink-900 shadow-soft ring-1 ring-line">
         <span className="relative flex size-2" aria-hidden>
@@ -133,7 +135,6 @@ export default function HeroChat() {
                   </p>
                   {i === 1 && (
                     <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                      <LogoMark px={14} className="rounded-[4px]" />
                       {c.auto}
                     </span>
                   )}
@@ -169,7 +170,9 @@ export default function HeroChat() {
           done ? "animate-pop-in [animation-delay:700ms]" : "invisible",
         )}
       >
-        <LogoMark px={32} className="rounded-lg" />
+        <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+          <BellRing className="size-4" />
+        </span>
         <div className="min-w-0">
           <div className="text-[13px] font-bold">
             <bdi>{c.customer}</bdi> {c.notifyWaiting}
@@ -183,10 +186,14 @@ export default function HeroChat() {
 
 function TypingBubble({ label }: { label: string }) {
   return (
-    <span role="status" aria-label={label} className="animate-fade-in absolute end-0 top-0 flex items-center gap-1 rounded-2xl rounded-se-md bg-brand-50 px-3.5 py-3">
-      <span className="typing-dot size-1.5 rounded-full bg-brand-500" />
-      <span className="typing-dot size-1.5 rounded-full bg-brand-500 [animation-delay:0.2s]" />
-      <span className="typing-dot size-1.5 rounded-full bg-brand-500 [animation-delay:0.4s]" />
+    <span role="status" aria-label={label} className="animate-fade-in absolute end-0 top-0 flex items-end gap-2">
+      <span className="flex items-center gap-1 rounded-2xl rounded-se-md bg-brand-50 px-3.5 py-3">
+        <span className="typing-dot size-1.5 rounded-full bg-brand-500" />
+        <span className="typing-dot size-1.5 rounded-full bg-brand-500 [animation-delay:0.2s]" />
+        <span className="typing-dot size-1.5 rounded-full bg-brand-500 [animation-delay:0.4s]" />
+      </span>
+      {/* the light-bulb moment while the answer is being written */}
+      <Mascot pose="idea" loop className="-mt-8 w-11" />
     </span>
   );
 }

@@ -212,10 +212,12 @@ export function PageLoading() {
 }
 
 /** Friendly "nothing here" block: icon in a soft violet circle, bold line, optional detail. */
-export function EmptyState({ icon, title, children }: { icon?: ReactNode; title: ReactNode; children?: ReactNode }) {
+/** `art` (e.g. the mascot) replaces the round icon badge. */
+export function EmptyState({ icon, art, title, children }: { icon?: ReactNode; art?: ReactNode; title: ReactNode; children?: ReactNode }) {
   return (
     <div className="animate-pop-in flex flex-col items-center justify-center px-6 py-14 text-center">
-      {icon && (
+      {art && <div className="mb-4">{art}</div>}
+      {icon && !art && (
         <div aria-hidden className="mb-4 flex size-16 items-center justify-center rounded-full bg-brand-50 text-brand-500 ring-8 ring-brand-50/50 [&>svg]:size-7">
           {icon}
         </div>

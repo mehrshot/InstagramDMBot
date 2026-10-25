@@ -497,6 +497,12 @@ def _fresh_rate_limits() -> None:
     auth._last_reset_request.clear()
 
 
+@pytest.fixture(autouse=True)
+def _email_check_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Most tests use a fresh, unverified sign-up; test_verification covers the closed panel."""
+    monkeypatch.setattr(get_settings(), "require_verified_email", False)
+
+
 @pytest.fixture
 def billing_on(monkeypatch: pytest.MonkeyPatch) -> None:
     """Charge AI answers to the shop's wallet, as in production."""

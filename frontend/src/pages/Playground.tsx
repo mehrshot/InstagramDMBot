@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowRight, BookOpen, ChevronDown, FlaskConical, Lightbulb, PackageSearch, RotateCcw, Send, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, ChevronDown, FlaskConical, Lightbulb, PackageSearch, RotateCcw, Send, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { api } from "../api/client";
 import { useMe } from "../api/queries";
 import type { PlaygroundReply, PlaygroundTurn } from "../api/types";
-import { LogoMark } from "../components/Logo";
+import { Mascot } from "../components/Mascot";
 import { PostCard } from "../components/PostCard";
 import { Alert, Badge, Button, Card, IconChip, PageHeader, cx } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -76,7 +76,9 @@ export default function Playground() {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <Card className="flex min-h-0 flex-col overflow-hidden">
           <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
-            <LogoMark px={36} />
+            <IconChip>
+              <Bot />
+            </IconChip>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold text-ink-950">{t.panel.playground.botName(me?.shop.name ?? t.appName)}</div>
               <span className="mt-0.5 inline-flex rounded-full bg-accent-300 px-2 text-[11px] font-bold leading-5 text-night-900">{t.panel.playground.env}</span>
@@ -91,7 +93,6 @@ export default function Playground() {
           <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
             {turns.length === 0 && (
               <div className="animate-pop-in flex h-full flex-col items-center justify-center gap-4 py-6 text-center">
-                <LogoMark px={56} className="shadow-lift" />
                 <p className="max-w-xs font-semibold text-ink-900">{t.playground.empty}</p>
                 <div className="flex max-w-lg flex-wrap justify-center gap-2">
                   {t.playground.suggestions.map((s) => (
@@ -111,7 +112,8 @@ export default function Playground() {
             {turns.map((turn, i) => (turn.role === "customer" ? <CustomerBubble key={i} text={turn.text} /> : <BotBubble key={i} turn={turn} />))}
 
             {chat.isPending && (
-              <div className="animate-fade-in flex justify-end" role="status" aria-label={t.playground.typing}>
+              <div className="animate-fade-in flex items-end justify-end gap-2" role="status" aria-label={t.playground.typing}>
+                <Mascot pose="idea" loop className="order-last w-11" />
                 <div className="flex items-center gap-1 rounded-2xl rounded-se-md bg-brand-50 px-4 py-3.5">
                   <span className="typing-dot size-1.5 rounded-full bg-brand-500" />
                   <span className="typing-dot size-1.5 rounded-full bg-brand-500 [animation-delay:0.2s]" />
@@ -218,7 +220,6 @@ function BotBubble({ turn }: { turn: Turn }) {
     <div className="animate-msg-in flex flex-col items-end gap-2">
       <div className="flex max-w-[85%] items-end gap-2 sm:max-w-[70%]">
         <div className="user-text rounded-2xl rounded-se-md bg-brand-600 px-4 py-2.5 text-sm leading-7 text-white">{turn.text}</div>
-        <LogoMark px={26} className="mb-0.5 rounded-lg" />
       </div>
 
       {r?.unanswered && (

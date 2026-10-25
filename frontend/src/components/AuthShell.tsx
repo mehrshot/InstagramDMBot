@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Languages } from "lucide-react";
 import { useI18n } from "../i18n";
-import { Logo, LogoMark } from "./Logo";
+import { Logo } from "./Logo";
+import { Mascot } from "./Mascot";
 import ThemeToggle from "./ThemeToggle";
 
 export default function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
@@ -58,8 +59,8 @@ function BrandPanel() {
     <aside className="relative hidden overflow-hidden bg-brand-600 text-white lg:flex lg:items-center lg:justify-center">
       <div aria-hidden className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_80%_70%_at_50%_40%,black,transparent)]" />
       <div className="relative w-full max-w-md px-10 py-16">
-        <LogoMark px={56} className="shadow-float ring-2 ring-white/25" />
-        <p className="t-h2 mt-8 text-balance">{t.tagline}</p>
+        <Mascot pose="wave" className="-ms-2 w-36 drop-shadow-[0_16px_20px_rgba(24,6,70,0.45)]" />
+        <p className="t-h2 mt-6 text-balance">{t.tagline}</p>
         <ul aria-label={t.landing.hero.rolesLabel} className="mt-6 flex flex-wrap gap-2">
           {t.landing.hero.roles.map((role) => (
             <li key={role} className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-semibold ring-1 ring-white/20">

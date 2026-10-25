@@ -2,14 +2,14 @@ import { useI18n } from "../i18n";
 import { cx } from "./ui";
 
 /**
- * The supplied Javab logo tile, unaltered; only its corners are softened like an app icon.
+ * The Javab logo: the mascot on a soft lavender app-icon tile (corners already rounded in the file).
  * `px` is the rendered size, so the browser picks the smallest file that is still sharp.
  */
 export function LogoMark({ px = 36, className, alt = "" }: { px?: number; className?: string; alt?: string }) {
   return (
     <img
-      src="/brand/javab-logo-128.png"
-      srcSet="/brand/javab-logo-128.png 128w, /brand/javab-logo-192.png 192w, /brand/javab-logo-512.png 512w"
+      src="/brand/javab-mascot-128.png"
+      srcSet="/brand/javab-mascot-128.png 128w, /brand/javab-mascot-192.png 192w, /brand/javab-mascot-512.png 512w"
       sizes={`${px}px`}
       width={px}
       height={px}

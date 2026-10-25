@@ -229,11 +229,15 @@ async def test_email_verification(client: AsyncClient, monkeypatch: pytest.Monke
         mails.append((to, body))
 
     monkeypatch.setattr(auth, "send_email", fake_send)
+    monkeypatch.setattr(get_settings(), "require_verified_email", True)
     headers = await _register(client)
     assert mails and mails[0][0] == "new@shop.ir"
     token = mails[0][1].split("token=")[1].split()[0]
     me = (await client.get("/api/v1/me", headers=headers)).json()
     assert me["email_verified_at"] is None
+    # The panel stays closed until the link is clicked
+    assert (await client.get("/api/v1/shop", headers=headers)).status_code == 403
+    assert (await client.get("/api/v1/dashboard", headers=headers)).status_code == 403
 
     bad = await client.post("/api/v1/auth/email/verify", json={"token": token[:-3] + "abc"})
     assert bad.status_code == 400
@@ -241,6 +245,7 @@ async def test_email_verification(client: AsyncClient, monkeypatch: pytest.Monke
     assert resp.status_code == 204
     me = (await client.get("/api/v1/me", headers=headers)).json()
     assert me["email_verified_at"] is not None
+    assert (await client.get("/api/v1/shop", headers=headers)).status_code == 200
     resp = await client.post("/api/v1/auth/email/resend", headers=headers)
     assert "قبلا تأیید" in resp.json()["message"]
 

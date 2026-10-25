@@ -156,6 +156,9 @@ class Settings(BaseSettings):
     smtp_ssl: bool = False
     password_reset_minutes: int = 30
     email_verify_days: int = 7
+    # The panel stays closed until the owner clicks the emailed link (only /me, resending
+    # the link and deleting the account work before that).
+    require_verified_email: bool = True
 
     # SMS for verifying mobile numbers: "kavenegar" or "smsir" (both send a code with a
     # template approved in their panel). Empty: codes are only logged (development).

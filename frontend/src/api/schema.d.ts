@@ -282,10 +282,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Connect Url
-         * @description URL of Instagram's consent screen. The panel sends the browser there.
-         */
+        /** Connect Url */
         get: operations["connect_url_api_v1_instagram_connect_url_get"];
         put?: never;
         post?: never;
@@ -302,10 +299,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Posts
-         * @description The page's posts and which products the bot links to each (newest 60).
-         */
+        /** List Posts */
         get: operations["list_posts_api_v1_instagram_posts_get"];
         put?: never;
         post?: never;
@@ -324,10 +318,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Sync Posts Now
-         * @description Read the page's posts again now (they are also refreshed daily).
-         */
+        /** Sync Posts Now */
         post: operations["sync_posts_now_api_v1_instagram_posts_sync_post"];
         delete?: never;
         options?: never;
@@ -3238,6 +3229,11 @@ export interface components {
             /** Phone Verified At */
             phone_verified_at: string | null;
             shop: components["schemas"]["ShopOut"];
+            /**
+             * Must Verify Email
+             * @description True while the panel stays closed until the emailed link is clicked (REQUIRE_VERIFIED_EMAIL).
+             */
+            readonly must_verify_email: boolean;
         };
         /** ValidationError */
         ValidationError: {

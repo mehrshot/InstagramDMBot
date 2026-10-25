@@ -7,6 +7,7 @@ import type { Unanswered as Item } from "../api/types";
 import { Avatar, MessageText } from "../components/conversation";
 import FaqDialog from "../components/FaqDialog";
 import { useToast } from "../components/toast";
+import { Mascot } from "../components/Mascot";
 import { Alert, Button, Card, EmptyState, LinkButton, PageHeader, PageLoading } from "../components/ui";
 import { useI18n } from "../i18n";
 import { errorMessage } from "../lib/errors";
@@ -46,7 +47,7 @@ export default function Unanswered() {
         <Alert kind="error">{errorMessage(list.error, t)}</Alert>
       ) : list.data.length === 0 ? (
         <Card>
-          <EmptyState icon={<Sparkles />} title={t.unanswered.empty} />
+          <EmptyState icon={<Sparkles />} art={<Mascot pose="idea" className="w-20" />} title={t.unanswered.empty} />
         </Card>
       ) : (
         <ul className="space-y-4">

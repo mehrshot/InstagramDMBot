@@ -3,7 +3,9 @@ from datetime import datetime
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
+
+from app.core.config import get_settings
 
 
 class RegisterRequest(BaseModel):
@@ -95,3 +97,9 @@ class UserOut(BaseModel):
     phone: str | None
     phone_verified_at: datetime | None
     shop: ShopOut
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def must_verify_email(self) -> bool:
+        """True while the panel stays closed until the emailed link is clicked (REQUIRE_VERIFIED_EMAIL)."""
+        return get_settings().require_verified_email and self.email_verified_at is None
