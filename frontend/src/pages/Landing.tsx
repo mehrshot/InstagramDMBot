@@ -64,12 +64,12 @@ export default function Landing() {
       <SiteHeader overHero />
       <main id="main">
         <Hero />
+        <Ask />
         <Roles />
         <Channels />
         <Problem />
         <Features />
         <How />
-        <Ask />
         <Trust />
         <Faq />
         <FinalCta />

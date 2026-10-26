@@ -7,7 +7,7 @@ import { Logo } from "../Logo";
 import ThemeToggle from "../ThemeToggle";
 import { buttonClass, cx } from "../ui";
 
-export const SECTIONS = ["roles", "channels", "how", "ask", "faq"] as const;
+export const SECTIONS = ["ask", "roles", "channels", "how", "faq"] as const;
 
 /**
  * Public site header. Over the violet hero it starts transparent with white text and turns
